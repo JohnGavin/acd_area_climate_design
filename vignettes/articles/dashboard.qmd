@@ -1,5 +1,7 @@
 ---
 title: "Vienna ACD: Building-Zone Linkage"
+params:
+  data_source: "local"
 format:
   dashboard:
     orientation: rows
@@ -34,6 +36,12 @@ tryCatch(
 
 # Snapshot date constant (defined in R/snapshot.R; fallback if not loaded)
 if (!exists("SNAPSHOT_DATE")) SNAPSHOT_DATE <- "2026-05-01"
+
+# ── Data source selection (Stage 2: "remote" uses GitHub Pages Parquet) ────────
+# Default: "local" — reads from inst/extdata (fast, offline, always available).
+# Set to "remote" to test the duckplyr path against GitHub Pages Parquet.
+# Can also be overridden via params: in YAML front-matter for testing.
+data_source <- if (!is.null(params$data_source)) params$data_source else "local"
 
 # ── Parquet cache helper ───────────────────────────────────────────────────────
 # Resolves the inst/extdata path for both installed and dev-tree usage,
@@ -201,7 +209,18 @@ if (!exists("SNAPSHOT_DATE")) SNAPSHOT_DATE <- "2026-05-01"
 }
 
 # ── Load or synthesise data ────────────────────────────────────────────────────
-joined_raw <- .cached_parquet(paste0("joined_", SNAPSHOT_DATE, ".parquet"))
+# Stage 1: try load_acd_data() (package function); fall back to .cached_parquet;
+# fall back to placeholder when neither source is available.
+joined_raw <- tryCatch(
+  {
+    df <- acd::load_acd_data("joined", source = data_source)
+    df
+  },
+  error = function(e) {
+    message("load_acd_data() failed (", conditionMessage(e), "); trying .cached_parquet fallback")
+    .cached_parquet(paste0("joined_", SNAPSHOT_DATE, ".parquet"))
+  }
+)
 
 using_placeholder <- is.null(joined_raw)
 
@@ -309,6 +328,78 @@ orphan_zones <- tryCatch(
   }
 )
 n_orphan <- nrow(orphan_zones)
+
+# ── ACD agreement pre-computation ─────────────────────────────────────────────
+# Confusion matrix: rows = spatial says in zone, cols = city says in zone.
+# Uses acd_agreement_summary() if available, else local fallback.
+.acd_agreement_summary_local <- function(df) {
+  df |>
+    sf::st_drop_geometry() |>
+    dplyr::count(acd_agreement, name = "n_buildings") |>
+    dplyr::mutate(pct = round(100 * n_buildings / sum(n_buildings), 1))
+}
+
+acd_agree_sum <- tryCatch(
+  acd:::acd_agreement_summary(joined),
+  error = function(e) .acd_agreement_summary_local(joined)
+)
+
+# Disaggregated counts for inline prose (dynamic, no hardcoding)
+.ag <- function(level) {
+  v <- acd_agree_sum$n_buildings[acd_agree_sum$acd_agreement == level]
+  if (length(v) == 0L) 0L else as.integer(v)
+}
+n_agree_in_zone  <- .ag("agree_in_zone")
+n_agree_no_zone  <- .ag("agree_no_zone")
+n_spatial_only   <- .ag("spatial_only")
+n_acd_only       <- .ag("acd_only")
+n_agree_total    <- n_agree_in_zone + n_agree_no_zone
+n_disagree_total <- n_spatial_only + n_acd_only
+
+# Confusion matrix as a 2×2 data frame
+.cm_cell <- function(level) {
+  v <- acd_agree_sum$n_buildings[acd_agree_sum$acd_agreement == level]
+  pv <- acd_agree_sum$pct[acd_agree_sum$acd_agreement == level]
+  n  <- if (length(v)  == 0L) 0L  else as.integer(v)
+  p  <- if (length(pv) == 0L) 0.0 else as.numeric(pv)
+  paste0(n, " (", p, "%)")
+}
+confusion_matrix_df <- data.frame(
+  Spatial_join = c("Spatial: IN zone", "Spatial: NOT in zone"),
+  City_ACD_yes = c(.cm_cell("agree_in_zone"), .cm_cell("acd_only")),
+  City_ACD_no  = c(.cm_cell("spatial_only"),  .cm_cell("agree_no_zone")),
+  check.names  = FALSE,
+  stringsAsFactors = FALSE
+)
+colnames(confusion_matrix_df) <- c(
+  "Spatial join result",
+  "City ACD: yes (non-empty)",
+  "City ACD: no (empty/NA)"
+)
+
+# Disagreement subset for leaflet
+acd_disagree_sf <- tryCatch(
+  acd:::case_acd_disagreement(joined),
+  error = function(e) {
+    # Fallback: filter directly if the package function is unavailable
+    if ("acd_agreement" %in% names(joined)) {
+      joined[joined$acd_agreement %in% c("spatial_only", "acd_only"), ]
+    } else {
+      joined[integer(0), ]
+    }
+  }
+)
+
+# Colors for the disagreement leaflet
+disagree_colors <- c(
+  spatial_only = "#e7298a",   # pink
+  acd_only     = "#66a61e"    # olive
+)
+pal_disagree <- leaflet::colorFactor(
+  palette  = unname(disagree_colors),
+  levels   = names(disagree_colors),
+  na.color = "#999999"
+)
 
 # ── Per-case subsets for page 4 ───────────────────────────────────────────────
 case_in_zone <- function(df, n = 50L) {
@@ -1128,6 +1219,111 @@ To refresh the analysis:
 Do not compare analysis results across snapshots without accounting for the
 change in building inventory.
 
+### ACD agreement (cross-validation)
+
+::: {.card title="Confusion matrix"}
+
+```{r}
+#| label: tbl-acd-confusion-matrix
+
+confusion_matrix_df |>
+  gt::gt(rowname_col = "Spatial join result") |>
+  gt::tab_header(
+    title    = "Spatial join vs City ACD cross-validation",
+    subtitle = paste0("Snapshot: ", SNAPSHOT_DATE, " — N = ", n_total, " buildings")
+  ) |>
+  gt::tab_spanner(
+    label   = "City of Vienna ACD field",
+    columns = dplyr::starts_with("City ACD")
+  ) |>
+  gt::tab_caption(
+    caption = paste0(
+      "2×2 cross-validation of spatial join (rows) vs city ACD field (columns). ",
+      "Snapshot: ", SNAPSHOT_DATE, ". Total buildings: ", n_total, ". ",
+      "Agreement: ", n_agree_total, " buildings; Disagreements: ", n_disagree_total, "."
+    )
+  )
+```
+
+:::
+
+::: {.card title="Disagreements on the map"}
+
+```{r}
+#| label: fig-acd-disagreement-map
+
+if (nrow(acd_disagree_sf) > 0L) {
+  leaflet(data = acd_disagree_sf, height = "420px") |>
+    leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+    leaflet::addCircleMarkers(
+      radius      = 5,
+      fillColor   = ~ pal_disagree(as.character(acd_agreement)),
+      fillOpacity = 0.85,
+      color       = "#333333",
+      weight      = 0.6,
+      opacity     = 0.7,
+      group       = ~ as.character(acd_agreement),
+      popup       = ~ paste0(
+        "<strong>Building: </strong>", building_id, "<br>",
+        "<strong>Agreement: </strong>", acd_agreement, "<br>",
+        "<strong>City ACD: </strong>", dplyr::coalesce(acd_native, "(empty)"), "<br>",
+        "<strong>Spatial join zone: </strong>", dplyr::coalesce(zone_id, "(none)")
+      )
+    ) |>
+    leaflet::addLegend(
+      position = "bottomright",
+      pal      = pal_disagree,
+      values   = ~ as.character(acd_agreement),
+      title    = "Disagreement type",
+      opacity  = 0.9
+    ) |>
+    leaflet::addLayersControl(
+      overlayGroups = c("spatial_only", "acd_only"),
+      options       = leaflet::layersControlOptions(collapsed = FALSE)
+    ) |>
+    leaflet::setView(
+      lng  = vienna_center[["lng"]],
+      lat  = vienna_center[["lat"]],
+      zoom = 12L
+    )
+} else {
+  cat("No disagreements found in this snapshot — spatial join and city ACD agree on all buildings.")
+}
+```
+
+:::
+
+::: {.card title="Notes"}
+
+### What this cross-validation tests
+
+The City of Vienna already tags every building with an ACD identifier in
+the `ogdwien:GEBAEUDEINFOOGD` layer (the `ACD` field). Our spatial join is
+an **independent computation** — we overlay building footprints onto zone
+polygons geometrically, without consulting the city's pre-linked field.
+
+Disagreements are **interesting findings**, not data errors:
+
+- **`spatial_only`** (`r n_spatial_only` buildings): our spatial join finds
+  a zone, but the city's `ACD` field is empty or `NA`. Possible under-coverage
+  in the city's pre-linking step.
+- **`acd_only`** (`r n_acd_only` buildings): the city's `ACD` field is
+  populated, but our spatial join finds no overlapping zone. Possible stale
+  zone geometry, or a zone that was present when the city's field was computed
+  but has since been modified in the WFS layer.
+
+Total agreements in this snapshot: **`r n_agree_total`** buildings.
+Total disagreements: **`r n_disagree_total`** buildings.
+
+**Sampling caveat:** This snapshot covers `r n_total` buildings (out of
+~220,000 in Vienna). When `n_total` is a sample rather than the full
+inventory, the `acd_only` count is dominated by a **sampling artefact** —
+the city has linked buildings that happen to fall outside our sample window,
+not a genuine join error. Interpret `acd_only` counts only in the context of
+`r if (n_total < 5000L) paste0("a sample (N = ", n_total, " < full inventory)") else paste0("a near-complete inventory (N = ", n_total, ")")`.
+
+:::
+
 :::
 
 # Stories — Worked Well / Failed Badly
@@ -1548,3 +1744,76 @@ checks |>
   pointblank agent with alerting on refresh.
 
 :::
+
+## Row
+
+::: {.card title="Remote duckplyr query (Stage 2 preview)"}
+
+```{r}
+#| label: tbl-remote-duckplyr-query
+
+# Stage 2: demonstrate live duckplyr query against Parquet hosted on GitHub Pages.
+# DuckDB issues HTTP range requests — only the link_status column is downloaded,
+# not the full file. Gracefully degrades if Pages is not yet live or duckplyr
+# is not available in the render environment.
+demo_remote_query <- tryCatch({
+  acd::load_acd_data("joined", source = "remote", collect = FALSE) |>
+    dplyr::count(.data$link_status, name = "n") |>
+    dplyr::collect()
+}, error = function(e) {
+  message("Remote duckplyr query unavailable: ", conditionMessage(e))
+  NULL
+})
+
+if (!is.null(demo_remote_query)) {
+  demo_remote_query |>
+    gt::gt() |>
+    gt::cols_label(link_status = "Link status", n = "N buildings") |>
+    gt::fmt_number(columns = n, decimals = 0) |>
+    gt::tab_caption(
+      caption = paste0(
+        "Live duckplyr query against Parquet served by GitHub Pages. ",
+        "DuckDB issues HTTP range requests; only the link_status column is downloaded, ",
+        "not the full file. Source URL: ",
+        "https://johngavin.github.io/acd_area_climate_design/data/joined_",
+        SNAPSHOT_DATE, ".parquet"
+      )
+    )
+} else {
+  cat(paste0(
+    "Remote query unavailable: GitHub Pages may not yet be live, ",
+    "or duckplyr is not available in this render environment. ",
+    "The local snapshot (N = ", n_total, " buildings) was used throughout the rest of this dashboard."
+  ))
+}
+```
+
+:::
+
+::: {.card title="Stage 2 architecture notes"}
+
+### Parquet on GitHub Pages
+
+The snapshot Parquet files are now committed to `docs/data/` and served by
+GitHub Pages at:
+
+`https://johngavin.github.io/acd_area_climate_design/data/`
+
+The `load_acd_data()` function supports two modes:
+
+| `source` | Reads from | Speed | Network |
+|----------|-----------|-------|---------|
+| `"local"` (default) | `inst/extdata/` (committed) | Instant | None |
+| `"remote"` | GitHub Pages via DuckDB httpfs | ~1–2 s | HTTP range requests |
+
+**Why HTTP range requests are efficient:** DuckDB reads only the byte ranges
+needed for the query (predicate / projection pushdown). A `count(link_status)`
+query downloads only the `link_status` column bytes — typically < 1 KB from a
+30 KB Parquet file.
+
+**Stage 3 upgrade path:** Replace `REMOTE_BASE_URL` in `R/snapshot.R` with an
+HuggingFace `hf://datasets/...` or S3/R2 URL when the dataset outgrows GitHub
+Pages limits (100 MB file cap, 1 GB repo cap).
+
+:::
+
