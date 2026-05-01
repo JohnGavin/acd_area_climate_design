@@ -1,5 +1,4 @@
 ---
-title: "Vienna ACD: Building-Zone Linkage"
 params:
   data_source: "local"
 format:
@@ -539,6 +538,17 @@ district_summary <- joined |>
 decade <- function(year) {
   paste0(floor(year / 10) * 10, "s")
 }
+
+# ── Map sample for leaflets (cap at 5000 rows for browser performance) ─────────
+# Full data is kept in `joined` for tables, summaries, and crosstabs.
+# `joined_for_map` is used only for leaflet markers to avoid browser OOM.
+MAP_SAMPLE_N <- 5000L
+joined_for_map <- if (nrow(joined) > MAP_SAMPLE_N) {
+  set.seed(42L)
+  joined[sample.int(nrow(joined), MAP_SAMPLE_N), ]
+} else {
+  joined
+}
 ```
 
 ```{=html}
@@ -752,11 +762,9 @@ hist(
 **Layer:** `ogdwien:GEBAEUDEOGD`
 **Provider:** [Vienna Open Government Data WFS](https://data.wien.gv.at/daten/geo)
 **Snapshot date:** `r SNAPSHOT_DATE`
-**Buildings in this snapshot:** `r n_total`
-**Expected full Vienna inventory:** ~220,000 buildings
+**Buildings in this snapshot:** `r format(n_total, big.mark = ",")` (full WFS layer, `max_features = NULL`)
 
-The POC smoke test fetches `max_features = 500`; the full fetch uses
-`max_features = NULL`. For rendering speed the map above shows the first
+For rendering speed the map above shows the first
 `r min(nrow(buildings), 200L)` buildings only.
 
 Column mapping from WFS: `OBJECTID` → `building_id`, `BAUJAHR` → `year_built`,
@@ -773,12 +781,6 @@ Column mapping from WFS: `OBJECTID` → `building_id`, `BAUJAHR` → `year_built
 ```{r}
 #| label: fig-joined-map
 
-bldg_sample_join <- if (nrow(joined) > 500L) {
-  joined[sample(nrow(joined), 500L), ]
-} else {
-  joined
-}
-
 zones_wgs84_join <- sf::st_transform(zones, crs = 4326L)
 
 leaflet(height = "500px") |>
@@ -794,7 +796,7 @@ leaflet(height = "500px") |>
     popup       = ~ paste0("<strong>Zone: </strong>", zone_id)
   ) |>
   leaflet::addCircleMarkers(
-    data        = bldg_sample_join,
+    data        = joined_for_map,
     radius      = 4,
     fillColor   = ~ pal_link(link_status),
     fillOpacity = 0.85,
@@ -830,33 +832,50 @@ leaflet(height = "500px") |>
 
 ## Row
 
-::: {.card title="Crosstab: Zone Type × Building Decade"}
+::: {.card title="Buildings by Decade"}
 
 ```{r}
-#| label: tbl-crosstab
+#| label: tbl-decade-marginals
 
-crosstab_df <- joined |>
+decade_marginals <- joined |>
   sf::st_drop_geometry() |>
-  dplyr::filter(!is.na(zone_type), !is.na(year_built)) |>
+  dplyr::filter(!is.na(year_built)) |>
   dplyr::mutate(decade = decade(year_built)) |>
-  dplyr::count(zone_type, decade) |>
-  tidyr::pivot_wider(
-    names_from  = decade,
-    values_from = n,
-    values_fill = 0L
-  )
+  dplyr::count(decade, name = "total_buildings") |>
+  dplyr::left_join(
+    joined |>
+      sf::st_drop_geometry() |>
+      dplyr::filter(!is.na(year_built), !is.na(zone_id)) |>
+      dplyr::mutate(decade = decade(year_built)) |>
+      dplyr::count(decade, name = "n_in_zone"),
+    by = "decade"
+  ) |>
+  dplyr::mutate(
+    n_in_zone   = dplyr::coalesce(as.integer(n_in_zone), 0L),
+    pct_in_zone = round(100 * n_in_zone / total_buildings, 1)
+  ) |>
+  dplyr::arrange(decade) |>
+  dplyr::filter(total_buildings > 0L)
 
-crosstab_df |>
-  gt::gt(rowname_col = "zone_type") |>
-  gt::grand_summary_rows(
-    columns    = where(is.integer),
-    fns        = list(Total = ~ sum(., na.rm = TRUE)),
-    fmt        = ~ gt::fmt_integer(.)
+decade_marginals |>
+  gt::gt() |>
+  gt::cols_label(
+    decade          = "Decade",
+    total_buildings = "Total buildings",
+    n_in_zone       = "In a zone",
+    pct_in_zone     = "% in zone"
+  ) |>
+  gt::fmt_number(columns = c(total_buildings, n_in_zone), decimals = 0) |>
+  gt::fmt_number(columns = pct_in_zone, decimals = 1) |>
+  gt::data_color(
+    columns = pct_in_zone,
+    palette = c("#fee0d2", "#de2d26")
   ) |>
   gt::tab_caption(
     caption = paste0(
-      "Buildings by zone type and construction decade. ",
-      "Snapshot: ", SNAPSHOT_DATE, "."
+      "Buildings per construction decade and zone coverage. ",
+      "N = ", n_total, " buildings, snapshot ", SNAPSHOT_DATE, ". ",
+      "Pct in zone = buildings with any zone assignment (link_status != outside_any_zone)."
     )
   )
 ```
@@ -1315,12 +1334,10 @@ Disagreements are **interesting findings**, not data errors:
 Total agreements in this snapshot: **`r n_agree_total`** buildings.
 Total disagreements: **`r n_disagree_total`** buildings.
 
-**Sampling caveat:** This snapshot covers `r n_total` buildings (out of
-~220,000 in Vienna). When `n_total` is a sample rather than the full
-inventory, the `acd_only` count is dominated by a **sampling artefact** —
-the city has linked buildings that happen to fall outside our sample window,
-not a genuine join error. Interpret `acd_only` counts only in the context of
-`r if (n_total < 5000L) paste0("a sample (N = ", n_total, " < full inventory)") else paste0("a near-complete inventory (N = ", n_total, ")")`.
+**Coverage:** This snapshot is the full `ogdwien:GEBAEUDEINFOOGD` WFS
+layer — `r format(n_total, big.mark = ",")` buildings. Any `acd_only` count
+in this view reflects a real divergence between the city's pre-linked `ACD`
+field and the independent spatial join, not a sampling artefact.
 
 :::
 
