@@ -92,36 +92,125 @@ fetch_buildings <- function(
     )
   }
 
-  resp <- tryCatch(
-    httr2::request(WFS_BASE_URL) |>
-      httr2::req_url_query(!!!query_params) |>
-      httr2::req_error(is_error = \(r) FALSE) |>
-      httr2::req_perform(),
-    error = function(e) {
+  # When max_features is set, do a single request (smoke test or bbox sub-fetch).
+  # When max_features is NULL, use paginated fetching to retrieve the full layer
+  # (~220 k buildings). WFS 2.0 pagination uses startIndex + count.
+  dir.create(dirname(cache_path), showWarnings = FALSE, recursive = TRUE)
+
+  if (!is.null(max_features)) {
+    # ── Single-request path (limited fetch) ────────────────────────────────────
+    resp <- tryCatch(
+      httr2::request(WFS_BASE_URL) |>
+        httr2::req_url_query(!!!query_params) |>
+        httr2::req_error(is_error = \(r) FALSE) |>
+        httr2::req_perform(),
+      error = function(e) {
+        cli::cli_abort(
+          c(
+            "Network error while fetching buildings from WFS.",
+            "i" = "URL: {WFS_BASE_URL}",
+            "x" = conditionMessage(e)
+          )
+        )
+      }
+    )
+    if (httr2::resp_is_error(resp)) {
       cli::cli_abort(
         c(
-          "Network error while fetching buildings from WFS.",
-          "i" = "URL: {WFS_BASE_URL}",
-          "x" = conditionMessage(e)
+          "WFS request failed with HTTP {httr2::resp_status(resp)}.",
+          "i" = "URL: {httr2::resp_url(resp)}"
         )
       )
     }
-  )
+    writeBin(httr2::resp_body_raw(resp), cache_path)
+    cli::cli_inform("Buildings cached at {.path {cache_path}}")
+    result <- sf::st_read(cache_path, quiet = TRUE)
 
-  if (httr2::resp_is_error(resp)) {
-    cli::cli_abort(
-      c(
-        "WFS request failed with HTTP {httr2::resp_status(resp)}.",
-        "i" = "URL: {httr2::resp_url(resp)}"
+  } else {
+    # ── Paginated path (full layer fetch) ───────────────────────────────────────
+    # WFS 2.0 paginates via startIndex + count.
+    # We collect chunks into temp files, parse each, then rbind.
+    PAGE_SIZE <- 5000L
+    start     <- 0L
+    chunks    <- list()
+    page_num  <- 1L
+
+    repeat {
+      paged_params <- c(
+        query_params,
+        list(startIndex = start, count = PAGE_SIZE)
       )
+      cli::cli_inform(
+        "Buildings page {page_num}: startIndex = {start}"
+      )
+      resp <- tryCatch(
+        httr2::request(WFS_BASE_URL) |>
+          httr2::req_url_query(!!!paged_params) |>
+          httr2::req_error(is_error = \(r) FALSE) |>
+          httr2::req_timeout(120L) |>
+          httr2::req_perform(),
+        error = function(e) {
+          cli::cli_abort(
+            c(
+              "Network error fetching buildings page {page_num}.",
+              "i" = "startIndex = {start}",
+              "x" = conditionMessage(e)
+            )
+          )
+        }
+      )
+      if (httr2::resp_is_error(resp)) {
+        cli::cli_abort(
+          c(
+            "WFS request failed with HTTP {httr2::resp_status(resp)} on page {page_num}.",
+            "i" = "startIndex = {start}"
+          )
+        )
+      }
+
+      # Write page to temp file, parse sf
+      tmp_path <- tempfile(fileext = ".geojson")
+      writeBin(httr2::resp_body_raw(resp), tmp_path)
+      chunk_sf <- tryCatch(
+        sf::st_read(tmp_path, quiet = TRUE),
+        error = function(e) {
+          cli::cli_warn(
+            "Could not parse GeoJSON page {page_num}: {conditionMessage(e)}"
+          )
+          NULL
+        }
+      )
+      unlink(tmp_path)
+
+      if (is.null(chunk_sf) || nrow(chunk_sf) == 0L) {
+        cli::cli_inform("Buildings pagination complete: {start} total features after {page_num - 1L} pages.")
+        break
+      }
+      chunks[[page_num]] <- chunk_sf
+      cli::cli_inform("  -> {nrow(chunk_sf)} features on page {page_num}")
+
+      if (nrow(chunk_sf) < PAGE_SIZE) {
+        # Received fewer rows than requested — this was the last page
+        break
+      }
+      start    <- start    + PAGE_SIZE
+      page_num <- page_num + 1L
+    }
+
+    if (length(chunks) == 0L) {
+      cli::cli_abort("Buildings WFS returned 0 features across all pages.")
+    }
+
+    result <- do.call(rbind, chunks)
+    cli::cli_inform(
+      "Buildings pagination complete: {nrow(result)} total features in {length(chunks)} page(s)."
     )
+
+    # Cache the full combined GeoJSON for future cache-hit reads
+    sf::st_write(result, cache_path, driver = "GeoJSON", quiet = TRUE, delete_dsn = TRUE)
+    cli::cli_inform("Buildings cached at {.path {cache_path}}")
   }
 
-  dir.create(dirname(cache_path), showWarnings = FALSE, recursive = TRUE)
-  writeBin(httr2::resp_body_raw(resp), cache_path)
-  cli::cli_inform("Buildings cached at {.path {cache_path}}")
-
-  result <- sf::st_read(cache_path, quiet = TRUE)
   result <- sf::st_transform(result, crs = CRS_WORKING)
   result <- sf::st_make_valid(result)
   result <- .compose_building_address(result)
