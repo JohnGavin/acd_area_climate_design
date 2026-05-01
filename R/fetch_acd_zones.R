@@ -1,6 +1,6 @@
 #' Fetch ACD Energieraumpläne (energy planning zones) from Vienna OGD WFS
 #'
-#' Downloads the `ogdwien:ENERGIEPLANERPOGD` layer from the Vienna Open
+#' Downloads the `ogdwien:ENERGIERAUMPLANOGD` layer from the Vienna Open
 #' Government Data WFS endpoint, caches the raw GeoJSON to `data-raw/`, and
 #' returns a valid sf object in EPSG:31287 (Austria Lambert, the working CRS).
 #'
@@ -17,8 +17,14 @@
 #' @param force Logical. When `TRUE`, ignore any existing cache file and
 #'   re-download from the WFS endpoint.
 #'
-#' @return An sf object (MULTIPOLYGON) in EPSG:31287 with all WFS attributes
-#'   intact. The attribute `snapshot_date` is set on the returned object.
+#' @return An sf object (MULTIPOLYGON) in EPSG:31287 with WFS attributes
+#'   including `OBJECTID`, `ERPLABEL`, `BEZNR`, `GEBID`, `FL_ERP`, `PLANNR`,
+#'   `BEARB_DATUM`, `WEBLINK_VO`, and `SHAPE` (geometry). The attribute
+#'   `snapshot_date` is set on the returned object.
+#'
+#' @note The real schema does **not** include `ERPTYP` or `ERPRECHTSTAT`.
+#'   Zone type and legal status must be inferred from `ERPLABEL` or
+#'   `WEBLINK_VO` — this is left as future work outside the POC scope.
 #'
 #' @export
 #'
