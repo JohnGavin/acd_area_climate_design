@@ -196,7 +196,7 @@ join_buildings_zones <- function(buildings, zones) {
     # Union of all overlapping zone footprints intersected with this building
     union_zones_i    <- sf::st_union(zone_geom[zone_idx_i])
     intersect_area_i <- sf::st_area(
-      suppressWarnings(sf::st_intersection(bldg_geom[[i]], union_zones_i))
+      suppressWarnings(sf::st_intersection(bldg_geom[i], union_zones_i))
     )
     total_intersect <- if (length(intersect_area_i) == 0L) 0 else sum(intersect_area_i)
     bldg_area_i     <- as.numeric(bldg_areas[[i]])
