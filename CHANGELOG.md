@@ -41,4 +41,26 @@
 - Vienna-only POC; Austria extension sources documented (BEV cadastre, Statistik Austria, INSPIRE AT, GeoSphere, Eurostat GISCO, OSM) — deferred
 
 ### Failed Approaches
-(none yet)
+- Initial layer name guesses (`ENERGIEPLANERPOGD`, `GEBAEUDEOGD`) — wrong; corrected via GetCapabilities to `ENERGIERAUMPLANOGD`, `GEBAEUDEINFOOGD`. Lesson: always verify WFS layer names before writing fetch code.
+- Initial column assumptions (`ERPTYP`, `ERPRECHTSTAT`, `HOEHE`, `ADRESSE`) — none exist. The `dplyr::any_of()` rename guard prevented runtime errors but produced silently un-renamed columns. Real schema documented in STUBS.md.
+- Subagent prompt suggesting `dplyr::tbl(con, sql("SELECT..."))` for remote DuckDB — flagged by user as raw-SQL violation per `~/docs_gh/llm/.claude/rules/duckdplyr-not-sql.md` lines 38-40. Replaced with `duckplyr::read_parquet_duckdb()`.
+
+### Session end (2026-05-01)
+- Initial commit pushed to https://github.com/JohnGavin/acd_area_climate_design (public, branch `main`)
+- 6 follow-up issues filed (#1–#6) covering: schema alignment, ACD-agreement dashboard tab, default.nix regen, smoke-fetch, stage-2 remote storage, ctx_audit
+- 1 upstream issue filed: JohnGavin/llm#97 (noisy session_stop.sh hook)
+
+### Known limitations
+- No live data committed yet — dashboard renders against synthetic placeholder
+- Code uses pre-verification column names; behaviour is graceful (any_of guards) but rename map needs update (#1)
+- Tests are synthetic only — no smoke test against real WFS yet (#4)
+- default.nix copied from maps template; not regenerated for this project's deps (#3)
+- ctx files for new dependencies (httr2, cli, digest, tibble, duckplyr) not yet generated (#6)
+
+### Accuracy / Metrics
+- Files committed: 29
+- R/ source files: 6 (snapshot, fetch_acd_zones, fetch_buildings, join_buildings_zones, missing_data_cases, load_data)
+- Test files: 2 (test-join.R 270 lines, test-placeholder.R)
+- Dashboard: 1533 lines, 6 pages, 8-tab missing-link panel, 5-story tabset
+- Dependencies declared: 9 Imports (sf, dplyr, rlang, glue, fs, httr2, cli, digest, tibble), 11 Suggests
+- Tests not yet run (Nix shell regen pending #3) — will report PASS counts after smoke test
