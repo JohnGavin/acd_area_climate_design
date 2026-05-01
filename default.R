@@ -10,6 +10,10 @@ r_pkgs <- c(
   "rlang",
   "glue",
   "fs",
+  "httr2",
+  "cli",
+  "digest",
+  "tibble",
 
   # Suggested packages
   "leaflet",
@@ -20,6 +24,7 @@ r_pkgs <- c(
   "testthat",
   "arrow",
   "duckdb",
+  "duckplyr",
   "pointblank",
   "targets",
 
@@ -29,15 +34,18 @@ r_pkgs <- c(
   "roxygen2",
   "rmarkdown",
   "pkgdown",
-  "httr2",
   "xml2"
 )
 
 system_pkgs <- c(
   "gdal",
   "geos",
+  "glibcLocales",
+  "nix",
   "proj",
-  "quarto"
+  "quarto",
+  "which",
+  "pandoc"
 )
 
 rix(
