@@ -1,14 +1,14 @@
 #' @importFrom rlang .data
 NULL
 
-# ── link_status colour palette (shared) ─────────────────────────────────────
+# ── link_status colour palette (dark-background optimised) ──────────────────
 .LINK_STATUS_COLORS <- c(
-  "in_zone"            = "#2ca02c",
-  "outside_any_zone"   = "#7f7f7f",
-  "straddles_boundary" = "#ff7f0e",
-  "multiple_zones"     = "#9467bd",
-  "invalid_geometry"   = "#d62728",
-  "orphan_zone"        = "#1f77b4"
+  "in_zone"            = "#66ff66",
+  "outside_any_zone"   = "#cccccc",
+  "straddles_boundary" = "#ffaa44",
+  "multiple_zones"     = "#c39bd3",
+  "invalid_geometry"   = "#ff5555",
+  "orphan_zone"        = "#66b3ff"
 )
 
 

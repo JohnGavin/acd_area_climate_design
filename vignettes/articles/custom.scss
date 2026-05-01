@@ -103,3 +103,23 @@ table.dataTable tbody tr.even {
 .good { color: #2ca02c; font-weight: bold; }
 .bad  { color: #d62728; font-weight: bold; }
 .warn { color: #ff7f0e; font-weight: bold; }
+
+/* Dark leaflet controls */
+.leaflet-control-layers,
+.leaflet-bar a {
+  background: #1a1a1a !important;
+  color: #ffffff !important;
+}
+.leaflet-bar a:hover {
+  background: #333333 !important;
+}
+.leaflet-control-legend,
+.info.legend {
+  background: rgba(0, 0, 0, 0.85) !important;
+  color: #ffffff !important;
+}
+
+/* Focus-district highlight in tables */
+.focus-district-row {
+  background-color: #fff8dc !important;
+}
