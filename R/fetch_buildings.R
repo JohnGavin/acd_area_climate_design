@@ -1,6 +1,6 @@
 #' Fetch Vienna building inventory from OGD WFS
 #'
-#' Downloads the `ogdwien:GEBAEUDEOGD` layer from the Vienna Open Government
+#' Downloads the `ogdwien:GEBAEUDEINFOOGD` layer from the Vienna Open Government
 #' Data WFS endpoint, caches the raw GeoJSON to `data-raw/`, and returns a
 #' valid sf object in EPSG:31287 (Austria Lambert, the working CRS).
 #'
@@ -19,8 +19,16 @@
 #'   can coexist in cache.
 #' @param force Logical. When `TRUE`, ignore any existing cache file.
 #'
-#' @return An sf object (MULTIPOLYGON) in EPSG:31287 with all WFS attributes.
+#' @return An sf object (MULTIPOLYGON) in EPSG:31287 with WFS attributes
+#'   including `OBJECTID`, `ACD`, `BAUJAHR`, `BEZ`, `GESCH_ANZ`, `STRNAML`,
+#'   `VONA`, `VONN`, `BISA`, `BISN`, `STRCD`, `HA_NAME`, `SHAPE` (geometry),
+#'   plus a derived `address` column composed from `STRNAML`, `VONN`, `BISN`.
 #'   The attribute `snapshot_date` is set on the returned object.
+#'
+#' @note The real schema does **not** include `HOEHE` (height) or `ADRESSE`
+#'   (address as a single field). Use `GESCH_ANZ` as a height proxy.
+#'   The `address` column is composed inline:
+#'   `paste(STRNAML, VONN, ifelse(!is.na(BISN) & BISN != VONN, paste0("-", BISN), ""))`.
 #'
 #' @export
 #'
@@ -57,6 +65,7 @@ fetch_buildings <- function(
     result <- sf::st_read(cache_path, quiet = TRUE)
     result <- sf::st_transform(result, crs = CRS_WORKING)
     result <- sf::st_make_valid(result)
+    result <- .compose_building_address(result)
     attr(result, "snapshot_date") <- snapshot_date
     return(result)
   }
@@ -115,7 +124,41 @@ fetch_buildings <- function(
   result <- sf::st_read(cache_path, quiet = TRUE)
   result <- sf::st_transform(result, crs = CRS_WORKING)
   result <- sf::st_make_valid(result)
+  result <- .compose_building_address(result)
 
   attr(result, "snapshot_date") <- snapshot_date
+  result
+}
+
+#' Compose a human-readable address column from GEBAEUDEINFOOGD street fields
+#'
+#' The WFS layer has no single `ADRESSE` field. This helper composes one from
+#' `STRNAML` (street name), `VONN` (start house number — numeric part), and
+#' optionally `BISN` (end house number for ranges). If the building has a
+#' range address (e.g., "Mariahilfer Strasse 1-7"), `BISN` is appended with
+#' a dash; otherwise only `VONN` is used.
+#'
+#' Called automatically by [fetch_buildings()] on every read path.
+#'
+#' @param result An sf data frame with columns `STRNAML`, `VONN`, `BISN`
+#'   (all may be `NA`). Missing columns are tolerated gracefully — the
+#'   resulting `address` will be `NA_character_` if all source columns are
+#'   absent or `NA`.
+#'
+#' @return `result` with an additional `address` column (character).
+#' @keywords internal
+#' @noRd
+.compose_building_address <- function(result) {
+  strnaml <- if ("STRNAML" %in% names(result)) result$STRNAML else NA_character_
+  vonn    <- if ("VONN"    %in% names(result)) result$VONN    else NA_character_
+  bisn    <- if ("BISN"    %in% names(result)) result$BISN    else NA_character_
+
+  range_suffix <- ifelse(
+    !is.na(bisn) & !is.na(vonn) & (as.character(bisn) != as.character(vonn)),
+    paste0("-", bisn),
+    ""
+  )
+
+  result$address <- trimws(paste(strnaml, vonn, range_suffix))
   result
 }

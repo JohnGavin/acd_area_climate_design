@@ -113,6 +113,29 @@ case_invalid_geometry <- function(joined) {
 }
 
 
+#' Buildings where spatial join and native ACD disagree
+#'
+#' Returns buildings where the independent spatial join result disagrees with
+#' the city's pre-linked `ACD` classification on `ogdwien:GEBAEUDEINFOOGD`.
+#' Disagreements come in two flavours:
+#'
+#' * `spatial_only` — our spatial join finds a zone, but the city's `ACD`
+#'   field is empty or `NA` (possible under-coverage in city data)
+#' * `acd_only` — the city's `ACD` field is populated, but our spatial join
+#'   finds no overlapping zone (possible stale zone geometry or data error)
+#'
+#' These rows are **analytically interesting findings**, not data errors.
+#' Investigate them before treating the city's `ACD` field as ground truth.
+#'
+#' @param joined An sf object produced by [join_buildings_zones()].
+#'
+#' @return Subset of `joined` where `acd_agreement %in% c("spatial_only", "acd_only")`.
+#' @export
+case_acd_disagreement <- function(joined) {
+  joined[joined$acd_agreement %in% c("spatial_only", "acd_only"), ]
+}
+
+
 # ── Summary tibble ───────────────────────────────────────────────────────────
 
 #' Summarise building counts by link_status

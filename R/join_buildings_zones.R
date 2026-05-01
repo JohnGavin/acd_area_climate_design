@@ -4,8 +4,9 @@ NULL
 #' Spatial join of buildings to ACD zones
 #'
 #' Assigns each building to its primary ACD energy-planning zone, computes
-#' diagnostic fields (`n_overlapping_zones`, `overlap_fraction`), and
-#' classifies the relationship as a `link_status` factor.
+#' diagnostic fields (`n_overlapping_zones`, `overlap_fraction`), classifies
+#' the spatial relationship as a `link_status` factor, and cross-validates the
+#' spatial result against the city's pre-linked `ACD` field via `acd_agreement`.
 #'
 #' Both inputs must already be in EPSG:31287 (Austria Lambert). The join uses
 #' **building centroids** to determine primary zone membership, plus a
@@ -19,26 +20,75 @@ NULL
 #' 4. `straddles_boundary` — `overlap_fraction` strictly between 0.05 and 0.95
 #' 5. `in_zone` — everything else
 #'
+#' @section acd_agreement cross-validation:
+#' The Vienna city dataset carries a pre-linked `ACD` field on buildings
+#' (`ogdwien:GEBAEUDEINFOOGD`). This function cross-validates that city
+#' classification against our independent spatial join result:
+#'
+#' * `agree_in_zone` — both spatial join and city `ACD` say the building is
+#'   in a zone (the "happy path" confirming the two approaches agree)
+#' * `agree_no_zone` — both agree the building is not in a zone
+#' * `spatial_only` — spatial join says in-zone, but city `ACD` is empty/NA
+#'   (we say yes, city says no — potential under-coverage in city data)
+#' * `acd_only` — city `ACD` says in-zone, but spatial join finds no zone
+#'   (city says yes, we say no — potential stale zone geometry or data error)
+#'
+#' Disagreements (`spatial_only`, `acd_only`) are **interesting findings**,
+#' not data errors. Use [case_acd_disagreement()] to extract them.
+#'
 #' @param buildings An sf object with building footprints in EPSG:31287.
 #'   Must contain at minimum the columns returned by [fetch_buildings()]:
-#'   `OBJECTID`, `BAUJAHR`, `HOEHE`, `ADRESSE`.
+#'   `OBJECTID`, `ACD`, `BAUJAHR`, `BEZ`, `GESCH_ANZ`, `STRNAML`,
+#'   `VONA`, `VONN`, `BISA`, `BISN`, `STRCD`, `HA_NAME`, `address`.
 #' @param zones An sf object with ACD zone polygons in EPSG:31287.
-#'   Must contain at minimum: `ERPLABEL`, `ERPTYP`, `ERPRECHTSTAT`.
+#'   Must contain at minimum: `ERPLABEL`, `BEZNR`, `GEBID`, `FL_ERP`,
+#'   `PLANNR`, `BEARB_DATUM`, `WEBLINK_VO`.
 #'
-#' @return An sf object (same geometry as `buildings`) with the joined schema
-#'   defined in `STUBS.md`:
-#'   `building_id`, `building_geom`, `district`, `year_built`, `height_m`,
-#'   `address`, `zone_id`, `zone_type`, `legal_status`, `link_status`,
-#'   `n_overlapping_zones`, `overlap_fraction`.
+#' @return An sf object (same geometry as `buildings`) with columns:
+#' \describe{
+#'   \item{building_id}{`<chr>` — `OBJECTID` from buildings}
+#'   \item{geometry}{sf geometry column preserved from buildings}
+#'   \item{acd_native}{`<chr>` — pre-linked `ACD` classification from city
+#'     data; may be empty string or `NA` for buildings without a city-side
+#'     zone link}
+#'   \item{district}{`<chr>` — `BEZ` district name from buildings}
+#'   \item{year_built}{`<int>` — `BAUJAHR`}
+#'   \item{n_stories}{`<int>` — `GESCH_ANZ` (number of storeys; use as
+#'     height proxy in lieu of a height field)}
+#'   \item{address}{`<chr>` — composed from `STRNAML` / `VONN` / `BISN`
+#'     by [fetch_buildings()]}
+#'   \item{zone_id}{`<chr>` — `ERPLABEL` of primary intersecting zone,
+#'     or `NA` if none}
+#'   \item{zone_area_ha}{`<dbl>` — `FL_ERP / 10000` (zone area in hectares)}
+#'   \item{zone_district}{`<chr>` — `BEZNR` district number from zone}
+#'   \item{zone_pre_linked_gebid}{`<chr>` — `GEBID` from the zone record
+#'     (zone's own claim about which building it is associated with)}
+#'   \item{zone_legal_url}{`<chr>` — `WEBLINK_VO` URL to the legal planning
+#'     document}
+#'   \item{link_status}{`<fct>` — spatial relationship category (see
+#'     *link_status logic* section)}
+#'   \item{n_overlapping_zones}{`<int>` — number of zones whose centroid
+#'     intersects this building}
+#'   \item{overlap_fraction}{`<dbl>` — fraction of building footprint area
+#'     covered by any overlapping zone; range `[0, 1]`}
+#'   \item{acd_agreement}{`<fct>` — cross-validation result comparing our
+#'     spatial join to the city's pre-linked `ACD` field (see
+#'     *acd_agreement cross-validation* section)}
+#' }
 #'
 #' @export
 #'
+#' @seealso [acd_agreement_summary()] for a tabular cross-validation summary,
+#'   [case_acd_disagreement()] to extract disagreement rows,
+#'   [link_status_summary()] for counts by spatial relationship.
+#'
 #' @examples
 #' \dontrun{
-#' zones    <- fetch_acd_zones(max_features = 100)
+#' zones     <- fetch_acd_zones(max_features = 100)
 #' buildings <- fetch_buildings(max_features = 500)
-#' joined   <- join_buildings_zones(buildings, zones)
+#' joined    <- join_buildings_zones(buildings, zones)
 #' dplyr::count(joined, link_status)
+#' acd_agreement_summary(joined)
 #' }
 join_buildings_zones <- function(buildings, zones) {
   # ── 1. CRS guard ─────────────────────────────────────────────────────────────
@@ -60,26 +110,33 @@ join_buildings_zones <- function(buildings, zones) {
     )
   }
 
-  # ── 2. Rename / select WFS columns to canonical schema names ─────────────────
-  # NOTE: These column names are assumed from the OGD WFS schema inspection.
-  # See uncertainty note at end of file.
+  # ── 2. Rename WFS columns to canonical schema names ──────────────────────────
+  # any_of() is used throughout so the function tolerates either the canonical
+  # names (already renamed by a prior call) or the raw WFS column names.
   buildings <- buildings |>
     dplyr::rename(
-      building_id = dplyr::any_of(c("OBJECTID", "objectid")),
-      year_built  = dplyr::any_of(c("BAUJAHR", "baujahr")),
-      height_m    = dplyr::any_of(c("HOEHE", "hoehe", "GEBHOEHE", "gebhoehe")),
-      address     = dplyr::any_of(c("ADRESSE", "adresse"))
+      dplyr::any_of(c(
+        building_id = "OBJECTID",
+        acd_native  = "ACD",
+        district    = "BEZ",
+        year_built  = "BAUJAHR",
+        n_stories   = "GESCH_ANZ"
+        # address is already composed by fetch_buildings()
+      ))
     ) |>
-    # Ensure building_id is character
     dplyr::mutate(
       building_id = as.character(.data$building_id)
     )
 
   zones <- zones |>
     dplyr::rename(
-      zone_id      = dplyr::any_of(c("ERPLABEL", "erplabel")),
-      zone_type    = dplyr::any_of(c("ERPTYP", "erptyp")),
-      legal_status = dplyr::any_of(c("ERPRECHTSTAT", "erprechtstat"))
+      dplyr::any_of(c(
+        zone_id                 = "ERPLABEL",
+        zone_area_m2            = "FL_ERP",
+        zone_district           = "BEZNR",
+        zone_pre_linked_gebid   = "GEBID",
+        zone_legal_url          = "WEBLINK_VO"
+      ))
     )
 
   # ── 3. Building validity flag ─────────────────────────────────────────────────
@@ -105,12 +162,21 @@ join_buildings_zones <- function(buildings, zones) {
   zone_attrs <- zones |>
     sf::st_drop_geometry() |>
     dplyr::select(
-      dplyr::any_of(c("zone_id", "zone_type", "legal_status"))
+      dplyr::any_of(c(
+        "zone_id", "zone_area_m2", "zone_district",
+        "zone_pre_linked_gebid", "zone_legal_url"
+      ))
     )
 
-  primary_zone_id     <- zone_attrs$zone_id[primary_idx]
-  primary_zone_type   <- zone_attrs$zone_type[primary_idx]
-  primary_legal_stat  <- zone_attrs$legal_status[primary_idx]
+  primary_zone_id             <- zone_attrs$zone_id[primary_idx]
+  primary_zone_area_m2        <- if ("zone_area_m2" %in% names(zone_attrs))
+    zone_attrs$zone_area_m2[primary_idx] else rep(NA_real_, length(primary_idx))
+  primary_zone_district       <- if ("zone_district" %in% names(zone_attrs))
+    zone_attrs$zone_district[primary_idx] else rep(NA_character_, length(primary_idx))
+  primary_zone_gebid          <- if ("zone_pre_linked_gebid" %in% names(zone_attrs))
+    zone_attrs$zone_pre_linked_gebid[primary_idx] else rep(NA_character_, length(primary_idx))
+  primary_zone_legal_url      <- if ("zone_legal_url" %in% names(zone_attrs))
+    zone_attrs$zone_legal_url[primary_idx] else rep(NA_character_, length(primary_idx))
 
   # ── 8. overlap_fraction: area of footprint inside ANY overlapping zone ────────
   n_bldg          <- nrow(buildings)
@@ -157,36 +223,109 @@ join_buildings_zones <- function(buildings, zones) {
     )
   )
 
-  # ── 10. Derive district from building centroid (placeholder: NA for now) ──────
-  # Full district assignment requires the Vienna district boundary layer
-  # (BEZIRKSGRENZEOGD). For the POC this is left as NA and can be populated
-  # by a separate spatial join in a downstream target.
-  district <- NA_character_
+  # ── 10. acd_agreement cross-validation ───────────────────────────────────────
+  # Compares our spatial result to the city's pre-linked ACD field.
+  # Disagreements are analytically interesting, not data errors.
+  spatial_says_in_zone <- link_status %in%
+    c("in_zone", "straddles_boundary", "multiple_zones")
+
+  # Retrieve acd_native from the (already-renamed) buildings data frame.
+  # The column may not exist in synthetic test fixtures — default to NA.
+  acd_native_raw <- if ("acd_native" %in% names(buildings))
+    buildings$acd_native else rep(NA_character_, nrow(buildings))
+
+  acd_says_yes <- !is.na(acd_native_raw) & nzchar(trimws(as.character(acd_native_raw)))
+
+  acd_agreement <- factor(
+    dplyr::case_when(
+      spatial_says_in_zone  &  acd_says_yes  ~ "agree_in_zone",
+      !spatial_says_in_zone & !acd_says_yes  ~ "agree_no_zone",
+      spatial_says_in_zone  & !acd_says_yes  ~ "spatial_only",
+      !spatial_says_in_zone &  acd_says_yes  ~ "acd_only",
+      TRUE ~ NA_character_
+    ),
+    levels = c("agree_in_zone", "agree_no_zone", "spatial_only", "acd_only")
+  )
 
   # ── 11. Assemble output sf ────────────────────────────────────────────────────
-  # Start from buildings sf to preserve geometry and CRS
-  buildings |>
+  # Start from buildings sf to preserve geometry and CRS.
+  # district is sourced from BEZ (already renamed to district in step 2).
+  # n_stories is sourced from GESCH_ANZ (already renamed in step 2).
+  joined <- buildings |>
     dplyr::mutate(
-      building_geom       = sf::st_geometry(buildings),
-      district            = district,
-      year_built          = as.integer(.data$year_built),
-      height_m            = as.double(.data$height_m),
-      address             = as.character(.data$address),
-      zone_id             = primary_zone_id,
-      zone_type           = primary_zone_type,
-      legal_status        = primary_legal_stat,
-      link_status         = link_status,
-      n_overlapping_zones = as.integer(n_overlapping),
-      overlap_fraction    = overlap_fraction
+      year_built              = as.integer(.data$year_built),
+      n_stories               = if ("n_stories" %in% names(buildings))
+        as.integer(.data$n_stories) else NA_integer_,
+      address                 = if ("address" %in% names(buildings))
+        as.character(.data$address) else NA_character_,
+      acd_native              = as.character(acd_native_raw),
+      zone_id                 = primary_zone_id,
+      zone_area_ha            = as.double(primary_zone_area_m2) / 10000,
+      zone_district           = as.character(primary_zone_district),
+      zone_pre_linked_gebid   = as.character(primary_zone_gebid),
+      zone_legal_url          = as.character(primary_zone_legal_url),
+      link_status             = link_status,
+      n_overlapping_zones     = as.integer(n_overlapping),
+      overlap_fraction        = overlap_fraction,
+      acd_agreement           = acd_agreement
     ) |>
     dplyr::select(
       dplyr::any_of(c(
-        "building_id", "building_geom", "district",
-        "year_built", "height_m", "address",
-        "zone_id", "zone_type", "legal_status",
-        "link_status", "n_overlapping_zones", "overlap_fraction"
+        "building_id",
+        "acd_native",
+        "district",
+        "year_built",
+        "n_stories",
+        "address",
+        "zone_id",
+        "zone_area_ha",
+        "zone_district",
+        "zone_pre_linked_gebid",
+        "zone_legal_url",
+        "link_status",
+        "n_overlapping_zones",
+        "overlap_fraction",
+        "acd_agreement"
       ))
     )
+
+  joined
+}
+
+
+#' Summarise ACD cross-validation agreement
+#'
+#' Returns a one-row-per-level count of the `acd_agreement` factor from the
+#' output of [join_buildings_zones()]. Use this to understand how well the
+#' independent spatial join agrees with the city's pre-linked `ACD` field
+#' on `ogdwien:GEBAEUDEINFOOGD`.
+#'
+#' `spatial_only` rows (we say in-zone, city says no) and `acd_only` rows
+#' (city says yes, we say no) are analytically interesting disagreements —
+#' they may reveal under-coverage in the city data or stale zone geometry.
+#'
+#' @param joined Output of [join_buildings_zones()].
+#'
+#' @return A tibble with columns:
+#' \describe{
+#'   \item{acd_agreement}{`<fct>` — one of `agree_in_zone`, `agree_no_zone`,
+#'     `spatial_only`, `acd_only`}
+#'   \item{n_buildings}{`<int>` — count of buildings at this level}
+#'   \item{pct}{`<dbl>` — percentage of total buildings, rounded to 1 d.p.}
+#' }
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' joined <- join_buildings_zones(fetch_buildings(), fetch_acd_zones())
+#' acd_agreement_summary(joined)
+#' }
+acd_agreement_summary <- function(joined) {
+  joined |>
+    sf::st_drop_geometry() |>
+    dplyr::count(.data$acd_agreement, name = "n_buildings") |>
+    dplyr::mutate(pct = round(100 * .data$n_buildings / sum(.data$n_buildings), 1))
 }
 
 
