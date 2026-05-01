@@ -1,0 +1,105 @@
+/*-- scss:defaults --*/
+$navbar-bg: #1a3a5c;
+$navbar-fg: #ffffff;
+$font-size-base: 1.125rem;  /* +2px from default 1rem (16px → 18px) */
+
+/*-- scss:rules --*/
+
+/* Dark navbar */
+.navbar, .quarto-dashboard .navbar {
+  background-color: #1a3a5c !important;
+}
+.navbar .navbar-brand,
+.navbar .nav-link,
+.navbar-title {
+  color: #ffffff !important;
+}
+.navbar .nav-link:hover {
+  color: #cce0ff !important;
+}
+
+/* White captions for contrast */
+caption, figcaption, .figure-caption, .quarto-float-caption {
+  color: #ffffff !important;
+  text-align: left !important;
+  caption-side: top !important;
+}
+
+/* Leaflet zoom controls visible on dark background */
+.leaflet-control-zoom a {
+  background-color: #333 !important;
+  color: #fff !important;
+  border-color: #555 !important;
+}
+.leaflet-control-zoom a:hover {
+  background-color: #555 !important;
+}
+
+/* Leaflet legend: high contrast on dark background */
+.info.legend,
+.leaflet-control .legend {
+  background: rgba(0, 0, 0, 0.85) !important;
+  color: #ffffff !important;
+  padding: 10px 14px !important;
+  margin: 15px !important;
+  border: 1px solid #555 !important;
+  border-radius: 4px !important;
+}
+.info.legend i {
+  border: 1px solid #666;
+  margin-right: 6px;
+}
+.info.legend span,
+.info.legend div {
+  color: #ffffff !important;
+}
+
+/* Full-width table with horizontal scroll */
+.full-width .card-body {
+  overflow-x: auto;
+}
+.full-width table {
+  white-space: nowrap;
+}
+
+/* DT dark theme */
+.dataTables_wrapper,
+table.dataTable,
+table.dataTable th,
+table.dataTable td,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  color: #e0e0e0 !important;
+}
+table.dataTable,
+table.dataTable thead,
+table.dataTable tbody {
+  background-color: #1a1a2e !important;
+}
+table.dataTable thead th {
+  background-color: #16213e !important;
+  border-bottom-color: #444 !important;
+}
+table.dataTable tbody tr {
+  background-color: #1a1a2e !important;
+}
+table.dataTable tbody tr:hover {
+  background-color: #252545 !important;
+}
+table.dataTable tbody tr.even {
+  background-color: #1e1e3a !important;
+}
+.dataTables_wrapper input[type="search"],
+.dataTables_wrapper .form-control,
+.dataTables_wrapper select {
+  background-color: #16213e !important;
+  color: #e0e0e0 !important;
+  border-color: #444 !important;
+}
+
+/* ACD status badges */
+.good { color: #2ca02c; font-weight: bold; }
+.bad  { color: #d62728; font-weight: bold; }
+.warn { color: #ff7f0e; font-weight: bold; }

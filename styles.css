@@ -1,0 +1,26 @@
+/* acd project custom styles */
+
+/* Dark blue navbar with white text */
+.navbar, .quarto-title-banner, nav.navbar {
+  background-color: #1a3a5c !important;
+  color: #ffffff !important;
+}
+.navbar .navbar-brand, .navbar .nav-link,
+.navbar .navbar-nav .nav-link,
+.quarto-title-banner .title,
+.quarto-title-banner .subtitle {
+  color: #ffffff !important;
+}
+.navbar .nav-link:hover {
+  color: #cce0ff !important;
+}
+.navbar .nav-link.active {
+  color: #ffffff !important;
+  font-weight: bold;
+}
+
+/* Left-justified captions */
+caption, figcaption, .figure-caption {
+  text-align: left !important;
+  caption-side: top !important;
+}

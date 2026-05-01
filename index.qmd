@@ -1,0 +1,98 @@
+---
+title: "acd: Vienna Area Climate Design"
+subtitle: "Building-Zone Linkage for ACD Energy Planning Regulations"
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+# Load snapshot date constant from package
+tryCatch(
+  {
+    pkgload::load_all(quiet = TRUE)
+  },
+  error = function(e) {
+    tryCatch(library(acd), error = function(e2) NULL)
+  }
+)
+
+# Fallback if package not loaded
+if (!exists("SNAPSHOT_DATE")) SNAPSHOT_DATE <- "2026-05-01"
+```
+
+## Overview
+
+The `acd` R package implements a reproducible spatial linkage of Vienna's
+building inventory to its
+[Area Climate Design (ACD)](https://www.wien.gv.at/stadtentwicklung/energieplanung/)
+energy planning zones.
+
+Data snapshot: **`r SNAPSHOT_DATE`**
+
+### What are ACD Zones?
+
+Vienna's *Energieraumplanung* (Energy Area Planning) designates zones where
+specific heating and energy rules apply:
+
+| Zone type | Rule example |
+|-----------|-------------|
+| District heating mandatory | Buildings must connect to the municipal heat network |
+| Heat-pump required | No fossil-fuel heating installations permitted |
+| Fossil fuel banned | Existing fossil-fuel systems must be retired |
+
+### The Linkage Problem
+
+With approximately 220,000 buildings and dozens of ACD zones, the spatial
+join is not trivial. Buildings may:
+
+- Fall cleanly inside a single zone (the ideal case)
+- Lie entirely outside any zone (legitimate — no ACD rule applies)
+- Straddle a zone boundary (ambiguous legal applicability)
+- Fall under multiple overlapping zones simultaneously
+- Represent zones with no buildings inside (orphan polygons)
+- Have invalid geometry from upstream data errors
+
+See the [Dashboard](vignettes/articles/dashboard.qmd) for interactive
+exploration of all six linkage cases.
+
+## Data Sources
+
+| Source | Layer | Provider |
+|--------|-------|---------|
+| ACD Zones | `ogdwien:ENERGIEPLANERPOGD` | [Vienna OGD WFS](https://data.wien.gv.at/daten/geo) |
+| Buildings | `ogdwien:GEBAEUDEOGD` | [Vienna OGD WFS](https://data.wien.gv.at/daten/geo) |
+
+Both layers are fetched at the pinned snapshot date `r SNAPSHOT_DATE` and
+committed as Parquet files under `inst/extdata/` for reproducibility.
+
+## Installation
+
+::: {.panel-tabset}
+
+### R
+
+```r
+# install.packages("pak")
+pak::pak("JohnGavin/acd_area_climate_design")
+```
+
+### Nix
+
+```bash
+# Clone and enter the reproducible nix shell
+git clone https://github.com/JohnGavin/acd_area_climate_design.git
+nix-shell /path/to/acd_area_climate_design/default.nix
+```
+
+The `default.nix` provides R 4.5.3 with all dependencies (sf, arrow, leaflet,
+DT, gt, etc.) pinned to a specific nixpkgs snapshot for full reproducibility.
+
+:::
+
+## Links
+
+- [GitHub](https://github.com/JohnGavin/acd_area_climate_design)
+- [Dashboard](vignettes/articles/dashboard.qmd)
+- [Vienna Open Government Data](https://www.data.gv.at/)
+- [ACD Energy Planning (Stadt Wien)](https://www.wien.gv.at/stadtentwicklung/energieplanung/)

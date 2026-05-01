@@ -1,0 +1,40 @@
+Package: acd
+Type: Package
+Title: Vienna Area Climate Design (ACD) Building-Zone Linkage
+Version: 0.1.0
+Authors@R:
+    person("John", "Gavin", email = "john.b.gavin@gmail.com", role = c("aut", "cre"))
+Description: Proof-of-concept R package linking Vienna's Energieraumpläne (ACD zones)
+    to the building inventory (Gebäudeinformation) via spatial join. Includes spatial
+    join with diagnostic link_status enum, interactive Quarto dashboard, and committed
+    snapshot data (Parquet format).
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Depends:
+    R (>= 4.5.0)
+Imports:
+    sf,
+    dplyr,
+    rlang,
+    glue,
+    fs,
+    httr2,
+    cli,
+    digest,
+    tibble
+Suggests:
+    leaflet,
+    DT,
+    gt,
+    knitr,
+    quarto,
+    testthat (>= 3.0.0),
+    arrow,
+    duckdb,
+    duckplyr,
+    pointblank,
+    targets
+Config/testthat/edition: 3
+VignetteBuilder: knitr

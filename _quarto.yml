@@ -1,0 +1,33 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "acd: Vienna ACD"
+  description: "Vienna Area Climate Design (ACD) Building-Zone Linkage"
+  navbar:
+    left:
+      - href: index.qmd
+        text: Home
+      - href: vignettes/articles/dashboard.qmd
+        text: Dashboard
+  sidebar: false
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+    fig-align: left
+    cap-location: top
+
+execute:
+  freeze: false
+  cache: false
+  execute-dir: project
+
+knitr:
+  opts_chunk:
+    echo: false
+    message: false
+    warning: false

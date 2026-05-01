@@ -1,0 +1,1533 @@
+---
+title: "Vienna ACD: Building-Zone Linkage"
+format:
+  dashboard:
+    orientation: rows
+    scrolling: true
+    theme:
+      - cosmo
+      - custom.scss
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(sf)
+library(leaflet)
+library(dplyr)
+library(DT)
+library(gt)
+
+# ── Package loading ────────────────────────────────────────────────────────────
+# Try pkgload first (dev mode), then library (installed), then graceful fail.
+tryCatch(
+  pkgload::load_all(quiet = TRUE),
+  error = function(e) {
+    tryCatch(library(acd), error = function(e2) NULL)
+  }
+)
+
+# Snapshot date constant (defined in R/snapshot.R; fallback if not loaded)
+if (!exists("SNAPSHOT_DATE")) SNAPSHOT_DATE <- "2026-05-01"
+
+# ── Parquet cache helper ───────────────────────────────────────────────────────
+# Resolves the inst/extdata path for both installed and dev-tree usage,
+# then reads via arrow::read_parquet().
+.cached_parquet <- function(filename) {
+  installed <- system.file("extdata", filename, package = "acd")
+  if (nzchar(installed) && file.exists(installed)) {
+    return(arrow::read_parquet(installed))
+  }
+  dev_path <- tryCatch(
+    file.path(find.package("acd"), "inst", "extdata", filename),
+    error = function(e) ""
+  )
+  if (nzchar(dev_path) && file.exists(dev_path)) {
+    return(arrow::read_parquet(dev_path))
+  }
+  vignette_dir <- tryCatch(
+    dirname(normalizePath(knitr::current_input())),
+    error = function(e) ""
+  )
+  if (nzchar(vignette_dir)) {
+    src_path <- normalizePath(
+      file.path(vignette_dir, "..", "..", "inst", "extdata", filename),
+      mustWork = FALSE
+    )
+    if (file.exists(src_path)) return(arrow::read_parquet(src_path))
+  }
+  NULL
+}
+
+# ── Placeholder data (used when real parquet is absent) ────────────────────────
+# Creates a synthetic sf with all 6 link_status values so the dashboard
+# renders completely before real WFS data arrives.
+.placeholder_joined <- function() {
+  set.seed(42L)
+  n <- 18L
+
+  # Vienna centre coordinates + small offsets (degrees)
+  lat_c <- 48.2082
+  lng_c <- 16.3725
+
+  lats <- lat_c + runif(n, -0.03, 0.03)
+  lngs <- lng_c + runif(n, -0.04, 0.04)
+
+  # Create point geometries in WGS84 (for placeholder — display only)
+  geom <- sf::st_sfc(
+    lapply(seq_len(n), function(i) sf::st_point(c(lngs[i], lats[i]))),
+    crs = 4326L
+  )
+
+  link_statuses <- factor(
+    c(
+      rep("in_zone",            7L),
+      rep("outside_any_zone",   4L),
+      rep("straddles_boundary", 3L),
+      rep("multiple_zones",     2L),
+      rep("orphan_zone",        1L),
+      rep("invalid_geometry",   1L)
+    ),
+    levels = c(
+      "in_zone", "outside_any_zone", "straddles_boundary",
+      "multiple_zones", "orphan_zone", "invalid_geometry"
+    )
+  )
+
+  zone_ids <- c(
+    rep("ZONE-A1", 4L), rep("ZONE-B2", 3L), rep(NA_character_, 4L),
+    rep("ZONE-A1", 3L), rep(c("ZONE-A1", "ZONE-B2"), 1L),
+    "ZONE-C3", NA_character_
+  )
+
+  zone_types <- dplyr::case_when(
+    link_statuses == "outside_any_zone" ~ NA_character_,
+    zone_ids == "ZONE-A1" ~ "district_heating",
+    zone_ids == "ZONE-B2" ~ "heat_pump",
+    zone_ids == "ZONE-C3" ~ "fossil_fuel_ban",
+    TRUE ~ NA_character_
+  )
+
+  legal_statuses <- dplyr::case_when(
+    zone_types == "district_heating" ~ "district_heating_mandatory",
+    zone_types == "heat_pump"        ~ "heat_pump_required",
+    zone_types == "fossil_fuel_ban"  ~ "fossil_fuel_banned",
+    TRUE ~ NA_character_
+  )
+
+  district_labels <- c(
+    rep("01", 4L), rep("02", 4L), rep("10", 4L),
+    rep("13", 3L), rep("22", 3L)
+  )
+
+  sf::st_sf(
+    building_id         = paste0("B-SYNTH-", sprintf("%03d", seq_len(n))),
+    district            = district_labels,
+    year_built          = as.integer(sample(1880:2020, n, replace = TRUE)),
+    height_m            = round(runif(n, 8, 40), 1),
+    address             = paste0("Musterstrasse ", seq_len(n), ", Wien"),
+    zone_id             = zone_ids,
+    zone_type           = zone_types,
+    legal_status        = legal_statuses,
+    link_status         = link_statuses,
+    n_overlapping_zones = dplyr::case_when(
+      link_statuses == "outside_any_zone"   ~ 0L,
+      link_statuses == "multiple_zones"     ~ 2L,
+      link_statuses == "straddles_boundary" ~ 1L,
+      TRUE ~ 1L
+    ),
+    overlap_fraction    = dplyr::case_when(
+      link_statuses == "in_zone"            ~ 0.98,
+      link_statuses == "outside_any_zone"   ~ 0.00,
+      link_statuses == "straddles_boundary" ~ round(runif(
+        sum(link_statuses == "straddles_boundary"), 0.10, 0.90), 2),
+      link_statuses == "multiple_zones"     ~ 0.70,
+      TRUE ~ 0.00
+    ),
+    geometry = geom
+  )
+}
+
+# ── Placeholder zones (3 fake zones as polygons) ───────────────────────────────
+.placeholder_zones <- function() {
+  lat_c <- 48.2082
+  lng_c <- 16.3725
+
+  make_box <- function(lat0, lng0, dlat = 0.012, dlng = 0.016) {
+    sf::st_polygon(list(matrix(
+      c(lng0,        lat0,
+        lng0 + dlng, lat0,
+        lng0 + dlng, lat0 + dlat,
+        lng0,        lat0 + dlat,
+        lng0,        lat0),
+      ncol = 2, byrow = TRUE
+    )))
+  }
+
+  geom <- sf::st_sfc(
+    make_box(lat_c - 0.01,  lng_c - 0.02),
+    make_box(lat_c + 0.005, lng_c + 0.005),
+    make_box(lat_c - 0.025, lng_c + 0.01),
+    crs = 4326L
+  )
+
+  sf::st_sf(
+    zone_id      = c("ZONE-A1", "ZONE-B2", "ZONE-C3"),
+    zone_type    = c("district_heating", "heat_pump", "fossil_fuel_ban"),
+    legal_status = c(
+      "district_heating_mandatory",
+      "heat_pump_required",
+      "fossil_fuel_banned"
+    ),
+    area_ha      = c(12.4, 8.7, 5.1),
+    geometry     = geom
+  )
+}
+
+# ── link_status summary helper (inline fallback if acd package not loaded) ─────
+.link_status_summary_local <- function(joined) {
+  joined |>
+    sf::st_drop_geometry() |>
+    dplyr::count(link_status, name = "n_buildings") |>
+    dplyr::mutate(
+      pct = round(100 * n_buildings / sum(n_buildings), 1)
+    ) |>
+    dplyr::arrange(link_status)
+}
+
+# ── Load or synthesise data ────────────────────────────────────────────────────
+joined_raw <- .cached_parquet(paste0("joined_", SNAPSHOT_DATE, ".parquet"))
+
+using_placeholder <- is.null(joined_raw)
+
+if (using_placeholder) {
+  joined <- .placeholder_joined()
+} else {
+  # Convert to sf if parquet stripped the geometry column
+  if (!inherits(joined_raw, "sf")) {
+    joined <- sf::st_as_sf(joined_raw, wkt = "building_geom", crs = 31287L)
+  } else {
+    joined <- joined_raw
+  }
+  # Transform to WGS84 for leaflet
+  joined <- sf::st_transform(joined, crs = 4326L)
+}
+
+# Zones: derive from joined or load separately
+zones_raw <- .cached_parquet(paste0("zones_", SNAPSHOT_DATE, ".parquet"))
+if (is.null(zones_raw)) {
+  zones <- .placeholder_zones()
+} else {
+  if (!inherits(zones_raw, "sf")) {
+    zones <- sf::st_as_sf(zones_raw, wkt = "geometry", crs = 31287L)
+  } else {
+    zones <- zones_raw
+  }
+  zones <- sf::st_transform(zones, crs = 4326L)
+}
+
+# Buildings: subset of joined that are actual building points/polygons
+buildings <- joined
+
+# ── Pre-compute summary objects ────────────────────────────────────────────────
+# link_status summary — use package function if available, else local fallback
+link_summary <- tryCatch(
+  acd:::link_status_summary(joined),
+  error = function(e) .link_status_summary_local(joined)
+)
+
+# Counts by link_status for inline prose
+n_total      <- nrow(joined)
+n_zones      <- nrow(zones)
+
+ls_counts <- link_summary |>
+  dplyr::select(link_status, n_buildings) |>
+  tibble::deframe()
+
+n_in_zone     <- ls_counts[["in_zone"]]            %||% 0L
+n_outside     <- ls_counts[["outside_any_zone"]]   %||% 0L
+n_straddle    <- ls_counts[["straddles_boundary"]] %||% 0L
+n_multi       <- ls_counts[["multiple_zones"]]     %||% 0L
+n_invalid     <- ls_counts[["invalid_geometry"]]   %||% 0L
+
+pct_outside   <- round(100 * n_outside  / n_total, 1)
+pct_straddle  <- round(100 * n_straddle / n_total, 1)
+pct_multi     <- round(100 * n_multi    / n_total, 1)
+pct_in_zone   <- round(100 * n_in_zone  / n_total, 1)
+
+# Orphan zones (zones-side)
+orphan_zones <- tryCatch(
+  {
+    bldgs_31287 <- if (sf::st_crs(buildings)$epsg == 4326L) {
+      sf::st_transform(buildings, crs = 31287L)
+    } else {
+      buildings
+    }
+    zones_31287 <- if (sf::st_crs(zones)$epsg == 4326L) {
+      sf::st_transform(zones, crs = 31287L)
+    } else {
+      zones
+    }
+    acd:::find_orphan_zones(zones_31287, bldgs_31287) |>
+      sf::st_transform(crs = 4326L)
+  },
+  error = function(e) {
+    # Local fallback: zones not covered by any in_zone or straddles building
+    covered_zones <- joined |>
+      sf::st_drop_geometry() |>
+      dplyr::filter(!is.na(zone_id)) |>
+      dplyr::pull(zone_id) |>
+      unique()
+    zones[!zones$zone_id %in% covered_zones, ]
+  }
+)
+n_orphan <- nrow(orphan_zones)
+
+# ── Per-case subsets for page 4 ───────────────────────────────────────────────
+case_in_zone <- function(df, n = 50L) {
+  sub <- df[df$link_status == "in_zone", ]
+  if (nrow(sub) > n) sub <- sub[sample(nrow(sub), n), ]
+  sub
+}
+
+case_outside <- function(df, n = 100L) {
+  sub <- df[df$link_status == "outside_any_zone", ]
+  if (nrow(sub) > n) sub <- sub[sample(nrow(sub), n), ]
+  sub
+}
+
+case_straddle <- function(df, n = 50L) {
+  sub <- df[df$link_status == "straddles_boundary", ]
+  if (nrow(sub) > n) sub <- sub[sample(nrow(sub), n), ]
+  sub
+}
+
+case_multi <- function(df, n = 50L) {
+  sub <- df[df$link_status == "multiple_zones", ]
+  if (nrow(sub) > n) sub <- sub[sample(nrow(sub), n), ]
+  sub
+}
+
+case_invalid <- function(df) {
+  df[df$link_status == "invalid_geometry", ]
+}
+
+# ── Color palette for link_status ─────────────────────────────────────────────
+link_status_colors <- c(
+  in_zone            = "#2ca02c",  # green
+  outside_any_zone   = "#7f7f7f",  # gray
+  straddles_boundary = "#ff7f0e",  # orange
+  multiple_zones     = "#9467bd",  # purple
+  orphan_zone        = "#1f77b4",  # blue
+  invalid_geometry   = "#d62728"   # red
+)
+
+link_status_labels <- c(
+  in_zone            = "Clean join (in zone)",
+  outside_any_zone   = "Outside any zone",
+  straddles_boundary = "Straddles boundary",
+  multiple_zones     = "Multiple zones",
+  orphan_zone        = "Orphan zone",
+  invalid_geometry   = "Invalid geometry"
+)
+
+# Leaflet color function for link_status
+pal_link <- leaflet::colorFactor(
+  palette = unname(link_status_colors),
+  levels  = names(link_status_colors),
+  na.color = "#999999"
+)
+
+# Color function for zone_type
+zone_type_colors <- c(
+  district_heating = "#e41a1c",
+  heat_pump        = "#377eb8",
+  fossil_fuel_ban  = "#984ea3"
+)
+pal_zone_type <- leaflet::colorFactor(
+  palette  = unname(zone_type_colors),
+  levels   = names(zone_type_colors),
+  na.color = "#aaaaaa"
+)
+
+# Continuous palette for year_built
+year_range <- range(buildings$year_built, na.rm = TRUE)
+pal_year   <- leaflet::colorNumeric(
+  palette = "YlOrRd",
+  domain  = year_range
+)
+
+# ── Vienna map centre ─────────────────────────────────────────────────────────
+vienna_center <- c(lng = 16.3725, lat = 48.2082)
+
+# ── Story buildings / zones for page 5 ───────────────────────────────────────
+story_clean <- tryCatch(
+  joined[joined$link_status == "in_zone", ][1L, ],
+  error = function(e) joined[1L, ]
+)
+story_outside <- tryCatch(
+  joined[joined$link_status == "outside_any_zone", ][1L, ],
+  error = function(e) joined[nrow(joined), ]
+)
+story_straddle <- tryCatch(
+  joined[joined$link_status == "straddles_boundary", ][1L, ],
+  error = function(e) joined[1L, ]
+)
+story_orphan <- if (nrow(orphan_zones) > 0L) orphan_zones[1L, ] else NULL
+story_invalid <- tryCatch(
+  joined[joined$link_status == "invalid_geometry", ][1L, ],
+  error = function(e) NULL
+)
+
+# Compute area_ha for zones if not present
+if (!"area_ha" %in% names(zones)) {
+  zones_area <- zones |>
+    sf::st_transform(crs = 31287L) |>
+    dplyr::mutate(area_ha = round(as.numeric(sf::st_area(geometry)) / 10000, 1)) |>
+    sf::st_transform(crs = 4326L)
+} else {
+  zones_area <- zones
+}
+
+# n_buildings per zone for the zone table
+zone_bldg_counts <- joined |>
+  sf::st_drop_geometry() |>
+  dplyr::filter(!is.na(zone_id)) |>
+  dplyr::count(zone_id, name = "n_buildings")
+
+zone_table_df <- zones_area |>
+  sf::st_drop_geometry() |>
+  dplyr::left_join(zone_bldg_counts, by = "zone_id") |>
+  dplyr::mutate(n_buildings = dplyr::coalesce(as.integer(n_buildings), 0L)) |>
+  dplyr::select(
+    zone_id, zone_type, legal_status,
+    dplyr::any_of("area_ha"),
+    n_buildings
+  )
+
+# Buildings per district summary for page 2
+district_summary <- joined |>
+  sf::st_drop_geometry() |>
+  dplyr::count(district, name = "n_buildings") |>
+  dplyr::left_join(
+    joined |>
+      sf::st_drop_geometry() |>
+      dplyr::filter(!is.na(zone_id)) |>
+      dplyr::count(district, name = "n_in_zone"),
+    by = "district"
+  ) |>
+  dplyr::mutate(
+    n_in_zone = dplyr::coalesce(as.integer(n_in_zone), 0L),
+    pct_in_zone = round(100 * n_in_zone / n_buildings, 1)
+  ) |>
+  dplyr::arrange(district)
+
+# decade() helper
+decade <- function(year) {
+  paste0(floor(year / 10) * 10, "s")
+}
+```
+
+```{=html}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(tab) {
+    tab.addEventListener('shown.bs.tab', function() {
+      window.dispatchEvent(new Event('resize'));
+    });
+  });
+  setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 500);
+  setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 2000);
+});
+</script>
+```
+
+# Source A — Zones
+
+## Row
+
+::: {.card title="Zone Map"}
+
+```{r}
+#| label: fig-zone-map
+
+zones_wgs84 <- sf::st_transform(zones, crs = 4326L)
+
+zone_pal <- leaflet::colorFactor(
+  palette = c("#e41a1c", "#377eb8", "#984ea3", "#ff7f0e"),
+  domain  = zones_wgs84$zone_type,
+  na.color = "#aaaaaa"
+)
+
+leaflet(data = zones_wgs84, height = "500px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addPolygons(
+    fillColor   = ~ zone_pal(zone_type),
+    fillOpacity = 0.55,
+    color       = "#333333",
+    weight      = 1.5,
+    opacity     = 1,
+    popup       = ~ paste0(
+      "<strong>Zone: </strong>", zone_id, "<br>",
+      "<strong>Type: </strong>", zone_type, "<br>",
+      "<strong>Legal status: </strong>", legal_status
+    ),
+    label       = ~ paste0(zone_id, " (", zone_type, ")")
+  ) |>
+  leaflet::addLegend(
+    position = "bottomright",
+    pal      = zone_pal,
+    values   = ~ zone_type,
+    title    = "Zone type",
+    opacity  = 0.9
+  ) |>
+  leaflet::setView(
+    lng  = vienna_center[["lng"]],
+    lat  = vienna_center[["lat"]],
+    zoom = 12L
+  )
+```
+
+:::
+
+## Row
+
+::: {.card title="Zone Attributes"}
+
+```{r}
+#| label: tbl-zone-attributes
+
+DT::datatable(
+  zone_table_df,
+  rownames = FALSE,
+  filter   = "top",
+  colnames = c("Zone ID", "Type", "Legal status", "Area (ha)", "N buildings"),
+  options  = list(
+    pageLength = 15,
+    scrollX    = TRUE,
+    order      = list(list(4L, "desc"))
+  )
+)
+```
+
+:::
+
+::: {.card title="Notes"}
+
+### ACD Zones — Klimaschutzgebiete
+
+Vienna's *Energieraumplanung* (Energy Area Planning, ACD) designates geographic
+zones where specific heating and energy-system rules apply to buildings.
+
+**Layer:** `ogdwien:ENERGIEPLANERPOGD`
+**Provider:** [Vienna Open Government Data WFS](https://data.wien.gv.at/daten/geo)
+**Snapshot date:** `r SNAPSHOT_DATE`
+**Total zones in this snapshot:** `r n_zones`
+
+Zone types:
+
+| Type | Legal rule |
+|------|-----------|
+| `district_heating` | Buildings must connect to district heating network |
+| `heat_pump` | Heat-pump installations required; fossil fuel banned |
+| `fossil_fuel_ban` | Existing fossil-fuel heating must be retired |
+
+Source columns used from the WFS layer: `ERPLABEL` (zone ID),
+`ERPTYP` (zone type), `ERPRECHTSTAT` (legal status).
+
+:::
+
+# Source B — Buildings
+
+## Row
+
+::: {.card title="Building Sample (first 200)"}
+
+```{r}
+#| label: fig-building-sample
+
+bldg_sample <- if (nrow(buildings) > 200L) buildings[seq_len(200L), ] else buildings
+
+leaflet(data = bldg_sample, height = "500px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addCircleMarkers(
+    radius      = 4,
+    fillColor   = ~ pal_year(year_built),
+    fillOpacity = 0.8,
+    color       = "#333333",
+    weight      = 0.5,
+    opacity     = 0.6,
+    popup       = ~ paste0(
+      "<strong>Address: </strong>", address, "<br>",
+      "<strong>Year built: </strong>", year_built, "<br>",
+      "<strong>Height: </strong>", height_m, " m"
+    )
+  ) |>
+  leaflet::addLegend(
+    position = "bottomright",
+    pal      = pal_year,
+    values   = ~ year_built,
+    title    = "Year built",
+    opacity  = 0.9
+  ) |>
+  leaflet::setView(
+    lng  = vienna_center[["lng"]],
+    lat  = vienna_center[["lat"]],
+    zoom = 12L
+  )
+```
+
+:::
+
+## Row
+
+::: {.card title="Buildings by District"}
+
+```{r}
+#| label: tbl-district-summary
+
+district_summary |>
+  gt::gt() |>
+  gt::cols_label(
+    district    = "District",
+    n_buildings = "Total",
+    n_in_zone   = "In a zone",
+    pct_in_zone = "% in zone"
+  ) |>
+  gt::fmt_number(columns = c(n_buildings, n_in_zone), decimals = 0) |>
+  gt::fmt_number(columns = pct_in_zone, decimals = 1) |>
+  gt::data_color(
+    columns = pct_in_zone,
+    palette = c("#fee0d2", "#de2d26")
+  ) |>
+  gt::tab_caption(
+    caption = paste0(
+      "Buildings per district as of snapshot ", SNAPSHOT_DATE,
+      ". 'In a zone' counts buildings with link_status != outside_any_zone."
+    )
+  )
+```
+
+:::
+
+::: {.card title="Year-Built Distribution"}
+
+```{r}
+#| label: fig-year-hist
+
+yb <- buildings$year_built[!is.na(buildings$year_built)]
+hist(
+  yb,
+  breaks = 30,
+  col    = "#377eb8",
+  border = "#1a5276",
+  xlab   = "Year built",
+  ylab   = "Number of buildings",
+  main   = paste0(
+    "Year-Built Distribution (N = ", length(yb), ", snapshot ", SNAPSHOT_DATE, ")"
+  ),
+  las    = 1
+)
+```
+
+:::
+
+::: {.card title="Notes"}
+
+### Vienna Building Inventory
+
+**Layer:** `ogdwien:GEBAEUDEOGD`
+**Provider:** [Vienna Open Government Data WFS](https://data.wien.gv.at/daten/geo)
+**Snapshot date:** `r SNAPSHOT_DATE`
+**Buildings in this snapshot:** `r n_total`
+**Expected full Vienna inventory:** ~220,000 buildings
+
+The POC smoke test fetches `max_features = 500`; the full fetch uses
+`max_features = NULL`. For rendering speed the map above shows the first
+`r min(nrow(buildings), 200L)` buildings only.
+
+Column mapping from WFS: `OBJECTID` → `building_id`, `BAUJAHR` → `year_built`,
+`HOEHE` / `GEBHOEHE` → `height_m`, `ADRESSE` → `address`.
+
+:::
+
+# Joined: Buildings × Zones
+
+## Row
+
+::: {.card title="Joined Map"}
+
+```{r}
+#| label: fig-joined-map
+
+bldg_sample_join <- if (nrow(joined) > 500L) {
+  joined[sample(nrow(joined), 500L), ]
+} else {
+  joined
+}
+
+zones_wgs84_join <- sf::st_transform(zones, crs = 4326L)
+
+leaflet(height = "500px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addPolygons(
+    data        = zones_wgs84_join,
+    fillColor   = ~ zone_pal(zone_type),
+    fillOpacity = 0.25,
+    color       = "#333333",
+    weight      = 1.2,
+    opacity     = 0.7,
+    group       = "Zones",
+    popup       = ~ paste0("<strong>Zone: </strong>", zone_id)
+  ) |>
+  leaflet::addCircleMarkers(
+    data        = bldg_sample_join,
+    radius      = 4,
+    fillColor   = ~ pal_link(link_status),
+    fillOpacity = 0.85,
+    color       = "#222222",
+    weight      = 0.4,
+    opacity     = 0.7,
+    group       = "Buildings",
+    popup       = ~ paste0(
+      "<strong>Building: </strong>", building_id, "<br>",
+      "<strong>Status: </strong>", link_status, "<br>",
+      "<strong>Zone: </strong>", dplyr::coalesce(zone_id, "none")
+    )
+  ) |>
+  leaflet::addLegend(
+    position = "bottomright",
+    pal      = pal_link,
+    values   = joined$link_status,
+    title    = "Link status",
+    opacity  = 0.9
+  ) |>
+  leaflet::addLayersControl(
+    overlayGroups = c("Buildings", "Zones"),
+    options       = leaflet::layersControlOptions(collapsed = FALSE)
+  ) |>
+  leaflet::setView(
+    lng  = vienna_center[["lng"]],
+    lat  = vienna_center[["lat"]],
+    zoom = 12L
+  )
+```
+
+:::
+
+## Row
+
+::: {.card title="Crosstab: Zone Type × Building Decade"}
+
+```{r}
+#| label: tbl-crosstab
+
+crosstab_df <- joined |>
+  sf::st_drop_geometry() |>
+  dplyr::filter(!is.na(zone_type), !is.na(year_built)) |>
+  dplyr::mutate(decade = decade(year_built)) |>
+  dplyr::count(zone_type, decade) |>
+  tidyr::pivot_wider(
+    names_from  = decade,
+    values_from = n,
+    values_fill = 0L
+  )
+
+crosstab_df |>
+  gt::gt(rowname_col = "zone_type") |>
+  gt::grand_summary_rows(
+    columns    = where(is.integer),
+    fns        = list(Total = ~ sum(., na.rm = TRUE)),
+    fmt        = ~ gt::fmt_integer(.)
+  ) |>
+  gt::tab_caption(
+    caption = paste0(
+      "Buildings by zone type and construction decade. ",
+      "Snapshot: ", SNAPSHOT_DATE, "."
+    )
+  )
+```
+
+:::
+
+::: {.card title="Link Status Distribution"}
+
+```{r}
+#| label: tbl-link-summary
+
+link_summary |>
+  dplyr::mutate(
+    color_hex = link_status_colors[as.character(link_status)],
+    label     = link_status_labels[as.character(link_status)]
+  ) |>
+  dplyr::select(label, n_buildings, pct) |>
+  gt::gt() |>
+  gt::cols_label(
+    label       = "Link status",
+    n_buildings = "N buildings",
+    pct         = "% of total"
+  ) |>
+  gt::fmt_number(columns = n_buildings, decimals = 0) |>
+  gt::fmt_number(columns = pct, decimals = 1) |>
+  gt::data_color(
+    columns = n_buildings,
+    palette = c("#e5f5e0", "#31a354")
+  ) |>
+  gt::tab_caption(
+    caption = paste0(
+      "Distribution of building-zone linkage outcomes. ",
+      "Snapshot: ", SNAPSHOT_DATE, ". Total buildings: ", n_total, "."
+    )
+  )
+```
+
+:::
+
+# Missing Linkage Handling
+
+## Row
+
+::: {.panel-tabset}
+
+### Clean join (in_zone)
+
+```{r}
+#| label: fig-case-in-zone
+
+sub <- case_in_zone(joined, n = 50L)
+
+leaflet(data = sub, height = "420px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addCircleMarkers(
+    radius      = 5,
+    fillColor   = link_status_colors[["in_zone"]],
+    fillOpacity = 0.85,
+    color       = "#1a5276",
+    weight      = 0.8,
+    popup       = ~ paste0(
+      "<strong>Building: </strong>", building_id, "<br>",
+      "<strong>Zone: </strong>", zone_id, "<br>",
+      "<strong>Overlap fraction: </strong>",
+      round(overlap_fraction, 3)
+    )
+  ) |>
+  leaflet::setView(
+    lng  = vienna_center[["lng"]],
+    lat  = vienna_center[["lat"]],
+    zoom = 12L
+  )
+```
+
+**<span class='good'>HEALTHY</span> — Clean join: building footprint fully
+contained in a single zone polygon.**
+
+The building centroid falls inside exactly one zone, and the overlap fraction
+is >= 0.95 (at least 95% of the footprint is covered). This is the most
+common, unambiguous case — the link is legally unequivocal and the downstream
+rule lookup is trivial.
+
+N (this snapshot): **`r n_in_zone`** buildings (`r pct_in_zone`% of total).
+
+### Outside any zone (legitimate)
+
+```{r}
+#| label: fig-case-outside
+
+sub_out <- case_outside(joined, n = 100L)
+
+leaflet(data = sub_out, height = "420px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addCircleMarkers(
+    radius      = 4,
+    fillColor   = link_status_colors[["outside_any_zone"]],
+    fillOpacity = 0.80,
+    color       = "#555555",
+    weight      = 0.5,
+    popup       = ~ paste0(
+      "<strong>Building: </strong>", building_id, "<br>",
+      "<strong>District: </strong>", dplyr::coalesce(district, "—"), "<br>",
+      "<strong>Year built: </strong>", year_built
+    )
+  ) |>
+  leaflet::setView(
+    lng  = vienna_center[["lng"]],
+    lat  = vienna_center[["lat"]],
+    zoom = 11L
+  )
+```
+
+**<span class='warn'>INFORMATIONAL</span> — Building outside any ACD zone.**
+
+The building footprint is valid, geocoding succeeded, and the building is in
+the official inventory — it simply has no ACD zone overlay at this location.
+**This is information, not corruption.** About `r pct_outside`% of Vienna
+buildings fall here.
+
+Distinguish from missing data: the building record is complete; the absence
+of a zone merely means no ACD energy-planning rule applies to this address.
+Common on Vienna's outer districts and undeveloped fringes.
+
+N (this snapshot): **`r n_outside`** buildings (`r pct_outside`% of total).
+
+### Straddles boundary
+
+```{r}
+#| label: fig-case-straddle
+
+sub_str <- case_straddle(joined, n = 50L)
+
+leaflet(data = sub_str, height = "420px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addCircleMarkers(
+    radius      = 5,
+    fillColor   = link_status_colors[["straddles_boundary"]],
+    fillOpacity = 0.85,
+    color       = "#8B4513",
+    weight      = 0.8,
+    popup       = ~ paste0(
+      "<strong>Building: </strong>", building_id, "<br>",
+      "<strong>Zone: </strong>", dplyr::coalesce(zone_id, "—"), "<br>",
+      "<strong>Overlap fraction: </strong>",
+      round(overlap_fraction, 3)
+    )
+  ) |>
+  leaflet::setView(
+    lng  = vienna_center[["lng"]],
+    lat  = vienna_center[["lat"]],
+    zoom = 12L
+  )
+```
+
+**<span class='warn'>AMBIGUOUS</span> — Building footprint spans two or more
+zones (overlap fraction between 5% and 95%).**
+
+The POC uses centroid-based assignment: the building is attributed to whichever
+zone contains its centroid. However, legal applicability may cover both zones
+for different parts of the building.
+
+**Production fix recommended:** Replace the single `zone_id` with a
+list-column of all overlapping zones plus their respective overlap fractions,
+and escalate ambiguous cases (overlap fraction 20%–80%) to manual review.
+
+Sample size (this snapshot): **`r n_straddle`** buildings
+(`r pct_straddle`% of total).
+
+### Multiple overlapping zones
+
+```{r}
+#| label: fig-case-multi
+
+sub_mul <- case_multi(joined, n = 50L)
+
+leaflet(data = sub_mul, height = "420px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addCircleMarkers(
+    radius      = 5,
+    fillColor   = link_status_colors[["multiple_zones"]],
+    fillOpacity = 0.85,
+    color       = "#4B0082",
+    weight      = 0.8,
+    popup       = ~ paste0(
+      "<strong>Building: </strong>", building_id, "<br>",
+      "<strong>Primary zone: </strong>",
+      dplyr::coalesce(zone_id, "—"), "<br>",
+      "<strong>N overlapping zones: </strong>", n_overlapping_zones
+    )
+  ) |>
+  leaflet::setView(
+    lng  = vienna_center[["lng"]],
+    lat  = vienna_center[["lat"]],
+    zoom = 12L
+  )
+```
+
+**<span class='warn'>INSPECT</span> — Building centroid falls inside two or
+more zone polygons simultaneously.**
+
+Two possible explanations:
+
+1. **Legitimate layering**: Vienna may designate the same area under multiple
+   rule frameworks simultaneously (e.g., district-heating zone AND a
+   fossil-fuel ban zone covering the same geometry). In this case both rules
+   apply and must be stored.
+
+2. **Data error**: Zone polygons that should be mutually exclusive may have
+   overlapping geometries due to digitisation errors. Inspect each case.
+
+The POC reports only the first matched zone. Production must store all
+overlapping zones as a list-column.
+
+N (this snapshot): **`r n_multi`** buildings (`r pct_multi`% of total).
+
+### Orphan zones (no buildings)
+
+```{r}
+#| label: fig-case-orphan
+
+if (nrow(orphan_zones) > 0L) {
+  leaflet(data = sf::st_transform(orphan_zones, crs = 4326L), height = "420px") |>
+    leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+    leaflet::addPolygons(
+      fillColor   = link_status_colors[["orphan_zone"]],
+      fillOpacity = 0.35,
+      color       = link_status_colors[["orphan_zone"]],
+      weight      = 2.0,
+      opacity     = 0.9,
+      popup       = ~ paste0(
+        "<strong>Zone: </strong>", zone_id, "<br>",
+        "<strong>Type: </strong>", zone_type
+      )
+    ) |>
+    leaflet::setView(
+      lng  = vienna_center[["lng"]],
+      lat  = vienna_center[["lat"]],
+      zoom = 11L
+    )
+} else {
+  cat("No orphan zones in this snapshot — all zones contain at least one building.")
+}
+```
+
+**<span class='warn'>INVESTIGATE</span> — Zones containing zero building
+centroids.**
+
+N orphan zones (this snapshot): **`r n_orphan`**.
+
+Possible causes:
+
+- **(a) Newly designated zone over undeveloped land** — legitimate. The zone
+  designates future development requirements; no current buildings to classify.
+- **(b) Inventory snapshot lag** — buildings exist physically but are not yet
+  catalogued in the `GEBAEUDEOGD` inventory. The zone polygon is correct; the
+  building list is incomplete.
+- **(c) Zone polygon digitisation error** — the polygon was drawn in the wrong
+  location. Inspect against imagery.
+
+Investigate each orphan individually before concluding it is a data error.
+
+### Invalid geometry
+
+```{r}
+#| label: fig-case-invalid
+
+sub_inv <- case_invalid(joined)
+
+if (nrow(sub_inv) > 0L) {
+  leaflet(data = sub_inv, height = "420px") |>
+    leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+    leaflet::addCircleMarkers(
+      radius      = 6,
+      fillColor   = link_status_colors[["invalid_geometry"]],
+      fillOpacity = 0.90,
+      color       = "#8B0000",
+      weight      = 1.0,
+      popup       = ~ paste0(
+        "<strong>Building: </strong>", building_id, "<br>",
+        "<strong>Address: </strong>", address
+      )
+    ) |>
+    leaflet::setView(
+      lng  = vienna_center[["lng"]],
+      lat  = vienna_center[["lat"]],
+      zoom = 12L
+    )
+} else {
+  cat(paste0(
+    "No invalid-geometry buildings in this snapshot (N = 0). ",
+    "st_make_valid() was applied during fetch — all footprints passed validation."
+  ))
+}
+```
+
+**`r if (n_invalid == 0L) "<span class='good'>PASS</span>" else "<span class='bad'>FAIL</span>"` — Self-intersecting or otherwise broken polygons.**
+
+N invalid buildings (this snapshot): **`r n_invalid`**.
+
+The join pipeline calls `sf::st_make_valid()` on all input geometries before
+performing any spatial operations. If this count is non-zero after that step,
+document the upstream data issue and report it to the data provider.
+
+Expected in a clean run: **0**.
+
+### CRS mismatch
+
+**No map for this case** — CRS errors are caught at code time, not at render time.
+
+**CRS chain used in this POC:**
+
+| Stage | CRS | EPSG | Purpose |
+|-------|-----|------|---------|
+| Native WFS data | MGI / Austria GK East | 31256 | Source CRS from data provider |
+| Working (analysis) | MGI / Austria Lambert | 31287 | Area + distance calculations |
+| Display (leaflet) | WGS84 | 4326 | Leaflet rendering |
+
+A CRS mismatch between buildings and zones causes **silent ~100 m offsets** in
+centroid-to-zone intersection — buildings that should be inside a zone appear
+outside it and vice versa.
+
+**Protection:** `join_buildings_zones()` contains an explicit assert that both
+inputs are in EPSG:31287. If either input differs, the function stops with an
+informative error before any spatial operation runs:
+
+```r
+if (b_crs != CRS_WORKING || z_crs != CRS_WORKING) {
+  cli::cli_abort(
+    c("Both inputs must be in EPSG:{CRS_WORKING}.",
+      "i" = "{.arg buildings} CRS: EPSG:{b_crs}",
+      "i" = "{.arg zones} CRS: EPSG:{z_crs}")
+  )
+}
+```
+
+### Snapshot lag
+
+**No map for this case** — temporal coverage is a data provenance issue,
+not a spatial geometry issue.
+
+**The pinned snapshot is the contract.**
+
+Buildings constructed **after** `r SNAPSHOT_DATE` cannot appear in this
+analysis regardless of their spatial location. The snapshot date is defined
+once in `R/snapshot.R`:
+
+```r
+SNAPSHOT_DATE <- "`r SNAPSHOT_DATE`"
+```
+
+To refresh the analysis:
+
+1. Bump `SNAPSHOT_DATE` in `R/snapshot.R`.
+2. Re-run `fetch_acd_zones()` and `fetch_buildings()` — these write new
+   Parquet files to `inst/extdata/zones_<date>.parquet` and
+   `inst/extdata/buildings_<date>.parquet`.
+3. Re-run `join_buildings_zones()` to produce the new joined Parquet.
+4. Re-render this dashboard.
+
+Do not compare analysis results across snapshots without accounting for the
+change in building inventory.
+
+:::
+
+# Stories — Worked Well / Failed Badly
+
+## Row
+
+::: {.panel-tabset}
+
+### Worked
+
+::: {.panel-tabset}
+
+#### Story 1: The cleanly classified apartment block
+
+```{r}
+#| label: fig-story-clean
+
+story_lat <- sf::st_coordinates(sf::st_centroid(story_clean))[, 2]
+story_lng <- sf::st_coordinates(sf::st_centroid(story_clean))[, 1]
+
+# Find the zone this building belongs to
+story_zone_id <- story_clean$zone_id[[1]]
+story_zone_sf <- zones[!is.na(zones$zone_id) & zones$zone_id == story_zone_id, ]
+
+m <- leaflet(height = "400px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron)
+
+if (nrow(story_zone_sf) > 0L) {
+  m <- m |>
+    leaflet::addPolygons(
+      data        = story_zone_sf,
+      fillColor   = "#e41a1c",
+      fillOpacity = 0.30,
+      color       = "#e41a1c",
+      weight      = 2.0,
+      popup       = ~ paste0("Zone: ", zone_id)
+    )
+}
+
+m |>
+  leaflet::addCircleMarkers(
+    data        = story_clean,
+    radius      = 10,
+    fillColor   = link_status_colors[["in_zone"]],
+    fillOpacity = 0.95,
+    color       = "#1a5276",
+    weight      = 2.0,
+    popup       = ~ paste0(
+      "<strong>Building: </strong>", building_id, "<br>",
+      "<strong>Zone: </strong>", dplyr::coalesce(zone_id, "—"), "<br>",
+      "<strong>Year built: </strong>", year_built, "<br>",
+      "<strong>Overlap fraction: </strong>",
+      round(overlap_fraction, 3)
+    )
+  ) |>
+  leaflet::setView(lng = story_lng, lat = story_lat, zoom = 15L)
+```
+
+Building **`r story_clean$building_id[[1]]`**, constructed
+**`r story_clean$year_built[[1]]`**, falls entirely within Zone
+**`r dplyr::coalesce(story_clean$zone_id[[1]], "(none)")`**
+(`r dplyr::coalesce(story_clean$zone_type[[1]], "unknown")` — legal status:
+`r dplyr::coalesce(story_clean$legal_status[[1]], "unknown")`).
+
+The centroid-based join assigns this building unambiguously to one zone.
+Overlap fraction: `r round(story_clean$overlap_fraction[[1]], 3)`. No manual
+review required. Downstream the legal rule lookup is a simple table join on
+`zone_id`.
+
+#### Story 2: Zone-free outskirts
+
+```{r}
+#| label: fig-story-outside
+
+outside_lat <- sf::st_coordinates(sf::st_centroid(story_outside))[, 2]
+outside_lng <- sf::st_coordinates(sf::st_centroid(story_outside))[, 1]
+
+leaflet(height = "400px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addCircleMarkers(
+    data        = story_outside,
+    radius      = 10,
+    fillColor   = link_status_colors[["outside_any_zone"]],
+    fillOpacity = 0.90,
+    color       = "#555555",
+    weight      = 1.5,
+    popup       = ~ paste0(
+      "<strong>Building: </strong>", building_id, "<br>",
+      "<strong>District: </strong>",
+      dplyr::coalesce(district, "—"), "<br>",
+      "<strong>Year built: </strong>", year_built
+    )
+  ) |>
+  leaflet::setView(lng = outside_lng, lat = outside_lat, zoom = 14L)
+```
+
+Building **`r story_outside$building_id[[1]]`** sits in district
+**`r dplyr::coalesce(story_outside$district[[1]], "unknown")`** with no ACD
+zone designation. The building owner is currently free to install any heating
+system — no ACD energy-planning rule binds this address as of
+`r SNAPSHOT_DATE`.
+
+This is not a data error. The building record is complete (year built:
+`r story_outside$year_built[[1]]`, height: `r story_outside$height_m[[1]]` m,
+address: `r story_outside$address[[1]]`). The absence of a zone assignment is
+a valid, informative outcome. It means: *no ACD action required for this
+property*.
+
+:::
+
+### Failed
+
+::: {.panel-tabset}
+
+#### Story 3: The straddler — half a building, half a rule
+
+```{r}
+#| label: fig-story-straddle
+
+straddle_lat <- sf::st_coordinates(sf::st_centroid(story_straddle))[, 2]
+straddle_lng <- sf::st_coordinates(sf::st_centroid(story_straddle))[, 1]
+
+leaflet(height = "400px") |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addPolygons(
+    data        = zones,
+    fillColor   = ~ zone_pal(zone_type),
+    fillOpacity = 0.30,
+    color       = "#333333",
+    weight      = 1.5,
+    popup       = ~ paste0("Zone: ", zone_id)
+  ) |>
+  leaflet::addCircleMarkers(
+    data        = story_straddle,
+    radius      = 10,
+    fillColor   = link_status_colors[["straddles_boundary"]],
+    fillOpacity = 0.95,
+    color       = "#8B4513",
+    weight      = 2.0,
+    popup       = ~ paste0(
+      "<strong>Building: </strong>", building_id, "<br>",
+      "<strong>Primary zone: </strong>",
+      dplyr::coalesce(zone_id, "—"), "<br>",
+      "<strong>Overlap fraction: </strong>",
+      round(overlap_fraction, 3), "<br>",
+      "<strong>N overlapping zones: </strong>", n_overlapping_zones
+    )
+  ) |>
+  leaflet::setView(lng = straddle_lng, lat = straddle_lat, zoom = 15L)
+```
+
+Building **`r story_straddle$building_id[[1]]`** sits with
+**`r round(story_straddle$overlap_fraction[[1]] * 100, 0)`%** of its footprint
+inside zone **`r dplyr::coalesce(story_straddle$zone_id[[1]], "(none)")`**.
+The remaining
+**`r round((1 - story_straddle$overlap_fraction[[1]]) * 100, 0)`%** lies
+outside that zone — potentially inside another zone.
+
+**POC limitation:** The centroid-based join assigns this building to the zone
+containing its centroid. The reported `zone_id` is
+**`r dplyr::coalesce(story_straddle$zone_id[[1]], "none")`** and the reported
+`link_status` is `straddles_boundary` as a warning signal.
+
+**Production fix:** Store a list-column of all overlapping zones with
+individual overlap fractions. Legal teams should handle boundary-straddling
+buildings case-by-case.
+
+#### Story 4: The orphan polygon
+
+```{r}
+#| label: fig-story-orphan
+
+if (!is.null(story_orphan) && nrow(story_orphan) > 0L) {
+  orphan_lat <- sf::st_coordinates(sf::st_centroid(story_orphan))[, 2]
+  orphan_lng <- sf::st_coordinates(sf::st_centroid(story_orphan))[, 1]
+
+  leaflet(height = "400px") |>
+    leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+    leaflet::addPolygons(
+      data        = story_orphan,
+      fillColor   = link_status_colors[["orphan_zone"]],
+      fillOpacity = 0.40,
+      color       = link_status_colors[["orphan_zone"]],
+      weight      = 2.5,
+      popup       = ~ paste0(
+        "<strong>Zone: </strong>", zone_id, "<br>",
+        "<strong>Type: </strong>", zone_type, "<br>",
+        "<strong>Buildings inside: </strong>0"
+      )
+    ) |>
+    leaflet::setView(lng = orphan_lng, lat = orphan_lat, zoom = 14L)
+} else {
+  cat("No orphan zones in this snapshot.")
+}
+```
+
+```{r}
+#| label: prose-story-orphan
+#| output: asis
+
+if (!is.null(story_orphan) && nrow(story_orphan) > 0L) {
+  orphan_area <- tryCatch(
+    round(
+      as.numeric(sf::st_area(sf::st_transform(story_orphan, crs = 31287L))) / 10000,
+      1
+    ),
+    error = function(e) NA_real_
+  )
+  cat(paste0(
+    "Zone **", story_orphan$zone_id[[1]], "**",
+    " (`", story_orphan$zone_type[[1]], "`)",
+    " covers",
+    if (!is.na(orphan_area)) paste0(" approximately **", orphan_area, " ha**") else " an unknown area",
+    " but contains **zero building centroids** in the `", SNAPSHOT_DATE, "` snapshot.\n\n",
+    "This could be: (a) a newly designated zone over undeveloped land —",
+    " **legitimate**; (b) an inventory lag; or (c) a polygon digitisation error.",
+    " Compare against Vienna satellite imagery to distinguish the cases.",
+    "\n\nOrphan zones should not be conflated with the `outside_any_zone`",
+    " building classification: the zone is real — it is the building list",
+    " that may be incomplete relative to the zone."
+  ))
+} else {
+  cat(paste0(
+    "No orphan zones in the `", SNAPSHOT_DATE, "` snapshot — all zones contain",
+    " at least one building centroid. This is a healthy result."
+  ))
+}
+```
+
+#### Story 5: The case of the impossible building
+
+```{r}
+#| label: prose-story-invalid
+#| output: asis
+
+if (!is.null(story_invalid) && nrow(story_invalid) > 0L) {
+  cat(paste0(
+    "Building **", story_invalid$building_id[[1]], "**",
+    " at address **", story_invalid$address[[1]], "**",
+    " has a self-intersecting footprint polygon as delivered by the WFS.\n\n",
+    "After calling `sf::st_make_valid()` the geometry is repaired and the",
+    " building participates in the join normally. However, we flag it as",
+    " `invalid_geometry` in the output so that the data quality dashboard",
+    " surfaces the upstream issue.\n\n",
+    "**Why this matters:** an undetected invalid geometry would cause",
+    " `sf::st_intersects()` to return unpredictable results and silently",
+    " exclude the building from zone assignment. Documenting it here creates",
+    " an audit trail for the data provider.\n\n",
+    "N invalid in this snapshot: **", n_invalid, "**."
+  ))
+} else {
+  cat(paste0(
+    "No invalid-geometry buildings in the `", SNAPSHOT_DATE, "` snapshot.",
+    " `sf::st_make_valid()` resolved all geometries before the join.",
+    " This story would fire if any upstream footprint polygon is",
+    " self-intersecting or otherwise malformed."
+  ))
+}
+```
+
+:::
+
+:::
+
+# Join QA
+
+## Row
+
+::: {.card title="Link Status Distribution"}
+
+```{r}
+#| label: tbl-qa-link-dist
+
+link_summary |>
+  dplyr::mutate(
+    status_label = link_status_labels[as.character(link_status)],
+    color_hex    = link_status_colors[as.character(link_status)]
+  ) |>
+  dplyr::select(status_label, n_buildings, pct, color_hex) |>
+  gt::gt() |>
+  gt::cols_label(
+    status_label = "Link status",
+    n_buildings  = "N buildings",
+    pct          = "%",
+    color_hex    = "Color"
+  ) |>
+  gt::fmt_number(columns = n_buildings, decimals = 0) |>
+  gt::fmt_number(columns = pct, decimals = 1) |>
+  gt::data_color(
+    columns = n_buildings,
+    palette = c("#f7fbff", "#08306b")
+  ) |>
+  gt::cols_width(color_hex ~ gt::px(60)) |>
+  gt::tab_caption(
+    caption = paste0(
+      "Full link-status distribution. Snapshot: ", SNAPSHOT_DATE,
+      ". Total buildings: ", n_total, "."
+    )
+  )
+```
+
+:::
+
+::: {.card title="Coverage Stats"}
+
+**Snapshot:** `r SNAPSHOT_DATE`
+
+| Metric | Value |
+|--------|-------|
+| Total buildings | `r n_total` |
+| Total zones | `r n_zones` |
+| Buildings in any zone | `r n_total - n_outside` (`r 100 - pct_outside`%) |
+| Buildings outside all zones | `r n_outside` (`r pct_outside`%) |
+| Buildings straddling boundary | `r n_straddle` (`r pct_straddle`%) |
+| Buildings under multiple zones | `r n_multi` (`r pct_multi`%) |
+| Orphan zones (no buildings) | `r n_orphan` |
+| Invalid-geometry buildings | `r n_invalid` |
+| Using placeholder data | `r using_placeholder` |
+
+:::
+
+## Row
+
+::: {.card title="Sanity Checks"}
+
+```{r}
+#| label: tbl-sanity-checks
+
+checks <- tibble::tibble(
+  check = c(
+    "All buildings have valid geometry (st_is_valid = TRUE)",
+    "All zones have valid geometry (st_is_valid = TRUE)",
+    "Sum of link_status percentages = 100%",
+    "No NA building_id values",
+    "link_status factor levels complete"
+  ),
+  result = c(
+    if (n_invalid == 0L) "PASS" else paste0("FAIL — ", n_invalid, " invalid"),
+    tryCatch({
+      n_bad_z <- sum(!sf::st_is_valid(zones), na.rm = TRUE)
+      if (n_bad_z == 0L) "PASS" else paste0("FAIL — ", n_bad_z, " invalid zones")
+    }, error = function(e) "WARN — could not check"),
+    if (abs(sum(link_summary$pct) - 100) < 0.2) "PASS" else
+      paste0("FAIL — sum = ", round(sum(link_summary$pct), 1), "%"),
+    if (sum(is.na(joined$building_id)) == 0L) "PASS" else
+      paste0("FAIL — ", sum(is.na(joined$building_id)), " NAs"),
+    if (all(
+      c("in_zone", "outside_any_zone", "straddles_boundary",
+        "multiple_zones", "orphan_zone", "invalid_geometry") %in%
+      levels(joined$link_status)
+    )) "PASS" else "FAIL — missing levels"
+  )
+)
+
+checks |>
+  gt::gt() |>
+  gt::cols_label(check = "Check", result = "Result") |>
+  gt::tab_style(
+    style     = gt::cell_fill(color = "#d4edda"),
+    locations = gt::cells_body(
+      columns = result,
+      rows    = grepl("^PASS", result)
+    )
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_fill(color = "#f8d7da"),
+    locations = gt::cells_body(
+      columns = result,
+      rows    = grepl("^FAIL", result)
+    )
+  ) |>
+  gt::tab_style(
+    style     = gt::cell_fill(color = "#fff3cd"),
+    locations = gt::cells_body(
+      columns = result,
+      rows    = grepl("^WARN", result)
+    )
+  ) |>
+  gt::tab_caption(caption = paste0(
+    "Automated sanity checks on joined data. Snapshot: ", SNAPSHOT_DATE, "."
+  ))
+```
+
+:::
+
+::: {.card title="Recommendations"}
+
+### What needs follow-up
+
+1. **Straddles-boundary cases (`r n_straddle` buildings):** The POC assigns
+   one zone via centroid. Production should compute area-weighted overlap and
+   store a list-column of all applicable zones with fractions.
+
+2. **Multiple-zone cases (`r n_multi` buildings):** Audit each manually to
+   determine whether overlapping zone polygons are intentional (layered rules)
+   or a digitisation error. If intentional, the data model must support
+   multiple simultaneous zone assignments per building.
+
+3. **Orphan zones (`r n_orphan`):** Cross-reference each orphan polygon against
+   current satellite imagery and planning documents to classify as
+   (a) legitimate undeveloped land, (b) inventory lag, or (c) polygon error.
+
+4. **District assignment:** The `district` column is `NA` for all buildings in
+   this POC. Production should perform a secondary spatial join against the
+   Vienna district boundary layer (`BEZIRKSGRENZEOGD`) to populate this field.
+
+### What production should add
+
+- **Area-weighted overlap:** Replace centroid join with full footprint
+  intersection to compute exact overlap fractions per zone.
+- **List-column schema:** Allow multiple `(zone_id, zone_type, overlap_fraction)`
+  tuples per building — required for straddlers and multi-zone buildings.
+- **Address geocoding fallback:** For buildings with invalid geometry, fall back
+  to address-based geocoding before marking as invalid.
+- **Snapshot refresh pipeline:** Automate `SNAPSHOT_DATE` bumping and
+  re-fetching via a targets pipeline target.
+- **pointblank data contract:** Convert these sanity checks into a formal
+  pointblank agent with alerting on refresh.
+
+:::
