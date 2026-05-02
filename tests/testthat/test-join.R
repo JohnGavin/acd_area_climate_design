@@ -21,7 +21,6 @@ test_that("join_buildings_zones produces correct link_status for all cases", {
   )
 
   # ── Synthetic buildings ────────────────────────────────────────────────────
-  # Helper: make a small square polygon centred at (cx, cy) with half-side s
   sq <- function(cx, cy, s = 5) {
     sf::st_polygon(list(matrix(
       c(cx - s, cy - s,
@@ -48,8 +47,6 @@ test_that("join_buildings_zones produces correct link_status for all cases", {
   # B5 — straddles boundary: building footprint crosses Z1 boundary but
   #       centroid is inside Z1. We make it large enough that only ~30% of
   #       the footprint is inside Z1 (overlap 0.05 < frac < 0.95).
-  #       Centre at (200020, 400050), half-side 25 → extends to 199995..200045
-  #       in x; Z1 starts at 200000, so ~20/50 = 40% inside → straddles.
   b5 <- sq(200020, 400050, s = 25)
 
   # B6 — invalid geometry (self-intersecting bowtie)
@@ -84,7 +81,7 @@ test_that("join_buildings_zones produces correct link_status for all cases", {
     "address", "zone_id", "zone_area_ha", "zone_district",
     "zone_pre_linked_gebid", "zone_legal_url",
     "link_status", "n_overlapping_zones", "overlap_fraction",
-    "acd_agreement"
+    "nearest_zone_dist_m", "inside_any_zone", "confidence_tier"
   )
   expect_true(
     all(required_cols %in% names(joined)),
@@ -94,31 +91,25 @@ test_that("join_buildings_zones produces correct link_status for all cases", {
     )
   )
 
+  # acd_agreement must NOT be present (it was removed in Stage 1a)
+  expect_false(
+    "acd_agreement" %in% names(joined),
+    label = "acd_agreement column must not be present (removed in Stage 1a)"
+  )
+
   # ── link_status assignments ────────────────────────────────────────────────
   ls <- joined$link_status[order(as.integer(joined$building_id))]
 
-  # B1 inside Z1 only — expect in_zone OR straddles depending on overlap_fraction
-  # (B1 is 10×10 m, entirely inside Z1's 100×100 m → overlap_fraction ≈ 1.0)
   expect_equal(as.character(ls[1]), "in_zone",
                label = "B1 (inside Z1) should be in_zone")
-
-  # B2 inside Z2 only
   expect_equal(as.character(ls[2]), "in_zone",
                label = "B2 (inside Z2) should be in_zone")
-
-  # B3 centroid inside both zones → multiple_zones
   expect_equal(as.character(ls[3]), "multiple_zones",
                label = "B3 (centroid in both zones) should be multiple_zones")
-
-  # B4 centroid outside all zones → outside_any_zone
   expect_equal(as.character(ls[4]), "outside_any_zone",
                label = "B4 (centroid outside all zones) should be outside_any_zone")
-
-  # B5 straddles boundary (large footprint, only ~40% inside Z1)
   expect_equal(as.character(ls[5]), "straddles_boundary",
                label = "B5 (large building straddling Z1 boundary) should be straddles_boundary")
-
-  # B6 invalid geometry
   expect_equal(as.character(ls[6]), "invalid_geometry",
                label = "B6 (self-intersecting bowtie) should be invalid_geometry")
 })
@@ -181,7 +172,6 @@ test_that("CRS mismatch raises an error", {
     geometry   = sf::st_sfc(sf::st_as_sfc(zone_wkt)[[1]], crs = 31287)
   )
 
-  # Buildings in wrong CRS (EPSG:4326 / WGS84)
   buildings_wgs84 <- sf::st_sf(
     OBJECTID  = 1L,
     ACD       = NA_character_,
@@ -222,7 +212,6 @@ test_that("find_orphan_zones returns zones with no building centroids", {
     )
   )
 
-  # Building only in Z1, none in Z2
   buildings <- sf::st_sf(
     OBJECTID  = 1L,
     ACD       = NA_character_,
@@ -286,39 +275,37 @@ test_that("link_status_summary returns all six levels with correct structure", {
   expect_true(inherits(summary, "data.frame"))
   expect_true(all(c("link_status", "n_buildings", "pct", "color") %in% names(summary)))
 
-  # All six levels must be present (even if n = 0)
   expected_levels <- c(
     "in_zone", "outside_any_zone", "straddles_boundary",
     "multiple_zones", "orphan_zone", "invalid_geometry"
   )
   expect_setequal(as.character(summary$link_status), expected_levels)
 
-  # Percentages sum to ~100 (modulo zero-count rows)
   total_n <- sum(summary$n_buildings)
   if (total_n > 0) {
     expect_equal(sum(summary$pct), 100, tolerance = 0.01)
   }
 
-  # Colors are hex strings
   expect_true(all(grepl("^#[0-9a-fA-F]{6}$", summary$color)))
 })
 
 
-# ── acd_agreement cross-validation tests ────────────────────────────────────
+# ── confidence_tier tests ────────────────────────────────────────────────────
 
-# Shared helper used across multiple acd_agreement tests
-.make_acd_fixtures <- function() {
-  zone_wkt <- "POLYGON((200000 400000, 200100 400000, 200100 400100, 200000 400100, 200000 400000))"
+# Helper: two-zone fixture with one building per confidence tier
+.make_tier_fixtures <- function() {
+  # Zone A (200 x 200 m) well away from zone edges so tier A is reachable
+  zone_wkt <- "POLYGON((200000 400000, 200200 400000, 200200 400200, 200000 400200, 200000 400000))"
   zones <- sf::st_sf(
     ERPLABEL   = "Z1",
-    FL_ERP     = 10000,
+    FL_ERP     = 40000,
     BEZNR      = "01",
     GEBID      = NA_character_,
     WEBLINK_VO = NA_character_,
     geometry   = sf::st_sfc(sf::st_as_sfc(zone_wkt)[[1]], crs = 31287)
   )
 
-  sq <- function(cx, cy, s = 5) {
+  sq <- function(cx, cy, s = 3) {
     sf::st_polygon(list(matrix(
       c(cx - s, cy - s, cx + s, cy - s, cx + s, cy + s,
         cx - s, cy + s, cx - s, cy - s),
@@ -326,102 +313,123 @@ test_that("link_status_summary returns all six levels with correct structure", {
     )))
   }
 
-  # B1: spatial=in_zone,        acd_native="Z1"          → agree_in_zone
-  # B2: spatial=outside_any_zone, acd_native=NA           → agree_no_zone
-  # B3: spatial=in_zone,        acd_native=NA/""          → spatial_only
-  # B4: spatial=outside_any_zone, acd_native="Z1" (populated) → acd_only
+  # Tier A: inside zone, centroid far from boundary (100 m inside)
+  bA <- sq(200100, 400100)
+
+  # Tier B: inside zone, centroid close to boundary (2 m inside left edge at x=200000)
+  bB <- sq(200002, 400100)
+
+  # Tier C: outside zone, centroid within 25 m (15 m to the right of right edge x=200200)
+  bC <- sq(200215, 400100)
+
+  # Tier D: outside zone, centroid 100 m to the right of right edge → 100 m away
+  bD <- sq(200300, 400100)
+
+  # Tier E: outside zone, centroid 600 m to the right → clearly outside
+  bE <- sq(200800, 400100)
+
   buildings <- sf::st_sf(
-    OBJECTID  = 1:4,
-    ACD       = c("Z1", NA_character_, NA_character_, "Z1"),
-    BAUJAHR   = rep(2000L, 4),
-    GESCH_ANZ = rep(3L, 4),
-    BEZ       = paste0("Bezirk ", 1:4),
-    STRNAML   = paste0("Gasse ", 1:4),
-    VONN      = as.character(1:4),
-    BISN      = rep(NA_character_, 4),
-    address   = paste0("Gasse ", 1:4, " ", 1:4),
-    geometry  = sf::st_sfc(
-      sq(200050, 400050),  # B1: inside Z1
-      sq(201000, 400050),  # B2: outside Z1
-      sq(200050, 400050),  # B3: inside Z1 (same spot, different ACD)
-      sq(201000, 400050),  # B4: outside Z1 (but ACD says yes)
-      crs = 31287
-    )
+    OBJECTID  = 1:5,
+    ACD       = rep(NA_character_, 5),
+    BAUJAHR   = rep(2000L, 5),
+    GESCH_ANZ = rep(3L, 5),
+    BEZ       = paste0("Bezirk ", 1:5),
+    STRNAML   = paste0("Gasse ", 1:5),
+    VONN      = as.character(1:5),
+    BISN      = rep(NA_character_, 5),
+    address   = paste0("Gasse ", 1:5, " 1"),
+    geometry  = sf::st_sfc(bA, bB, bC, bD, bE, crs = 31287)
   )
 
   list(zones = zones, buildings = buildings)
 }
 
 
-test_that("acd_agreement column exists and is a factor with 4 expected levels", {
-  f      <- .make_acd_fixtures()
+test_that("confidence_tier factor has 5 levels and all levels are populated", {
+  f      <- .make_tier_fixtures()
   joined <- join_buildings_zones(f$buildings, f$zones)
 
-  expect_true("acd_agreement" %in% names(joined),
-              label = "acd_agreement column must be present")
-  expect_true(is.factor(joined$acd_agreement),
-              label = "acd_agreement must be a factor")
+  expect_true("confidence_tier" %in% names(joined),
+              label = "confidence_tier column must be present")
+  expect_true(is.factor(joined$confidence_tier),
+              label = "confidence_tier must be a factor")
 
-  expected_levels <- c("agree_in_zone", "agree_no_zone", "spatial_only", "acd_only")
-  expect_setequal(levels(joined$acd_agreement), expected_levels)
+  expected_levels <- c(
+    "A_in_zone_high", "B_in_zone_boundary",
+    "C_outside_boundary", "D_outside_nearby", "E_outside_far"
+  )
+  expect_equal(levels(joined$confidence_tier), expected_levels,
+               label = "confidence_tier must have correct 5 levels in order")
 })
 
 
-test_that("B1: spatial=in_zone AND acd_native populated → agree_in_zone", {
-  f      <- .make_acd_fixtures()
+test_that("confidence_tier assigns correct tier to each synthetic building", {
+  f      <- .make_tier_fixtures()
   joined <- join_buildings_zones(f$buildings, f$zones)
 
-  b1 <- joined[joined$building_id == "1", ]
-  expect_equal(as.character(b1$acd_agreement), "agree_in_zone",
-               label = "B1 should be agree_in_zone")
+  tiers <- as.character(joined$confidence_tier[order(as.integer(joined$building_id))])
+
+  expect_equal(tiers[1], "A_in_zone_high",
+               label = "Building 1 (100 m inside zone) should be Tier A")
+  expect_equal(tiers[2], "B_in_zone_boundary",
+               label = "Building 2 (2 m from boundary, inside) should be Tier B")
+  expect_equal(tiers[3], "C_outside_boundary",
+               label = "Building 3 (15 m outside zone) should be Tier C")
+  expect_equal(tiers[4], "D_outside_nearby",
+               label = "Building 4 (100 m outside zone) should be Tier D")
+  expect_equal(tiers[5], "E_outside_far",
+               label = "Building 5 (600 m outside zone) should be Tier E")
 })
 
 
-test_that("B2: spatial=outside_any_zone AND acd_native empty/NA → agree_no_zone", {
-  f      <- .make_acd_fixtures()
+test_that("nearest_zone_dist_m is non-negative for all buildings", {
+  f      <- .make_tier_fixtures()
   joined <- join_buildings_zones(f$buildings, f$zones)
 
-  b2 <- joined[joined$building_id == "2", ]
-  expect_equal(as.character(b2$acd_agreement), "agree_no_zone",
-               label = "B2 should be agree_no_zone")
+  expect_true(
+    all(joined$nearest_zone_dist_m >= 0),
+    label = "nearest_zone_dist_m must be non-negative"
+  )
 })
 
 
-test_that("B3: spatial=in_zone AND acd_native empty → spatial_only", {
-  f      <- .make_acd_fixtures()
+test_that("inside_any_zone is consistent with link_status", {
+  f      <- .make_tier_fixtures()
   joined <- join_buildings_zones(f$buildings, f$zones)
 
-  b3 <- joined[joined$building_id == "3", ]
-  expect_equal(as.character(b3$acd_agreement), "spatial_only",
-               label = "B3 should be spatial_only")
+  # inside_any_zone TRUE → link_status should be in_zone, straddles_boundary, or multiple_zones
+  # inside_any_zone FALSE → link_status should be outside_any_zone or invalid_geometry
+  inside_statuses  <- c("in_zone", "straddles_boundary", "multiple_zones")
+  outside_statuses <- c("outside_any_zone", "invalid_geometry")
+
+  expect_true(
+    all(joined$link_status[joined$inside_any_zone] %in% inside_statuses),
+    label = "inside_any_zone=TRUE buildings must have in-zone link_status"
+  )
+  expect_true(
+    all(joined$link_status[!joined$inside_any_zone] %in% outside_statuses),
+    label = "inside_any_zone=FALSE buildings must have outside link_status"
+  )
 })
 
 
-test_that("B4: spatial=outside_any_zone AND acd_native populated → acd_only", {
-  f      <- .make_acd_fixtures()
+test_that("confidence_tier_summary returns 5 rows with pcts summing to 100", {
+  f      <- .make_tier_fixtures()
   joined <- join_buildings_zones(f$buildings, f$zones)
-
-  b4 <- joined[joined$building_id == "4", ]
-  expect_equal(as.character(b4$acd_agreement), "acd_only",
-               label = "B4 should be acd_only")
-})
-
-
-test_that("acd_agreement_summary returns 4 rows with counts summing to 100 pct", {
-  f      <- .make_acd_fixtures()
-  joined <- join_buildings_zones(f$buildings, f$zones)
-  summ   <- acd_agreement_summary(joined)
+  summ   <- confidence_tier_summary(joined)
 
   expect_true(inherits(summ, "data.frame"),
-              label = "acd_agreement_summary must return a data.frame")
-  expect_true(all(c("acd_agreement", "n_buildings", "pct") %in% names(summ)),
-              label = "expected columns missing from acd_agreement_summary")
+              label = "confidence_tier_summary must return a data.frame")
+  expect_true(
+    all(c("tier", "confidence_tier", "n_buildings", "pct", "color") %in% names(summ)),
+    label = "expected columns missing from confidence_tier_summary"
+  )
+  expect_equal(nrow(summ), 5L,
+               label = "confidence_tier_summary should have 5 rows")
 
-  # All 4 levels present (the fixture produces all 4)
-  expect_equal(nrow(summ), 4L,
-               label = "acd_agreement_summary should have 4 rows — one per level")
-
-  # Percentages sum to 100
   expect_equal(sum(summ$pct), 100, tolerance = 0.1,
-               label = "pct column in acd_agreement_summary must sum to 100")
+               label = "pct column in confidence_tier_summary must sum to 100")
+
+  expect_true(all(grepl("^#[0-9a-fA-F]{6}$", summ$color)),
+              label = "color column must be valid hex colours")
 })

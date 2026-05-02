@@ -1,12 +1,24 @@
 #' @importFrom rlang .data
 NULL
 
+# ── confidence_tier distance thresholds (metres, EPSG:31287) ─────────────────
+# Tier A: centroid inside zone AND >5 m from boundary → "in_zone_high"
+# Tier B: centroid inside zone AND ≤5 m from boundary → "in_zone_boundary"
+# Tier C: centroid outside, within 25 m of nearest zone → "outside_boundary"
+# Tier D: centroid outside, 25–500 m from nearest zone → "outside_nearby"
+# Tier E: centroid outside, >500 m from any zone       → "outside_far"
+TIER_BOUNDARY_INSIDE_M  <- 5L    # inside buildings ≤5 m from edge = Tier B
+TIER_BOUNDARY_OUTSIDE_M <- 25L   # outside buildings ≤25 m from zone = Tier C
+TIER_NEARBY_OUTSIDE_M   <- 500L  # outside buildings ≤500 m from zone = Tier D
+
+
 #' Spatial join of buildings to ACD zones
 #'
 #' Assigns each building to its primary ACD energy-planning zone, computes
 #' diagnostic fields (`n_overlapping_zones`, `overlap_fraction`), classifies
-#' the spatial relationship as a `link_status` factor, and cross-validates the
-#' spatial result against the city's pre-linked `ACD` field via `acd_agreement`.
+#' the spatial relationship as a `link_status` factor, and adds a
+#' `confidence_tier` factor summarising each building's proximity to the
+#' nearest zone boundary.
 #'
 #' Both inputs must already be in EPSG:31287 (Austria Lambert). The join uses
 #' **building centroids** to determine primary zone membership, plus a
@@ -20,21 +32,18 @@ NULL
 #' 4. `straddles_boundary` — `overlap_fraction` strictly between 0.05 and 0.95
 #' 5. `in_zone` — everything else
 #'
-#' @section acd_agreement cross-validation:
-#' The Vienna city dataset carries a pre-linked `ACD` field on buildings
-#' (`ogdwien:GEBAEUDEINFOOGD`). This function cross-validates that city
-#' classification against our independent spatial join result:
+#' @section confidence_tier:
+#' A 5-level factor derived from the distance of each building centroid to the
+#' nearest zone boundary (EPSG:31287 metres). Replaces the defunct
+#' `acd_agreement` field.
 #'
-#' * `agree_in_zone` — both spatial join and city `ACD` say the building is
-#'   in a zone (the "happy path" confirming the two approaches agree)
-#' * `agree_no_zone` — both agree the building is not in a zone
-#' * `spatial_only` — spatial join says in-zone, but city `ACD` is empty/NA
-#'   (we say yes, city says no — potential under-coverage in city data)
-#' * `acd_only` — city `ACD` says in-zone, but spatial join finds no zone
-#'   (city says yes, we say no — potential stale zone geometry or data error)
-#'
-#' Disagreements (`spatial_only`, `acd_only`) are **interesting findings**,
-#' not data errors. Use [case_acd_disagreement()] to extract them.
+#' | Tier | Label | Definition |
+#' |------|-------|------------|
+#' | A | `A_in_zone_high`      | inside zone AND > `TIER_BOUNDARY_INSIDE_M` m from boundary |
+#' | B | `B_in_zone_boundary`  | inside zone AND ≤ `TIER_BOUNDARY_INSIDE_M` m from boundary |
+#' | C | `C_outside_boundary`  | outside zone AND ≤ `TIER_BOUNDARY_OUTSIDE_M` m from nearest zone |
+#' | D | `D_outside_nearby`    | outside zone, `TIER_BOUNDARY_OUTSIDE_M`–`TIER_NEARBY_OUTSIDE_M` m |
+#' | E | `E_outside_far`       | outside zone AND > `TIER_NEARBY_OUTSIDE_M` m from any zone |
 #'
 #' @param buildings An sf object with building footprints in EPSG:31287.
 #'   Must contain at minimum the columns returned by [fetch_buildings()]:
@@ -49,37 +58,33 @@ NULL
 #'   \item{building_id}{`<chr>` — `OBJECTID` from buildings}
 #'   \item{geometry}{sf geometry column preserved from buildings}
 #'   \item{acd_native}{`<chr>` — pre-linked `ACD` classification from city
-#'     data; may be empty string or `NA` for buildings without a city-side
-#'     zone link}
+#'     data (the building registry Adress-Code, NOT a zone membership flag)}
 #'   \item{district}{`<chr>` — `BEZ` district name from buildings}
 #'   \item{year_built}{`<int>` — `BAUJAHR`}
-#'   \item{n_stories}{`<int>` — `GESCH_ANZ` (number of storeys; use as
-#'     height proxy in lieu of a height field)}
-#'   \item{address}{`<chr>` — composed from `STRNAML` / `VONN` / `BISN`
-#'     by [fetch_buildings()]}
+#'   \item{n_stories}{`<int>` — `GESCH_ANZ`}
+#'   \item{address}{`<chr>` — composed from `STRNAML` / `VONN` / `BISN`}
 #'   \item{zone_id}{`<chr>` — `ERPLABEL` of primary intersecting zone,
 #'     or `NA` if none}
-#'   \item{zone_area_ha}{`<dbl>` — `FL_ERP / 10000` (zone area in hectares)}
-#'   \item{zone_district}{`<chr>` — `BEZNR` district number from zone}
-#'   \item{zone_pre_linked_gebid}{`<chr>` — `GEBID` from the zone record
-#'     (zone's own claim about which building it is associated with)}
-#'   \item{zone_legal_url}{`<chr>` — `WEBLINK_VO` URL to the legal planning
-#'     document}
-#'   \item{link_status}{`<fct>` — spatial relationship category (see
-#'     *link_status logic* section)}
-#'   \item{n_overlapping_zones}{`<int>` — number of zones whose centroid
-#'     intersects this building}
-#'   \item{overlap_fraction}{`<dbl>` — fraction of building footprint area
-#'     covered by any overlapping zone; range `[0, 1]`}
-#'   \item{acd_agreement}{`<fct>` — cross-validation result comparing our
-#'     spatial join to the city's pre-linked `ACD` field (see
-#'     *acd_agreement cross-validation* section)}
+#'   \item{zone_area_ha}{`<dbl>` — `FL_ERP / 10000`}
+#'   \item{zone_district}{`<chr>` — `BEZNR` from zone}
+#'   \item{zone_pre_linked_gebid}{`<chr>` — `GEBID` from the zone record}
+#'   \item{zone_legal_url}{`<chr>` — `WEBLINK_VO` URL}
+#'   \item{link_status}{`<fct>` — spatial relationship category}
+#'   \item{n_overlapping_zones}{`<int>` — number of overlapping zones}
+#'   \item{overlap_fraction}{`<dbl>` — fraction of building footprint inside zones}
+#'   \item{nearest_zone_dist_m}{`<dbl>` — distance (metres) from building centroid
+#'     to nearest zone boundary; always non-negative}
+#'   \item{inside_any_zone}{`<lgl>` — `TRUE` if centroid falls inside at least
+#'     one zone polygon}
+#'   \item{confidence_tier}{`<fct>` — 5-level proximity tier (A–E; see section
+#'     *confidence_tier*)}
 #' }
 #'
 #' @export
 #'
-#' @seealso [acd_agreement_summary()] for a tabular cross-validation summary,
-#'   [case_acd_disagreement()] to extract disagreement rows,
+#' @seealso [confidence_tier_summary()] for tier counts and percentages,
+#'   [case_tier()] to subset by tier letter,
+#'   [confidence_tier_by_district()] for a district × tier pivot,
 #'   [link_status_summary()] for counts by spatial relationship.
 #'
 #' @examples
@@ -88,7 +93,7 @@ NULL
 #' buildings <- fetch_buildings(max_features = 500)
 #' joined    <- join_buildings_zones(buildings, zones)
 #' dplyr::count(joined, link_status)
-#' acd_agreement_summary(joined)
+#' confidence_tier_summary(joined)
 #' }
 join_buildings_zones <- function(buildings, zones) {
   # ── 1. CRS guard ─────────────────────────────────────────────────────────────
@@ -111,8 +116,6 @@ join_buildings_zones <- function(buildings, zones) {
   }
 
   # ── 2. Rename WFS columns to canonical schema names ──────────────────────────
-  # any_of() is used throughout so the function tolerates either the canonical
-  # names (already renamed by a prior call) or the raw WFS column names.
   buildings <- buildings |>
     dplyr::rename(
       dplyr::any_of(c(
@@ -121,7 +124,6 @@ join_buildings_zones <- function(buildings, zones) {
         district    = "BEZ",
         year_built  = "BAUJAHR",
         n_stories   = "GESCH_ANZ"
-        # address is already composed by fetch_buildings()
       ))
     ) |>
     dplyr::mutate(
@@ -131,11 +133,11 @@ join_buildings_zones <- function(buildings, zones) {
   zones <- zones |>
     dplyr::rename(
       dplyr::any_of(c(
-        zone_id                 = "ERPLABEL",
-        zone_area_m2            = "FL_ERP",
-        zone_district           = "BEZNR",
-        zone_pre_linked_gebid   = "GEBID",
-        zone_legal_url          = "WEBLINK_VO"
+        zone_id               = "ERPLABEL",
+        zone_area_m2          = "FL_ERP",
+        zone_district         = "BEZNR",
+        zone_pre_linked_gebid = "GEBID",
+        zone_legal_url        = "WEBLINK_VO"
       ))
     )
 
@@ -168,23 +170,22 @@ join_buildings_zones <- function(buildings, zones) {
       ))
     )
 
-  primary_zone_id             <- zone_attrs$zone_id[primary_idx]
-  primary_zone_area_m2        <- if ("zone_area_m2" %in% names(zone_attrs))
+  primary_zone_id        <- zone_attrs$zone_id[primary_idx]
+  primary_zone_area_m2   <- if ("zone_area_m2" %in% names(zone_attrs))
     zone_attrs$zone_area_m2[primary_idx] else rep(NA_real_, length(primary_idx))
-  primary_zone_district       <- if ("zone_district" %in% names(zone_attrs))
+  primary_zone_district  <- if ("zone_district" %in% names(zone_attrs))
     zone_attrs$zone_district[primary_idx] else rep(NA_character_, length(primary_idx))
-  primary_zone_gebid          <- if ("zone_pre_linked_gebid" %in% names(zone_attrs))
+  primary_zone_gebid     <- if ("zone_pre_linked_gebid" %in% names(zone_attrs))
     zone_attrs$zone_pre_linked_gebid[primary_idx] else rep(NA_character_, length(primary_idx))
-  primary_zone_legal_url      <- if ("zone_legal_url" %in% names(zone_attrs))
+  primary_zone_legal_url <- if ("zone_legal_url" %in% names(zone_attrs))
     zone_attrs$zone_legal_url[primary_idx] else rep(NA_character_, length(primary_idx))
 
   # ── 8. overlap_fraction: area of footprint inside ANY overlapping zone ────────
-  n_bldg          <- nrow(buildings)
+  n_bldg           <- nrow(buildings)
   overlap_fraction <- numeric(n_bldg)
 
-  bldg_geom <- sf::st_geometry(buildings)
-  zone_geom <- sf::st_geometry(zones)
-
+  bldg_geom  <- sf::st_geometry(buildings)
+  zone_geom  <- sf::st_geometry(zones)
   bldg_areas <- sf::st_area(bldg_geom)
 
   for (i in seq_len(n_bldg)) {
@@ -193,13 +194,12 @@ join_buildings_zones <- function(buildings, zones) {
       overlap_fraction[[i]] <- 0.0
       next
     }
-    # Union of all overlapping zone footprints intersected with this building
     union_zones_i    <- sf::st_union(zone_geom[zone_idx_i])
     intersect_area_i <- sf::st_area(
       suppressWarnings(sf::st_intersection(bldg_geom[i], union_zones_i))
     )
-    total_intersect <- if (length(intersect_area_i) == 0L) 0 else sum(intersect_area_i)
-    bldg_area_i     <- as.numeric(bldg_areas[[i]])
+    total_intersect      <- if (length(intersect_area_i) == 0L) 0 else sum(intersect_area_i)
+    bldg_area_i          <- as.numeric(bldg_areas[[i]])
     overlap_fraction[[i]] <- if (bldg_area_i > 0) {
       min(as.numeric(total_intersect) / bldg_area_i, 1.0)
     } else {
@@ -223,51 +223,61 @@ join_buildings_zones <- function(buildings, zones) {
     )
   )
 
-  # ── 10. acd_agreement cross-validation ───────────────────────────────────────
-  # Compares our spatial result to the city's pre-linked ACD field.
-  # Disagreements are analytically interesting, not data errors.
-  spatial_says_in_zone <- link_status %in%
-    c("in_zone", "straddles_boundary", "multiple_zones")
+  # ── 10. inside_any_zone logical flag ─────────────────────────────────────────
+  inside_any_zone <- n_overlapping > 0L
 
-  # Retrieve acd_native from the (already-renamed) buildings data frame.
-  # The column may not exist in synthetic test fixtures — default to NA.
-  acd_native_raw <- if ("acd_native" %in% names(buildings))
-    buildings$acd_native else rep(NA_character_, nrow(buildings))
-
-  acd_says_yes <- !is.na(acd_native_raw) & nzchar(trimws(as.character(acd_native_raw)))
-
-  acd_agreement <- factor(
-    dplyr::case_when(
-      spatial_says_in_zone  &  acd_says_yes  ~ "agree_in_zone",
-      !spatial_says_in_zone & !acd_says_yes  ~ "agree_no_zone",
-      spatial_says_in_zone  & !acd_says_yes  ~ "spatial_only",
-      !spatial_says_in_zone &  acd_says_yes  ~ "acd_only",
-      TRUE ~ NA_character_
-    ),
-    levels = c("agree_in_zone", "agree_no_zone", "spatial_only", "acd_only")
+  # ── 11. Distance from centroid to nearest zone boundary ──────────────────────
+  # Compute zone boundary as a single MULTILINESTRING via st_boundary(st_union).
+  # st_distance from centroid to this boundary gives distance to nearest edge
+  # for both inside and outside buildings (always non-negative).
+  # st_make_valid is applied before st_union to avoid TopologyException on
+  # self-touching or slightly invalid zone polygons in the WFS dataset.
+  zone_geom_valid <- sf::st_make_valid(zone_geom)
+  zones_boundary  <- sf::st_boundary(sf::st_union(zone_geom_valid))
+  dist_to_boundary <- as.numeric(
+    sf::st_distance(centroids, zones_boundary)[, 1]
   )
 
-  # ── 11. Assemble output sf ────────────────────────────────────────────────────
-  # Start from buildings sf to preserve geometry and CRS.
-  # district is sourced from BEZ (already renamed to district in step 2).
-  # n_stories is sourced from GESCH_ANZ (already renamed in step 2).
+  # ── 12. confidence_tier factor ───────────────────────────────────────────────
+  # For inside buildings: dist_to_boundary = distance to nearest zone edge
+  # For outside buildings: dist_to_boundary = distance to nearest zone edge
+  # (same computation — st_boundary of the unioned polygon is the outer edge)
+  confidence_tier <- dplyr::case_when(
+    inside_any_zone  & dist_to_boundary >  TIER_BOUNDARY_INSIDE_M  ~ "A_in_zone_high",
+    inside_any_zone  & dist_to_boundary <= TIER_BOUNDARY_INSIDE_M  ~ "B_in_zone_boundary",
+    !inside_any_zone & dist_to_boundary <= TIER_BOUNDARY_OUTSIDE_M ~ "C_outside_boundary",
+    !inside_any_zone & dist_to_boundary <= TIER_NEARBY_OUTSIDE_M   ~ "D_outside_nearby",
+    TRUE                                                             ~ "E_outside_far"
+  )
+  confidence_tier <- factor(
+    confidence_tier,
+    levels = c(
+      "A_in_zone_high", "B_in_zone_boundary",
+      "C_outside_boundary", "D_outside_nearby", "E_outside_far"
+    )
+  )
+
+  # ── 13. Assemble output sf ────────────────────────────────────────────────────
   joined <- buildings |>
     dplyr::mutate(
-      year_built              = as.integer(.data$year_built),
-      n_stories               = if ("n_stories" %in% names(buildings))
+      year_built            = as.integer(.data$year_built),
+      n_stories             = if ("n_stories" %in% names(buildings))
         as.integer(.data$n_stories) else NA_integer_,
-      address                 = if ("address" %in% names(buildings))
+      address               = if ("address" %in% names(buildings))
         as.character(.data$address) else NA_character_,
-      acd_native              = as.character(acd_native_raw),
-      zone_id                 = primary_zone_id,
-      zone_area_ha            = as.double(primary_zone_area_m2) / 10000,
-      zone_district           = as.character(primary_zone_district),
-      zone_pre_linked_gebid   = as.character(primary_zone_gebid),
-      zone_legal_url          = as.character(primary_zone_legal_url),
-      link_status             = link_status,
-      n_overlapping_zones     = as.integer(n_overlapping),
-      overlap_fraction        = overlap_fraction,
-      acd_agreement           = acd_agreement
+      acd_native            = if ("acd_native" %in% names(buildings))
+        as.character(.data$acd_native) else NA_character_,
+      zone_id               = primary_zone_id,
+      zone_area_ha          = as.double(primary_zone_area_m2) / 10000,
+      zone_district         = as.character(primary_zone_district),
+      zone_pre_linked_gebid = as.character(primary_zone_gebid),
+      zone_legal_url        = as.character(primary_zone_legal_url),
+      link_status           = link_status,
+      n_overlapping_zones   = as.integer(n_overlapping),
+      overlap_fraction      = overlap_fraction,
+      nearest_zone_dist_m   = dist_to_boundary,
+      inside_any_zone       = inside_any_zone,
+      confidence_tier       = confidence_tier
     ) |>
     dplyr::select(
       dplyr::any_of(c(
@@ -285,7 +295,9 @@ join_buildings_zones <- function(buildings, zones) {
         "link_status",
         "n_overlapping_zones",
         "overlap_fraction",
-        "acd_agreement"
+        "nearest_zone_dist_m",
+        "inside_any_zone",
+        "confidence_tier"
       ))
     )
 
@@ -293,25 +305,19 @@ join_buildings_zones <- function(buildings, zones) {
 }
 
 
-#' Summarise ACD cross-validation agreement
+#' Summarise confidence tier distribution
 #'
-#' Returns a one-row-per-level count of the `acd_agreement` factor from the
-#' output of [join_buildings_zones()]. Use this to understand how well the
-#' independent spatial join agrees with the city's pre-linked `ACD` field
-#' on `ogdwien:GEBAEUDEINFOOGD`.
-#'
-#' `spatial_only` rows (we say in-zone, city says no) and `acd_only` rows
-#' (city says yes, we say no) are analytically interesting disagreements —
-#' they may reveal under-coverage in the city data or stale zone geometry.
+#' Returns a tibble with one row per `confidence_tier` level, with counts,
+#' percentages, and brand hex colours for visualisation.
 #'
 #' @param joined Output of [join_buildings_zones()].
 #'
 #' @return A tibble with columns:
 #' \describe{
-#'   \item{acd_agreement}{`<fct>` — one of `agree_in_zone`, `agree_no_zone`,
-#'     `spatial_only`, `acd_only`}
-#'   \item{n_buildings}{`<int>` — count of buildings at this level}
+#'   \item{tier}{`<chr>` — the 5-level tier code (A–E)}
+#'   \item{n_buildings}{`<int>` — count of buildings at this tier}
 #'   \item{pct}{`<dbl>` — percentage of total buildings, rounded to 1 d.p.}
+#'   \item{color}{`<chr>` — hex colour for visualisation}
 #' }
 #'
 #' @export
@@ -319,21 +325,41 @@ join_buildings_zones <- function(buildings, zones) {
 #' @examples
 #' \dontrun{
 #' joined <- join_buildings_zones(fetch_buildings(), fetch_acd_zones())
-#' acd_agreement_summary(joined)
+#' confidence_tier_summary(joined)
 #' }
-acd_agreement_summary <- function(joined) {
-  joined |>
+confidence_tier_summary <- function(joined) {
+  tier_colors <- c(
+    "A_in_zone_high"     = "#2ca02c",
+    "B_in_zone_boundary" = "#bcbd22",
+    "C_outside_boundary" = "#ff7f0e",
+    "D_outside_nearby"   = "#9467bd",
+    "E_outside_far"      = "#7f7f7f"
+  )
+
+  all_levels <- names(tier_colors)
+
+  raw <- joined |>
     sf::st_drop_geometry() |>
-    dplyr::count(.data$acd_agreement, name = "n_buildings") |>
-    dplyr::mutate(pct = round(100 * .data$n_buildings / sum(.data$n_buildings), 1))
+    dplyr::count(.data$confidence_tier, name = "n_buildings")
+
+  tibble::tibble(
+    confidence_tier = factor(all_levels, levels = all_levels)
+  ) |>
+    dplyr::left_join(raw, by = "confidence_tier") |>
+    dplyr::mutate(
+      n_buildings = dplyr::coalesce(.data$n_buildings, 0L),
+      pct         = round(100 * .data$n_buildings / sum(.data$n_buildings), 1),
+      color       = tier_colors[as.character(.data$confidence_tier)],
+      tier        = substr(as.character(.data$confidence_tier), 1L, 1L)
+    ) |>
+    dplyr::select("tier", "confidence_tier", "n_buildings", "pct", "color")
 }
 
 
 #' Find orphan zones — zones with no building centroid inside them
 #'
 #' Returns the subset of `zones` for which no building centroid falls within
-#' the zone polygon. These are used to populate the "Orphan zones" dashboard
-#' tab (i.e., the `orphan_zone` case on the zones side of the join).
+#' the zone polygon.
 #'
 #' @param zones An sf object of ACD zones in EPSG:31287.
 #' @param buildings An sf object of buildings in EPSG:31287.
@@ -355,7 +381,6 @@ find_orphan_zones <- function(zones, buildings) {
     centroids <- sf::st_centroid(sf::st_geometry(buildings))
   )
 
-  # For each zone, count how many centroids fall inside
   coverage <- sf::st_contains(zones, centroids)
   n_inside <- lengths(coverage)
 
