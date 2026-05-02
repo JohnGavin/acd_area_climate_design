@@ -25,6 +25,7 @@ r_pkgs <- c(
   "arrow",
   "duckdb",
   "duckplyr",
+  "osmdata",
   "pointblank",
   "targets",
 
