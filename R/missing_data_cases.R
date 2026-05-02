@@ -113,30 +113,69 @@ case_invalid_geometry <- function(joined) {
 }
 
 
-#' Buildings where spatial join and native ACD disagree
+#' Subset buildings by confidence tier
 #'
-#' Returns buildings where the independent spatial join result disagrees with
-#' the city's pre-linked `ACD` classification on `ogdwien:GEBAEUDEINFOOGD`.
-#' Disagreements come in two flavours:
+#' Returns buildings belonging to a specific confidence tier (A–E). Tiers
+#' capture proximity of the building centroid to the nearest ACD zone boundary:
 #'
-#' * `spatial_only` — our spatial join finds a zone, but the city's `ACD`
-#'   field is empty or `NA` (possible under-coverage in city data)
-#' * `acd_only` — the city's `ACD` field is populated, but our spatial join
-#'   finds no overlapping zone (possible stale zone geometry or data error)
-#'
-#' These rows are **analytically interesting findings**, not data errors.
-#' Investigate them before treating the city's `ACD` field as ground truth.
+#' * `A` — inside zone, centroid > 5 m from boundary (high confidence)
+#' * `B` — inside zone, centroid ≤ 5 m from boundary (near edge)
+#' * `C` — outside zone, centroid ≤ 25 m from nearest zone (just outside)
+#' * `D` — outside zone, 25–500 m from nearest zone (nearby)
+#' * `E` — outside zone, > 500 m from any zone (clearly outside)
 #'
 #' @param joined An sf object produced by [join_buildings_zones()].
+#' @param tier_letter Single character: `"A"`, `"B"`, `"C"`, `"D"`, or `"E"`.
 #'
-#' @return Subset of `joined` where `acd_agreement %in% c("spatial_only", "acd_only")`.
+#' @return Subset of `joined` where `confidence_tier` starts with
+#'   `tier_letter`.
 #' @export
-case_acd_disagreement <- function(joined) {
-  joined[joined$acd_agreement %in% c("spatial_only", "acd_only"), ]
+case_tier <- function(joined, tier_letter) {
+  tier_letter <- toupper(tier_letter[[1L]])
+  if (!tier_letter %in% c("A", "B", "C", "D", "E")) {
+    cli::cli_abort(
+      "{.arg tier_letter} must be one of A, B, C, D, E; got {.val {tier_letter}}."
+    )
+  }
+  mask <- startsWith(as.character(joined$confidence_tier), tier_letter)
+  joined[mask, ]
 }
 
 
-# ── Summary tibble ───────────────────────────────────────────────────────────
+# ── Summary tibbles ──────────────────────────────────────────────────────────
+
+#' District × confidence_tier pivot table
+#'
+#' Returns a wide tibble with one row per district and one column per
+#' confidence tier (A–E). Values are building counts. Useful for understanding
+#' zone coverage patterns by administrative district.
+#'
+#' @param joined An sf object produced by [join_buildings_zones()].
+#'
+#' @return A tibble with columns `district`, `A`, `B`, `C`, `D`, `E`.
+#' @export
+confidence_tier_by_district <- function(joined) {
+  long <- joined |>
+    sf::st_drop_geometry() |>
+    dplyr::mutate(
+      tier = substr(as.character(.data$confidence_tier), 1L, 1L)
+    ) |>
+    dplyr::count(.data$district, .data$tier, name = "n")
+
+  all_districts <- sort(unique(long$district))
+  tier_letters  <- c("A", "B", "C", "D", "E")
+
+  # Build wide manually without requiring tidyr
+  tibble::tibble(
+    district = all_districts,
+    A = vapply(all_districts, function(d) sum(long$n[long$district == d & long$tier == "A"]), integer(1L)),
+    B = vapply(all_districts, function(d) sum(long$n[long$district == d & long$tier == "B"]), integer(1L)),
+    C = vapply(all_districts, function(d) sum(long$n[long$district == d & long$tier == "C"]), integer(1L)),
+    D = vapply(all_districts, function(d) sum(long$n[long$district == d & long$tier == "D"]), integer(1L)),
+    E = vapply(all_districts, function(d) sum(long$n[long$district == d & long$tier == "E"]), integer(1L))
+  )
+}
+
 
 #' Summarise building counts by link_status
 #'
