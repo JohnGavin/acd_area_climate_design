@@ -1,0 +1,24 @@
+"district","district_name","n_ogd","n_osm","ratio_osm_to_ogd","is_focus"
+"21","Floridsdorf",2962,54445,18.38,TRUE
+"20","Brigittenau",1617,5381,3.33,TRUE
+"22","Donaustadt",1389,109150,78.58,FALSE
+"23","Liesing",1137,37392,32.89,FALSE
+"11","Simmering",911,19440,21.34,FALSE
+"02","Leopoldstadt",2594,47158,18.18,FALSE
+"14","Penzing",3020,42601,14.11,FALSE
+"10","Favoriten",3362,35451,10.54,FALSE
+"17","Hernals",2986,25565,8.56,FALSE
+"13","Hietzing",4265,31728,7.44,FALSE
+"18","Waehring",3648,20326,5.57,FALSE
+"16","Ottakring",3600,18170,5.05,FALSE
+"12","Meidling",3729,13120,3.52,FALSE
+"19","Doebling",5935,19207,3.24,FALSE
+"03","Landstrasse",3157,8932,2.83,FALSE
+"06","Mariahilf",1405,3441,2.45,FALSE
+"09","Alsergrund",1930,4233,2.19,FALSE
+"05","Margareten",2071,4008,1.94,FALSE
+"15","Rudolfsheim-Fuenfhaus",2998,5774,1.93,FALSE
+"01","Innere Stadt",1514,2767,1.83,FALSE
+"07","Neubau",1461,2538,1.74,FALSE
+"04","Wieden",1464,2395,1.64,FALSE
+"08","Josefstadt",1100,1505,1.37,FALSE

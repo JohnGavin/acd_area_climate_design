@@ -950,6 +950,104 @@ district_stats_full |>
 
 :::
 
+## Row
+
+::: {.card title="OSM vs OGD Coverage (Stage 2 — issue #14)"}
+
+```{r}
+#| label: tbl-osm-coverage
+
+# Load Stage 2 comparison CSV (written by analysis/stage_2/merge_comparison.R)
+.osm_cov_path <- system.file(
+  "extdata", "osm_coverage_by_district.csv", package = "acd"
+)
+# Fall back to analysis output if not yet bundled in inst/extdata
+if (!nzchar(.osm_cov_path) || !file.exists(.osm_cov_path)) {
+  .osm_cov_path <- file.path(
+    tryCatch(find.package("acd"), error = function(e) "."),
+    "inst", "extdata", "osm_coverage_by_district.csv"
+  )
+}
+if (!file.exists(.osm_cov_path)) {
+  .osm_cov_path <- "analysis/stage_2/coverage_by_district.csv"
+}
+
+if (file.exists(.osm_cov_path)) {
+  osm_cov <- read.csv(.osm_cov_path, stringsAsFactors = FALSE)
+
+  osm_total_full <- tryCatch({
+    .smry_path <- sub("coverage_by_district", "osm_total_summary", .osm_cov_path)
+    if (!file.exists(.smry_path)) {
+      .smry_path <- "analysis/stage_2/osm_total_summary.csv"
+    }
+    read.csv(.smry_path)$n_total[1]
+  }, error = function(e) NA_integer_)
+
+  ogd_grand_total <- sum(osm_cov$n_ogd, na.rm = TRUE)
+  osm_in_dist     <- sum(osm_cov$n_osm, na.rm = TRUE)
+
+  # Show focus districts first, then top-10 by ratio
+  top_rows <- osm_cov |>
+    dplyr::arrange(dplyr::desc(is_focus), dplyr::desc(ratio_osm_to_ogd)) |>
+    dplyr::slice_head(n = 13)
+
+  top_rows |>
+    dplyr::select(district, district_name, n_ogd, n_osm, ratio_osm_to_ogd, is_focus) |>
+    gt::gt() |>
+    gt::cols_label(
+      district         = "Bez.",
+      district_name    = "District",
+      n_ogd            = "OGD (GEBAEUDEINFOOGD)",
+      n_osm            = "OSM bbox count",
+      ratio_osm_to_ogd = "OSM / OGD",
+      is_focus         = "Focus"
+    ) |>
+    gt::fmt_number(columns = c(n_ogd, n_osm), decimals = 0) |>
+    gt::fmt_number(columns = ratio_osm_to_ogd, decimals = 1) |>
+    gt::fmt_logical(columns = is_focus) |>
+    gt::tab_style(
+      style     = gt::cell_fill(color = "#fff8dc"),
+      locations = gt::cells_body(rows = is_focus == TRUE)
+    ) |>
+    gt::data_color(
+      columns = ratio_osm_to_ogd,
+      palette = c("#deebf7", "#08519c")
+    ) |>
+    gt::tab_footnote(
+      footnote = paste0(
+        "OSM full-city total (bbox query, 2026-05-01): ",
+        format(osm_total_full, big.mark = ","), " buildings. ",
+        "OGD city-wide total: ",
+        format(ogd_grand_total, big.mark = ","), ". ",
+        "Overall OSM/OGD ratio: ",
+        round(osm_total_full / max(ogd_grand_total, 1), 1), "x. ",
+        "OGD covers ~",
+        round(100 * ogd_grand_total / max(osm_total_full, 1), 0),
+        "% of the OSM building count. ",
+        "OSM per-district counts use bounding boxes (not polygon-clipped), ",
+        "so outer-district ratios are inflated. ",
+        "Source: OpenStreetMap contributors, ODbL 1.0."
+      )
+    ) |>
+    gt::tab_caption(
+      caption = paste0(
+        "OGD vs OSM building counts per district (Stage 2, issue #14). ",
+        "OSM has ", round(osm_total_full / max(ogd_grand_total, 1), 1), "x more ",
+        "buildings city-wide than GEBAEUDEINFOOGD. ",
+        "Focus districts 20 (Brigittenau) and 21 (Floridsdorf) highlighted. ",
+        "Top 13 districts by ratio shown."
+      )
+    )
+} else {
+  gt::gt(data.frame(Note = paste0(
+    "Stage 2 coverage data not yet available. ",
+    "Run analysis/stage_2/merge_comparison.R to generate coverage_by_district.csv."
+  )))
+}
+```
+
+:::
+
 # Joined: Buildings × Zones
 
 ## Row
