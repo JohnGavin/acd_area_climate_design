@@ -1,0 +1,685 @@
+---
+title: "Wie die ACD-Daten funktionieren"
+subtitle: "Eine Erklärung in neun Schritten"
+format:
+  closeread-html:
+    cr-section:
+      layout: "sidebar-left"
+    cr-style:
+      narrative-background-color-overlay: "#1c2833"
+      narrative-text-color-overlay: "#eaecee"
+      narrative-font-family: "Georgia, serif"
+      sidebar-width: "45%"
+    code-fold: false
+    toc: false
+    embed-resources: false
+execute:
+  echo: false
+  message: false
+  warning: false
+---
+
+```{r setup}
+#| label: setup
+pkgload::load_all(here::here(), quiet = TRUE)
+
+# Grundlegende Kennzahlen laden
+joined    <- load_acd_data("joined")
+zones     <- load_acd_data("zones")
+buildings <- load_acd_data("buildings")
+
+n_zones     <- nrow(zones)
+n_buildings <- nrow(buildings)
+snapshot    <- SNAPSHOT_DATE
+
+# Bezirk 20 und 21
+d20 <- joined[joined$district == "20", ]
+d21 <- joined[joined$district == "21", ]
+
+calc_pct_zone <- function(df) {
+  round(100 * sum(df$link_status == "in_zone", na.rm = TRUE) / nrow(df), 1)
+}
+district_20_pct <- calc_pct_zone(d20)
+district_21_pct <- calc_pct_zone(d21)
+
+# OSM-Vergleich
+osm_csv     <- read.csv(
+  system.file("extdata", "osm_total_summary.csv", package = "acd")
+)
+osm_total_n <- osm_csv$n_total[1]
+ogd_pct_of_osm <- round(100 * n_buildings / osm_total_n, 1)
+
+# Vertrauensstufen
+tier_counts <- table(joined$confidence_tier)
+tier_A <- as.integer(tier_counts["A_in_zone_high"])
+tier_B <- as.integer(tier_counts["B_in_zone_boundary"])
+tier_C <- as.integer(tier_counts["C_outside_boundary"])
+tier_D <- as.integer(tier_counts["D_outside_nearby"])
+tier_E <- as.integer(tier_counts["E_outside_far"])
+
+in_zone_total <- sum(joined$link_status == "in_zone", na.rm = TRUE)
+in_zone_pct   <- round(100 * in_zone_total / n_buildings, 1)
+```
+
+:::{.cr-section}
+
+## Schritt 1: Was ist ein Energieraumplan? {#cr-sticky1}
+
+```{r sticky1}
+#| label: sticky1
+library(leaflet)
+# Zeige Wien-Karte mit einem exemplarischen Zonen-Polygon
+zones_sf <- tryCatch({
+  z <- load_acd_data("zones")
+  if ("geometry_wkt" %in% names(z)) {
+    sf::st_as_sf(z, wkt = "geometry_wkt", crs = 4326)
+  } else {
+    NULL
+  }
+}, error = function(e) NULL)
+
+if (!is.null(zones_sf)) {
+  # Wähle den ersten Bezirk als Beispiel
+  sample_zone <- zones_sf[1, ]
+  bbox <- sf::st_bbox(sample_zone)
+  leaflet(sample_zone) |>
+    addProviderTiles(providers$CartoDB.Positron) |>
+    addPolygons(
+      color     = "#e74c3c",
+      weight    = 3,
+      fillColor = "#e74c3c",
+      fillOpacity = 0.25,
+      popup     = ~paste0("Zone: ", ERPLABEL)
+    ) |>
+    fitBounds(bbox[1], bbox[2], bbox[3], bbox[4])
+} else {
+  leaflet() |>
+    addProviderTiles(providers$CartoDB.Positron) |>
+    setView(16.37, 48.21, zoom = 11) |>
+    addMarkers(16.37, 48.21, popup = "Wien")
+}
+```
+
+[@cr-sticky1]
+
+Wien verpflichtet sich, bis 2040 klimaneutral zu sein. Ein zentrales Instrument dafür sind die **Energieraumpläne** (abgekürzt: **ERP**). Das sind rechtsverbindliche Planungsgrundlagen, die festlegen, welche Energieversorgungsform — Fernwärme, Erdwärme, solare Nahwärme — für welches Gebiet vorgesehen ist.
+
+Jeder Energieraumplan gilt für einen räumlich abgegrenzten **Energieraum**: ein Polygon auf der Karte Wiens, das einen oder mehrere Häuserblöcke umfasst. Das Ziel ist gebäudescharf: Die Stadt will wissen, *welches Haus* in welchem Energieraum liegt — und dafür ist eine saubere Verknüpfung von Gebäuden und Zonen unerlässlich.
+
+Genau das versucht dieses Paket zu leisten.
+
+:::
+
+---
+
+:::{.cr-section}
+
+## Schritt 2: Zwei offene Datenquellen {#cr-sticky2}
+
+```{r sticky2}
+#| label: sticky2
+library(leaflet)
+bldgs_sf <- tryCatch({
+  b <- load_acd_data("buildings")
+  if ("geometry_wkt" %in% names(b)) {
+    sf::st_as_sf(b, wkt = "geometry_wkt", crs = 4326) |>
+      dplyr::slice_sample(n = 2000)
+  } else NULL
+}, error = function(e) NULL)
+
+zones_sf2 <- tryCatch({
+  z <- load_acd_data("zones")
+  if ("geometry_wkt" %in% names(z)) {
+    sf::st_as_sf(z, wkt = "geometry_wkt", crs = 4326)
+  } else NULL
+}, error = function(e) NULL)
+
+m <- leaflet() |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+  setView(16.37, 48.21, zoom = 11)
+
+if (!is.null(zones_sf2)) {
+  m <- m |> addPolygons(
+    data        = zones_sf2,
+    color       = "#2980b9",
+    weight      = 1.5,
+    fillColor   = "#2980b9",
+    fillOpacity = 0.15,
+    group       = "Energieraum-Polygone"
+  )
+}
+if (!is.null(bldgs_sf)) {
+  m <- m |> addCircleMarkers(
+    data        = bldgs_sf,
+    radius      = 2,
+    color       = "#e67e22",
+    stroke      = FALSE,
+    fillOpacity = 0.4,
+    group       = "Gebäude (Stichprobe)"
+  )
+}
+m |> addLayersControl(
+  overlayGroups = c("Energieraum-Polygone", "Gebäude (Stichprobe)"),
+  options       = layersControlOptions(collapsed = FALSE)
+)
+```
+
+[@cr-sticky2]
+
+Das Paket kombiniert zwei öffentliche Datensätze von [data.gv.at](https://www.data.gv.at/):
+
+**Energieraum-Polygone** (blau): `r n_zones` Polygone aus dem Wiener Energieraumplan-WFS, abgerufen am `r snapshot`. Jede Zone hat einen eindeutigen Bezeichner (`ERPLABEL`) und einen Weblink zur rechtlichen Grundlage.
+
+**GEBAEUDEINFOOGD** (orange): `r format(n_buildings, big.mark = ".")` Gebäude aus dem Gebäudeinformationsdienst der Stadt Wien, ebenfalls Stand `r snapshot`. Für jedes Gebäude sind Adresse, Baujahr, Stockwerksanzahl und Lage als Punkt-Geometrie verfügbar.
+
+Beide Datensätze sind **Momentaufnahmen** — keine Live-Daten. Die Parquet-Dateien im Paket spiegeln exakt diesen Stand wider.
+
+:::
+
+---
+
+:::{.cr-section}
+
+## Schritt 3: Die Verbindung ist räumlich, nicht relational {#cr-sticky3}
+
+```{r sticky3}
+#| label: sticky3
+library(leaflet)
+zones_sf3 <- tryCatch({
+  z <- load_acd_data("zones")
+  if ("geometry_wkt" %in% names(z)) {
+    sf::st_as_sf(z, wkt = "geometry_wkt", crs = 4326)
+  } else NULL
+}, error = function(e) NULL)
+
+bldgs_sf3 <- tryCatch({
+  b <- load_acd_data("buildings")
+  if ("geometry_wkt" %in% names(b)) {
+    sf::st_as_sf(b, wkt = "geometry_wkt", crs = 4326) |>
+      dplyr::filter(district %in% c("07", "08")) |>
+      dplyr::slice_sample(n = 500)
+  } else NULL
+}, error = function(e) NULL)
+
+m3 <- leaflet() |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+  setView(16.35, 48.2, zoom = 13)
+
+if (!is.null(zones_sf3)) {
+  m3 <- m3 |> addPolygons(
+    data        = zones_sf3,
+    color       = "#2980b9",
+    weight      = 2,
+    fillColor   = "#2980b9",
+    fillOpacity = 0.2,
+    label       = ~ERPLABEL
+  )
+}
+if (!is.null(bldgs_sf3)) {
+  m3 <- m3 |> addCircleMarkers(
+    data        = bldgs_sf3,
+    radius      = 3,
+    color       = "#e67e22",
+    stroke      = FALSE,
+    fillOpacity = 0.6
+  )
+}
+m3
+```
+
+[@cr-sticky3]
+
+Die beiden Datensätze teilen **keinen gemeinsamen Schlüssel**. Es gibt keine Spalte `zone_id` in der Gebäudetabelle, die man einfach mit einer `zone_id` in der Zonentabelle verknüpfen könnte.
+
+Die einzige Möglichkeit, Gebäude und Zonen zu verbinden, ist eine **räumliche Verschneidung** — auf Englisch: *spatial join*. Das Paket prüft für jedes Gebäude, in welches Zonen-Polygon es fällt, oder — falls es außerhalb liegt — welche Zone am nächsten ist.
+
+Technisch: `sf::st_join(buildings, zones, join = sf::st_within)`, gefolgt von einer Distanzberechnung mit `sf::st_distance()` für Gebäude ohne Treffer.
+
+Das klingt simpel, bringt aber Komplikationen mit sich — die wir in den folgenden Schritten erklären.
+
+:::
+
+---
+
+:::{.cr-section}
+
+## Schritt 4: Was die ACD-Spalte NICHT ist {#cr-sticky4}
+
+```{r sticky4}
+#| label: sticky4
+library(gt)
+
+# Zeige eine kleine Beispieltabelle mit der acd_native-Spalte
+sample_data <- joined |>
+  dplyr::select(building_id, acd_native, district, zone_id, link_status) |>
+  dplyr::slice_sample(n = 8) |>
+  dplyr::mutate(
+    acd_native_display = acd_native
+  )
+
+gt(sample_data) |>
+  tab_header(
+    title    = "Beispiel: joined-Tabelle",
+    subtitle = "acd_native ist ein Gebäudecode, kein Zonenverweis"
+  ) |>
+  cols_label(
+    building_id       = "Gebäude-ID",
+    acd_native        = "acd_native",
+    district          = "Bezirk",
+    zone_id           = "Zone (nach Spatial Join)",
+    link_status       = "Verknüpfungsstatus",
+    acd_native_display = "acd_native (Klartextanzeige)"
+  ) |>
+  cols_hide(acd_native_display) |>
+  tab_style(
+    style = cell_fill(color = "#fdecea"),
+    locations = cells_column_labels(columns = acd_native)
+  ) |>
+  tab_style(
+    style = cell_text(style = "italic", color = "#c0392b"),
+    locations = cells_column_labels(columns = acd_native)
+  ) |>
+  tab_footnote(
+    footnote  = "Kein Verweis auf eine Energieraum-Zone — nur ein interner Gebäudeschlüssel.",
+    locations = cells_column_labels(columns = acd_native)
+  ) |>
+  opt_table_font(font = "Georgia") |>
+  tab_options(table.font.size = 12)
+```
+
+[@cr-sticky4]
+
+Eine häufige Fehlannahme beim ersten Blick auf den Datensatz: Die Spalte `acd_native` im GEBAEUDEINFOOGD sieht aus wie ein Zonenverweis. Tatsächlich ist sie der **Adress-Code** des Gebäudes — eine interne Ordnungsnummer des Wiener Adressregisters, auch **Gebäudekennzahl** genannt.
+
+**Was `acd_native` nicht ist:** kein Verweis auf einen Energieraumplan, kein Fremdschlüssel in der Zonentabelle, kein sortierbarer Qualitätsindikator für die Verknüpfung.
+
+Diese Verwechslung führt zu stillen Fehlern: Wer die beiden Tabellen über `acd_native` zu joinen versucht, erhält entweder 0 Treffer oder — schlimmer — zufällige Falschverknüpfungen, falls ein Zahlenwert in beiden Tabellen vorkommt.
+
+Der korrekte Weg ist ausschließlich der räumliche Join.
+
+:::
+
+---
+
+:::{.cr-section}
+
+## Schritt 5: Vertrauensstufen statt Ja/Nein {#cr-sticky5}
+
+```{r sticky5}
+#| label: sticky5
+library(leaflet)
+joined_sf5 <- tryCatch({
+  if ("geometry_wkt" %in% names(joined)) {
+    sf::st_as_sf(joined, wkt = "geometry_wkt", crs = 4326) |>
+      dplyr::filter(district %in% c("07", "08", "09")) |>
+      dplyr::slice_sample(n = 1500)
+  } else NULL
+}, error = function(e) NULL)
+
+tier_colors <- c(
+  "A_in_zone_high"      = "#27ae60",
+  "B_in_zone_boundary"  = "#f39c12",
+  "C_outside_boundary"  = "#e67e22",
+  "D_outside_nearby"    = "#e74c3c",
+  "E_outside_far"       = "#8e44ad"
+)
+
+tier_labels <- c(
+  "A_in_zone_high"      = "A: Klar in Zone (≤ 5 m)",
+  "B_in_zone_boundary"  = "B: Grenzlage (5–25 m)",
+  "C_outside_boundary"  = "C: Randbereich (25–500 m)",
+  "D_outside_nearby"    = "D: Außerhalb, nah (0–500 m)",
+  "E_outside_far"       = "E: Weit außerhalb (> 500 m)"
+)
+
+if (!is.null(joined_sf5)) {
+  pal <- colorFactor(
+    palette = unname(tier_colors),
+    levels  = names(tier_colors)
+  )
+
+  leaflet(joined_sf5) |>
+    addProviderTiles(providers$CartoDB.Positron) |>
+    setView(16.35, 48.2, zoom = 13) |>
+    addCircleMarkers(
+      radius      = 3,
+      color       = ~pal(confidence_tier),
+      stroke      = FALSE,
+      fillOpacity = 0.7,
+      popup       = ~paste0(
+        "<b>Stufe:</b> ", confidence_tier, "<br>",
+        "<b>Distanz:</b> ",
+        round(nearest_zone_dist_m, 1), " m"
+      )
+    ) |>
+    addLegend(
+      position = "bottomright",
+      pal      = pal,
+      values   = ~confidence_tier,
+      title    = "Vertrauensstufe",
+      labFormat = labelFormat(
+        transform = function(x) tier_labels[x]
+      )
+    )
+} else {
+  leaflet() |>
+    addProviderTiles(providers$CartoDB.Positron) |>
+    setView(16.37, 48.21, zoom = 11)
+}
+```
+
+[@cr-sticky5]
+
+Ein einfaches Ja/Nein reicht nicht. Dass ein Gebäude geometrisch *außerhalb* einer Zone liegt, kann an einem Vermessungsfehler von wenigen Metern liegen — oder daran, dass das Gebäude tatsächlich 2 Kilometer entfernt von jeder Zone steht.
+
+Das Paket löst das mit fünf **Vertrauensstufen**:
+
+| Stufe | Bedeutung | Anzahl |
+|-------|-----------|--------|
+| **A** — Klar in Zone | Distanz ≤ 5 m | `r format(tier_A, big.mark = ".")` |
+| **B** — Grenzlage | 5 – 25 m | `r format(tier_B, big.mark = ".")` |
+| **C** — Randbereich | 25 – 500 m | `r format(tier_C, big.mark = ".")` |
+| **D** — Außerhalb, nah | Nächste Zone < 500 m | `r format(tier_D, big.mark = ".")` |
+| **E** — Weit außerhalb | > 500 m von jeder Zone | `r format(tier_E, big.mark = ".")` |
+
+Für stadtplanerische Auswertungen empfiehlt sich, nur Stufen A und B zu verwenden — das sind `r format(tier_A + tier_B, big.mark = ".")` Gebäude (`r round(100*(tier_A + tier_B)/n_buildings, 1)` %).
+
+:::
+
+---
+
+:::{.cr-section}
+
+## Schritt 6: Fokus auf Bezirk 20 und 21 {#cr-sticky6}
+
+```{r sticky6}
+#| label: sticky6
+library(leaflet)
+districts_sf <- tryCatch({
+  d <- load_acd_data("districts")
+  if ("geometry_wkt" %in% names(d)) {
+    sf::st_as_sf(d, wkt = "geometry_wkt", crs = 4326)
+  } else NULL
+}, error = function(e) NULL)
+
+joined_2021_sf <- tryCatch({
+  sub <- joined[joined$district %in% c("20", "21"), ]
+  if ("geometry_wkt" %in% names(sub)) {
+    sf::st_as_sf(sub, wkt = "geometry_wkt", crs = 4326)
+  } else NULL
+}, error = function(e) NULL)
+
+tier_colors6 <- c(
+  "A_in_zone_high"     = "#27ae60",
+  "B_in_zone_boundary" = "#f39c12",
+  "C_outside_boundary" = "#e67e22",
+  "D_outside_nearby"   = "#e74c3c",
+  "E_outside_far"      = "#8e44ad"
+)
+
+m6 <- leaflet() |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+  setView(16.41, 48.24, zoom = 12)
+
+if (!is.null(districts_sf)) {
+  d2021 <- districts_sf[districts_sf$district %in% c("20", "21"), ]
+  if (nrow(d2021) > 0) {
+    m6 <- m6 |> addPolygons(
+      data        = d2021,
+      color       = "#2c3e50",
+      weight      = 3,
+      fill        = FALSE,
+      label       = ~paste0("Bezirk ", district)
+    )
+  }
+}
+
+if (!is.null(joined_2021_sf)) {
+  pal6 <- colorFactor(
+    palette = unname(tier_colors6),
+    levels  = names(tier_colors6)
+  )
+  m6 <- m6 |> addCircleMarkers(
+    data        = joined_2021_sf,
+    radius      = 3,
+    color       = ~pal6(confidence_tier),
+    stroke      = FALSE,
+    fillOpacity = 0.7
+  )
+}
+
+m6
+```
+
+[@cr-sticky6]
+
+Der aktuelle Arbeitsstand des Projekts legt besonderes Gewicht auf **Bezirk 20 (Brigittenau)** und **Bezirk 21 (Floridsdorf)** — zwei dicht bebaute Bezirke nördlich der Donau mit unterschiedlichem Fernwärme-Ausbaupotenzial.
+
+Die Abdeckung unterscheidet sich deutlich:
+
+- **Bezirk 20**: `r district_20_pct` % der Gebäude liegen in einer Energieraum-Zone
+- **Bezirk 21**: `r district_21_pct` % der Gebäude liegen in einer Energieraum-Zone
+
+Diese Unterschiede spiegeln nicht die Qualität der Daten wider, sondern den Stand der **Energieraumplanung**: Für manche Gebiete existieren bereits fertige Pläne, für andere noch nicht.
+
+:::
+
+---
+
+:::{.cr-section}
+
+## Schritt 7: OSM bestätigt — nur `r ogd_pct_of_osm` % Abdeckung {#cr-sticky7}
+
+```{r sticky7}
+#| label: sticky7
+library(gt)
+vergleich <- data.frame(
+  Datensatz    = c("OpenStreetMap (OSM)", "GEBAEUDEINFOOGD (OGD)"),
+  Quelle       = c("OpenStreetMap-Gemeinschaft", "Stadt Wien / data.gv.at"),
+  Gebaeude     = c(osm_total_n, n_buildings),
+  Abdeckung    = c("Vollständig (Stadtgebiet)", paste0("ca. ", ogd_pct_of_osm, " % des OSM-Bestands")),
+  Zugaenglich  = c("Frei, CC-BY", "Frei, CC-BY 4.0 AT")
+)
+
+gt(vergleich) |>
+  tab_header(
+    title    = "Gebäudebestände im Vergleich",
+    subtitle = paste0("Stand: ", snapshot)
+  ) |>
+  cols_label(
+    Datensatz   = "Datensatz",
+    Quelle      = "Quelle",
+    Gebaeude    = "Gebäude (n)",
+    Abdeckung   = "Abdeckung",
+    Zugaenglich = "Lizenz"
+  ) |>
+  fmt_integer(columns = Gebaeude, sep_mark = ".") |>
+  tab_style(
+    style     = cell_fill(color = "#eafaf1"),
+    locations = cells_body(rows = 1)
+  ) |>
+  tab_style(
+    style     = cell_fill(color = "#fef9e7"),
+    locations = cells_body(rows = 2)
+  ) |>
+  opt_table_font(font = "Georgia") |>
+  tab_options(table.font.size = 13)
+```
+
+[@cr-sticky7]
+
+Eine wichtige Einschränkung: GEBAEUDEINFOOGD ist ein **kurierter Datensatz** — er enthält nicht alle Wiener Gebäude, sondern jene, für die die Stadt Wien vollständige amtliche Daten führt. OpenStreetMap (OSM) zählt für dasselbe Stadtgebiet rund `r format(osm_total_n, big.mark = ".")` Gebäude.
+
+Der OGD-Datensatz umfasst `r format(n_buildings, big.mark = ".")` Gebäude — das entspricht etwa `r ogd_pct_of_osm` % des OSM-Bestands.
+
+Das ist keine Schwäche des Datensatzes, sondern eine Eigenschaft: OGD-Gebäude sind amtlich vermessen, haben offizielle Adressen und sind rechtssicher identifiziert. Für eine energierechtliche Planung ist das wertvoll. Für eine vollständige Bestandsaufnahme aller Baukörper wäre eine Ergänzung über OSM oder GEBAEUDETYPOGD notwendig.
+
+:::
+
+---
+
+:::{.cr-section}
+
+## Schritt 8: Was Sie damit tun können — und was nicht {#cr-sticky8}
+
+```{r sticky8}
+#| label: sticky8
+library(leaflet)
+# Zeige ein Beispiel einer sinnvollen Nutzung: Karte mit in_zone-Gebäuden
+ex_sf <- tryCatch({
+  sub <- joined[joined$district == "07" & joined$confidence_tier == "A_in_zone_high", ]
+  if ("geometry_wkt" %in% names(sub)) {
+    sf::st_as_sf(sub, wkt = "geometry_wkt", crs = 4326)
+  } else NULL
+}, error = function(e) NULL)
+
+zones_ex <- tryCatch({
+  z <- load_acd_data("zones")
+  if ("geometry_wkt" %in% names(z)) {
+    sf::st_as_sf(z, wkt = "geometry_wkt", crs = 4326)
+  } else NULL
+}, error = function(e) NULL)
+
+m8 <- leaflet() |>
+  addProviderTiles(providers$CartoDB.Positron) |>
+  setView(16.35, 48.2, zoom = 14)
+
+if (!is.null(zones_ex)) {
+  m8 <- m8 |> addPolygons(
+    data        = zones_ex,
+    color       = "#2980b9",
+    weight      = 1.5,
+    fillColor   = "#2980b9",
+    fillOpacity = 0.1,
+    label       = ~ERPLABEL
+  )
+}
+if (!is.null(ex_sf)) {
+  m8 <- m8 |> addCircleMarkers(
+    data        = ex_sf,
+    radius      = 4,
+    color       = "#27ae60",
+    stroke      = FALSE,
+    fillOpacity = 0.8,
+    popup       = ~paste0(
+      "<b>", address, "</b><br>",
+      "Zone: ", zone_id, "<br>",
+      "Baujahr: ", year_built
+    )
+  )
+}
+m8
+```
+
+[@cr-sticky8]
+
+**Was mit diesem Datensatz möglich ist:**
+
+- Zählen, wie viele Gebäude in welcher Energieraum-Zone liegen
+- Kartenauswertungen nach Bezirk, Baujahr oder Stockwerksanzahl
+- Ermitteln, welche Gebäude noch keiner Zone zugeordnet sind (Stufe D / E)
+- Grundlage für eine weiterführende Verknüpfung mit Förderunterlagen oder Sanierungsplänen
+
+**Was dieser Datensatz ausdrücklich nicht bietet:**
+
+- **Keine Energieausweise (EPC):** Der Datensatz enthält keine Angaben zum tatsächlichen Energiebedarf einzelner Gebäude
+- **Keine Innenraumspezifikationen:** Heizungstyp, Dämmung und Anlagentechnik sind nicht enthalten
+- **Keine Zeitreihen:** Es handelt sich um eine Momentaufnahme vom `r snapshot` — historische Vergleiche sind nicht möglich
+- **Keine Rechtssicherheit für Einzelentscheidungen:** Für rechtsverbindliche Planungen ist der direkte Zugriff auf die Originaldaten der Stadt Wien erforderlich
+
+Die richtige Frage ist nicht „Darf ich das verwenden?", sondern „Wofür ist es geeignet?" — und die Antwort ist: für explorative Stadtanalyse und Planungsvorbereitung.
+
+:::
+
+---
+
+:::{.cr-section}
+
+## Schritt 9: Wie weiter? {#cr-sticky9}
+
+```{r sticky9}
+#| label: sticky9
+library(gt)
+
+roadmap <- data.frame(
+  Prioritaet = c("Hoch", "Hoch", "Mittel", "Mittel", "Niedrig"),
+  Aufgabe    = c(
+    "Querverweis via STATAUSTRIA-Gebäudecodes",
+    "GEBAEUDETYPOGD-Abdeckung erweitern",
+    "Englische Version dieser Erklärung (Issue #8)",
+    "Automatisierte Snapshot-Aktualisierung (monatlich)",
+    "OSM-Abgleich zur Lückenerkennung"
+  ),
+  Status     = c(
+    "Offen",
+    "In Planung",
+    "Offen",
+    "In Planung",
+    "Offen"
+  ),
+  Beschreibung = c(
+    "Verbindung zu Statistik Austria-Daten über gemeinsame Gebäudekennzahl",
+    "Einbeziehung weiterer Gebäudetypen aus dem OGD-Katalog",
+    "Scrollytelling-Seite auf Englisch für internationale Leser",
+    "WFS-Abfrage automatisch bei Datenaktualisierungen der Stadt Wien",
+    "OSM-Polygone für die ~81 % nicht erfassten Gebäude einbinden"
+  )
+)
+
+gt(roadmap) |>
+  tab_header(
+    title    = "Roadmap: Nächste Schritte",
+    subtitle = "Stand der Entwicklung"
+  ) |>
+  cols_label(
+    Prioritaet   = "Priorität",
+    Aufgabe      = "Aufgabe",
+    Status       = "Status",
+    Beschreibung = "Erläuterung"
+  ) |>
+  tab_style(
+    style     = list(cell_fill(color = "#fdecea")),
+    locations = cells_body(rows = Prioritaet == "Hoch")
+  ) |>
+  tab_style(
+    style     = list(cell_fill(color = "#fef9e7")),
+    locations = cells_body(rows = Prioritaet == "Mittel")
+  ) |>
+  opt_table_font(font = "Georgia") |>
+  tab_options(table.font.size = 12)
+```
+
+[@cr-sticky9]
+
+Die aktuell vorliegende Version ist ein **Proof of Concept**. Sie zeigt, dass die räumliche Verknüpfung von Gebäuden und Energieraum-Zonen prinzipiell funktioniert — und wo die Grenzen liegen.
+
+Die größte offene Frage ist die **Vollständigkeit**: Nur `r ogd_pct_of_osm` % des Gebäudebestands (nach OSM-Maßstab) sind im OGD-Datensatz erfasst. Eine Erweiterung über GEBAEUDETYPOGD oder einen direkten Abgleich mit Statistik-Austria-Daten könnte die Abdeckung erheblich verbessern.
+
+Rückmeldungen, Fehlerberichte und Beiträge sind willkommen — das Projekt ist vollständig offen auf GitHub.
+
+:::
+
+---
+
+## Glossar {#glossar}
+
+**ACD** (Area Climate Design)
+: Englische Bezeichnung für den Wiener Ansatz, Klimaschutzziele räumlich auf Gebäudeebene herunterzubrechen. Gibt dem Paket seinen Namen.
+
+**Bezirk**
+: Einer der 23 Stadtbezirke Wiens. In diesem Paket als zweistellige Zahl gespeichert (z. B. `"07"` für Neubau, `"20"` für Brigittenau).
+
+**Energieraumplan (ERP)**
+: Rechtsverbindliches Planungsinstrument der Stadt Wien, das für ein räumlich abgegrenztes Gebiet die vorgesehene Energieversorgungsform festlegt.
+
+**Gebäudekennzahl**
+: Interne Ordnungsnummer des Wiener Adressregisters. Im Datensatz als Spalte `acd_native` gespeichert. *Kein* Zonenverweis.
+
+**Energieraum-Polygon**
+: Das Kartenpolygon, das den räumlichen Geltungsbereich eines Energieraum-plans definiert. `r n_zones` Polygone in der aktuellen Snapshot-Version.
+
+**Räumliche Verschneidung** (*Spatial Join*)
+: Verfahren, das zwei Geodatensätze ohne gemeinsamen Schlüssel über ihre geometrische Lage verknüpft. Hier: Prüfung, ob ein Gebäudepunkt innerhalb eines Zonen-Polygons liegt.
+
+**Vertrauensstufe** (*Confidence Tier*)
+: Fünfstufige Klassifikation (A–E), die angibt, wie zuverlässig die Verknüpfung eines Gebäudes mit einer Zone ist — basierend auf der Distanz zwischen Gebäudepunkt und nächster Zonengrenze.
