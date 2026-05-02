@@ -36,6 +36,7 @@ Suggests:
     duckplyr,
     osmdata,
     pointblank,
+    rvest,
     targets
 Config/testthat/edition: 3
 VignetteBuilder: knitr

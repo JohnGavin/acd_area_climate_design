@@ -69,3 +69,62 @@ acceptable for the purpose of confirming the hypothesis (undercount), not precis
 measurement.
 **Decided BEFORE seeing:** per-district results
 **Decided AFTER seeing:** Overpass rate-limit failure on second full-geometry pull
+
+## 2026-05-02: Deploy validation — rvest + httr2 over Python/Playwright
+
+**Category:** other (tooling)
+**Decided:** Use rvest + httr2 (pure R) for deploy validation, not Python/Playwright.
+**Alternatives considered:**
+1. Python + Playwright — rejected: adds a separate language runtime; project Nix env is
+   R-centric; Playwright requires browser binaries not in default.nix.
+2. Python + requests/bs4 — rejected: same R-vs-Python friction; would require a separate
+   venv or nix shell layer. No benefit over rvest for static HTML scraping.
+3. RSelenium — rejected: requires a running Selenium server; overkill for static page
+   structural checks. httr2 + rvest is sufficient for GET + parse workflows.
+**Rationale:** rvest and httr2 are already in the project dependency graph (httr2 is in
+DESCRIPTION Imports). Adding rvest keeps validation within the same R nix shell used for
+all other project work. No new runtime needed.
+**Decided BEFORE seeing:** any live site results
+**Decided AFTER seeing:** DESCRIPTION already had httr2 in Imports
+
+## 2026-05-02: Deploy validation — verdict threshold design (FAIL / WARN / PASS)
+
+**Category:** model (analytical method)
+**Decided:**
+- FAIL: any HTTP != 200, error markers > 0, silent empty Leaflet containers, or 4xx/5xx
+  CSS/JS assets. These indicate the page is broken for users.
+- WARN: broken same-page hash links (#fragment pointing to nonexistent id) or tables
+  with empty `<tbody>`. These are cosmetic degradations, not outright breakage.
+- PASS: all checks clean.
+**Alternatives considered:**
+1. Binary PASS/FAIL only — rejected: too coarse. Some issues (broken anchors) are minor
+   UX nuisances while others (HTTP 404, error output) indicate full failure.
+2. Numeric severity score — rejected: overengineered for a CI health check. Three tiers
+   map directly to actionable decisions: FAIL → block deploy, WARN → file issue,
+   PASS → no action.
+**Rationale:** FAIL tier should catch any user-visible error output or network failure.
+WARN tier captures issues that reduce quality but don't break the page. Threshold logic
+mirrors the approach in quality-gates Bronze/Silver/Gold: coarse categories over
+continuous scores for actionability.
+**Decided BEFORE seeing:** live site results
+**Decided AFTER seeing:** n/a (threshold design preceded first run)
+
+## 2026-05-02: Deploy validation — empty-leaflet check semantics
+
+**Category:** model (analytical method)
+**Decided:** A Leaflet container is classified as "silent empty" (triggering FAIL) when
+the page HTML contains no geodata markers (no leaflet-marker, circleMarker, addPolygons,
+latlng, or coordinates strings) AND the container's inner text or its parent's text
+contains no empty-state message ("no buildings", "no data", "no records", etc.).
+An empty Leaflet with an explicit empty-state message is classified as
+"empty with message" and does NOT trigger FAIL.
+**Alternatives considered:**
+1. Flag all Leaflet containers without visible markers as FAIL — rejected: during
+   development the dashboard legitimately shows empty maps for data-filtered categories.
+   A silent empty is a bug; an acknowledged empty is a feature.
+2. Skip Leaflet checks entirely — rejected: empty maps with no user feedback are the
+   most common silent regression in deployed dashboards.
+**Rationale:** The empty-state distinction follows UX principle: the user should always
+know why a map is empty. Silent empty = bug. Explicit empty state = intentional design.
+**Decided BEFORE seeing:** live site results
+**Decided AFTER seeing:** dashboard HTML structure (Leaflet divs without geodata markers)

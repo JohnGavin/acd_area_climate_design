@@ -29,6 +29,9 @@ r_pkgs <- c(
   "pointblank",
   "targets",
 
+  # Validation / web scraping
+  "rvest",
+
   # Development and documentation
   "devtools",
   "gert",
