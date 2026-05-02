@@ -618,6 +618,15 @@ joined_for_map <- if (nrow(joined) > MAP_SAMPLE_N) {
     "</div>"
   ))
 
+  # District outlines are decorative overlays — clicks must pass THROUGH
+  # them so buildings/zones underneath retain their popups. Use label= for
+  # a hover tooltip instead of a click popup.
+  pass_through_opts <- leaflet::pathOptions(
+    interactive = FALSE,
+    pane        = "overlayPane"
+  )
+  highlight_off <- leaflet::highlightOptions(stroke = FALSE)
+
   # Non-focus districts
   m <- leaflet::addPolygons(
     m,
@@ -627,12 +636,9 @@ joined_for_map <- if (nrow(joined) > MAP_SAMPLE_N) {
     weight      = 1,
     opacity     = 0.7,
     group       = group_name,
-    popup       = ~ htmltools::HTML(paste0(
-      "<div style='color:#fff;background:#111;padding:5px;'>",
-      "<strong>Bezirk ", BEZNR, "</strong><br>",
-      NAMEG,
-      "</div>"
-    ))
+    options     = pass_through_opts,
+    highlight   = highlight_off,
+    label       = ~ paste0("Bezirk ", BEZNR, " — ", NAMEG)
   )
   # Focus districts (20 Brigittenau, 21 Floridsdorf)
   m <- leaflet::addPolygons(
@@ -643,12 +649,9 @@ joined_for_map <- if (nrow(joined) > MAP_SAMPLE_N) {
     weight      = 4,
     opacity     = 0.9,
     group       = group_name,
-    popup       = ~ htmltools::HTML(paste0(
-      "<div style='color:#fff;background:#111;padding:5px;'>",
-      "<strong>Bezirk ", BEZNR, " (focus)</strong><br>",
-      NAMEG,
-      "</div>"
-    ))
+    options     = pass_through_opts,
+    highlight   = highlight_off,
+    label       = ~ paste0("Bezirk ", BEZNR, " (focus) — ", NAMEG)
   )
   m
 }
@@ -1133,7 +1136,10 @@ if (nrow(tier_summary) > 0L) {
   tier_display <- tier_summary |>
     dplyr::mutate(
       tier_label = tier_labels[as.character(confidence_tier)],
-      tier_label = dplyr::coalesce(tier_label, as.character(confidence_tier))
+      tier_label = dplyr::coalesce(tier_label, as.character(confidence_tier)),
+      # Blank cell text — tab_style fills the cell BACKGROUND so the text
+      # would just be a redundant hex string layered on the same colour.
+      color      = ""
     ) |>
     dplyr::select(tier_label, n_buildings, pct, color)
 
@@ -1530,32 +1536,37 @@ N (this snapshot): **`r n_outside`** buildings (`r pct_outside`% of total).
 
 ```{r}
 #| label: fig-case-straddle
+#| results: asis
 
 sub_str <- case_straddle(joined, n = 50L)
 
-leaflet(data = sub_str, height = "420px") |>
-  leaflet::addProviderTiles(
-    leaflet::providers$CartoDB.DarkMatter,
-    options = leaflet::providerTileOptions(opacity = 0.95)
-  ) |>
-  leaflet::addCircleMarkers(
-    radius      = 5,
-    fillColor   = link_status_colors[["straddles_boundary"]],
-    fillOpacity = 0.85,
-    color       = "#8B4513",
-    weight      = 0.8,
-    popup       = ~ paste0(
-      "<strong>Building: </strong>", building_id, "<br>",
-      "<strong>Zone: </strong>", dplyr::coalesce(zone_id, "—"), "<br>",
-      "<strong>Overlap fraction: </strong>",
-      round(overlap_fraction, 3)
-    )
-  ) |>
-  leaflet::setView(
-    lng  = vienna_center[["lng"]],
-    lat  = vienna_center[["lat"]],
-    zoom = 12L
-  )
+if (nrow(sub_str) == 0L) {
+  cat("> **No buildings in this category in the current snapshot.** The straddling-boundary check returns 0 hits on the full Vienna data — the centroid-based join produces unambiguous assignments at this resolution. If the buffer threshold widens (e.g. 25 m), some buildings would migrate from `outside_any_zone` to a near-boundary cohort; see the **Confidence** tab for the distance-based tier breakdown.\n")
+} else {
+  print(leaflet(data = sub_str, height = "420px") |>
+    leaflet::addProviderTiles(
+      leaflet::providers$CartoDB.DarkMatter,
+      options = leaflet::providerTileOptions(opacity = 0.95)
+    ) |>
+    leaflet::addCircleMarkers(
+      radius      = 5,
+      fillColor   = link_status_colors[["straddles_boundary"]],
+      fillOpacity = 0.85,
+      color       = "#8B4513",
+      weight      = 0.8,
+      popup       = ~ paste0(
+        "<strong>Building: </strong>", building_id, "<br>",
+        "<strong>Zone: </strong>", dplyr::coalesce(zone_id, "—"), "<br>",
+        "<strong>Overlap fraction: </strong>",
+        round(overlap_fraction, 3)
+      )
+    ) |>
+    leaflet::setView(
+      lng  = vienna_center[["lng"]],
+      lat  = vienna_center[["lat"]],
+      zoom = 12L
+    ))
+}
 ```
 
 **<span class='warn'>AMBIGUOUS</span> — Building footprint spans two or more
@@ -1580,32 +1591,37 @@ Sample size (this snapshot): **`r n_straddle`** buildings
 
 ```{r}
 #| label: fig-case-multi
+#| results: asis
 
 sub_mul <- case_multi(joined, n = 50L)
 
-leaflet(data = sub_mul, height = "420px") |>
-  leaflet::addProviderTiles(
-    leaflet::providers$CartoDB.DarkMatter,
-    options = leaflet::providerTileOptions(opacity = 0.95)
-  ) |>
-  leaflet::addCircleMarkers(
-    radius      = 5,
-    fillColor   = link_status_colors[["multiple_zones"]],
-    fillOpacity = 0.85,
-    color       = "#4B0082",
-    weight      = 0.8,
-    popup       = ~ paste0(
-      "<strong>Building: </strong>", building_id, "<br>",
-      "<strong>Primary zone: </strong>",
-      dplyr::coalesce(zone_id, "—"), "<br>",
-      "<strong>N overlapping zones: </strong>", n_overlapping_zones
-    )
-  ) |>
-  leaflet::setView(
-    lng  = vienna_center[["lng"]],
-    lat  = vienna_center[["lat"]],
-    zoom = 12L
-  )
+if (nrow(sub_mul) == 0L) {
+  cat("> **No buildings in this category in the current snapshot.** The full Vienna data has 0 buildings whose centroid falls inside two or more zones simultaneously. Layered zoning would produce overlapping polygons; the current Energieraumplan publication does not. If a future snapshot introduces overlap, this tab will populate.\n")
+} else {
+  print(leaflet(data = sub_mul, height = "420px") |>
+    leaflet::addProviderTiles(
+      leaflet::providers$CartoDB.DarkMatter,
+      options = leaflet::providerTileOptions(opacity = 0.95)
+    ) |>
+    leaflet::addCircleMarkers(
+      radius      = 5,
+      fillColor   = link_status_colors[["multiple_zones"]],
+      fillOpacity = 0.85,
+      color       = "#4B0082",
+      weight      = 0.8,
+      popup       = ~ paste0(
+        "<strong>Building: </strong>", building_id, "<br>",
+        "<strong>Primary zone: </strong>",
+        dplyr::coalesce(zone_id, "—"), "<br>",
+        "<strong>N overlapping zones: </strong>", n_overlapping_zones
+      )
+    ) |>
+    leaflet::setView(
+      lng  = vienna_center[["lng"]],
+      lat  = vienna_center[["lat"]],
+      zoom = 12L
+    ))
+}
 ```
 
 **<span class='warn'>INSPECT</span> — Building centroid falls inside two or
@@ -2154,16 +2170,14 @@ if (!is.null(story_invalid) && nrow(story_invalid) > 0L) {
 
 link_summary |>
   dplyr::mutate(
-    status_label = link_status_labels[as.character(link_status)],
-    color_hex    = link_status_colors[as.character(link_status)]
+    status_label = link_status_labels[as.character(link_status)]
   ) |>
-  dplyr::select(status_label, n_buildings, pct, color_hex) |>
+  dplyr::select(status_label, n_buildings, pct) |>
   gt::gt() |>
   gt::cols_label(
     status_label = "Link status",
     n_buildings  = "N buildings",
-    pct          = "%",
-    color_hex    = "Color"
+    pct          = "%"
   ) |>
   gt::fmt_number(columns = n_buildings, decimals = 0) |>
   gt::fmt_number(columns = pct, decimals = 1) |>
@@ -2171,11 +2185,12 @@ link_summary |>
     columns = n_buildings,
     palette = c("#f7fbff", "#08306b")
   ) |>
-  gt::cols_width(color_hex ~ gt::px(60)) |>
   gt::tab_caption(
     caption = paste0(
-      "Full link-status distribution. Snapshot: ", SNAPSHOT_DATE,
-      ". Total buildings: ", n_total, "."
+      "Full link-status distribution. Colour-coded leaflets in earlier ",
+      "tabs use the same palette (in_zone green, outside grey, etc.). ",
+      "Snapshot: ", SNAPSHOT_DATE,
+      ". Total buildings: ", format(n_total, big.mark = ","), "."
     )
   )
 ```
