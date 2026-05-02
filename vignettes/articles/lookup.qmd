@@ -1,0 +1,205 @@
+---
+title: "Lookup: ACD ↔ Address"
+subtitle: "Find a building by ACD code or by address — Vienna's 58,255 registered buildings"
+format:
+  html:
+    toc: false
+    code-fold: true
+    code-summary: "Show code"
+    page-layout: full
+execute:
+  echo: true
+  message: false
+  warning: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+library(sf)
+library(dplyr)
+library(DT)
+library(leaflet)
+library(crosstalk)
+library(htmltools)
+
+# Load package in dev mode (pkgload) or installed
+tryCatch(
+  pkgload::load_all(quiet = TRUE),
+  error = function(e) {
+    tryCatch(library(acd), error = function(e2) NULL)
+  }
+)
+
+if (!exists("SNAPSHOT_DATE")) SNAPSHOT_DATE <- "2026-05-01"
+
+# Load the joined parquet (58,255 buildings)
+joined_raw <- load_acd_data("joined")
+
+# Reproject to WGS84 for Leaflet
+sf_data <- sf::st_as_sf(joined_raw, wkt = "geometry_wkt", crs = CRS_WORKING) |>
+  sf::st_transform(4326)
+
+coords <- sf::st_coordinates(sf_data)
+
+# Build the display data frame
+df <- joined_raw |>
+  dplyr::mutate(
+    lon = coords[, 1],
+    lat = coords[, 2],
+    is_focus = district %in% c("20", "21"),
+    Zone     = dplyr::coalesce(zone_id, "\u2014"),
+    Tier     = substr(as.character(confidence_tier), 1L, 1L),
+    `Distance (m)` = round(nearest_zone_dist_m, 0L)
+  ) |>
+  dplyr::arrange(dplyr::desc(is_focus), district, acd_native) |>
+  dplyr::transmute(
+    ACD            = as.character(acd_native),
+    Address        = address,
+    District       = district,
+    `Year built`   = year_built,
+    Storeys        = n_stories,
+    Zone,
+    `Distance (m)`,
+    Tier,
+    lon,
+    lat
+  )
+
+# Example values for inline R (used in the quick guide below)
+example_acd  <- df$ACD[df$District %in% c("20", "21")][1]
+example_addr <- df$Address[df$District %in% c("20", "21")][1]
+n_total      <- nrow(df)
+n_focus      <- sum(df$District %in% c("20", "21"))
+```
+
+## Quick guide
+
+* **Find one building:** paste a 6-digit ACD code such as *`r example_acd`*
+  into the search box (top-right of the table) to jump straight to it.
+* **Find by street:** type any street-name fragment — for example, *Praterstraße*
+  or the first word of *`r example_addr`* — to see all matching buildings.
+* **Drill down:** use the column-header filter row to restrict by district,
+  confidence tier (A = best), or year built.
+* **Focus districts:** Brigittenau (20) and Floridsdorf (21) are sorted to the
+  top by default — `r n_focus` of the `r format(n_total, big.mark = ",")` buildings.
+* **Map sync:** the Leaflet map below the filters updates whenever you change a
+  crosstalk filter; circle colour encodes confidence tier.
+* **Export:** use the CSV or Copy buttons above the table to save your selection.
+
+---
+
+```{r}
+#| label: lookup-widget
+#| echo: true
+
+# Shared data object linking the table and map
+sd <- crosstalk::SharedData$new(df)
+
+# Colour palette for confidence tier
+tier_pal <- leaflet::colorFactor(
+  palette = c(
+    A = "#2ecc71",
+    B = "#27ae60",
+    C = "#f39c12",
+    D = "#e74c3c",
+    E = "#8e44ad"
+  ),
+  domain = c("A", "B", "C", "D", "E")
+)
+
+# Table caption satisfying visualization-standards (7 items):
+# 1. title/context  2. units  3. source  4. date  5. n  6. filter note  7. export note
+tbl_caption <- htmltools::tags$caption(
+  style = paste0(
+    "caption-side:top; text-align:left; font-size:0.85em; ",
+    "color:#555; padding-bottom:6px;"
+  ),
+  htmltools::strong("Vienna ACD building inventory — ACD \u2194 address lookup."),
+  htmltools::HTML(paste0(
+    " Distances in metres (rounded). Confidence tier A\u2013E: ",
+    "A = building centroid inside zone, E = beyond 500\u2009m buffer. ",
+    "Source: Vienna Open Data WFS, snapshot ", SNAPSHOT_DATE, ". ",
+    "n = ", format(n_total, big.mark = ","), " buildings. ",
+    "Crosstalk filters above also update the map. ",
+    "Use CSV / Copy buttons to export the filtered selection."
+  ))
+)
+
+# DT table
+dt_widget <- DT::datatable(
+  sd,
+  caption    = tbl_caption,
+  filter     = "top",
+  extensions = c("Scroller", "Buttons"),
+  selection  = "single",
+  rownames   = FALSE,
+  options    = list(
+    dom        = "Bfrtip",
+    buttons    = list("csv", "copy"),
+    scrollY    = 500,
+    scroller   = TRUE,
+    pageLength = 25,
+    searchHighlight = TRUE,
+    # Hide lon/lat columns (index 9,10 — 0-based)
+    columnDefs = list(
+      list(visible = FALSE, targets = c(8L, 9L))
+    )
+  )
+)
+
+# Leaflet map
+map_widget <- leaflet::leaflet(sd) |>
+  leaflet::addProviderTiles(leaflet::providers$CartoDB.Positron) |>
+  leaflet::addCircleMarkers(
+    lng    = ~lon,
+    lat    = ~lat,
+    radius = 4,
+    color  = ~tier_pal(Tier),
+    stroke = FALSE,
+    fillOpacity = 0.75,
+    popup  = ~paste0(
+      "<b>ACD:</b> ", ACD, "<br>",
+      "<b>Address:</b> ", Address, "<br>",
+      "<b>District:</b> ", District, "<br>",
+      "<b>Year built:</b> ", `Year built`, "<br>",
+      "<b>Tier:</b> ", Tier, "<br>",
+      "<b>Zone:</b> ", Zone
+    )
+  ) |>
+  leaflet::addLegend(
+    position = "bottomright",
+    pal      = tier_pal,
+    values   = c("A", "B", "C", "D", "E"),
+    title    = "Confidence tier"
+  )
+
+# Crosstalk filter panel
+filter_panel <- htmltools::div(
+  style = "display:flex; flex-wrap:wrap; gap:12px; margin-bottom:12px;",
+  crosstalk::filter_select(
+    "ct_district", "District", sd, ~District, multiple = TRUE
+  ),
+  crosstalk::filter_select(
+    "ct_tier", "Confidence tier", sd, ~Tier, multiple = TRUE
+  ),
+  crosstalk::filter_slider(
+    "ct_year", "Year built", sd, ~`Year built`,
+    min = 1800L, max = 2025L, step = 1L
+  ),
+  crosstalk::filter_select(
+    "ct_zone", "Zone (ACD zone ID)", sd, ~Zone, multiple = TRUE
+  )
+)
+
+# Assemble: filters on top, then table | map side-by-side
+htmltools::tagList(
+  filter_panel,
+  crosstalk::bscols(
+    widths = c(7, 5),
+    dt_widget,
+    map_widget
+  )
+)
+```

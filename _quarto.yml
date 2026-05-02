@@ -13,6 +13,8 @@ website:
         text: Dashboard
       - href: vignettes/articles/methodology.qmd
         text: Methodology
+      - href: vignettes/articles/lookup.qmd
+        text: Lookup
   sidebar: false
 
 format:

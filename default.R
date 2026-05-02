@@ -16,6 +16,7 @@ r_pkgs <- c(
   "tibble",
 
   # Suggested packages
+  "crosstalk",
   "leaflet",
   "DT",
   "gt",

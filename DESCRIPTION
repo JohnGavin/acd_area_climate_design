@@ -25,6 +25,7 @@ Imports:
     digest,
     tibble
 Suggests:
+    crosstalk,
     leaflet,
     DT,
     gt,
