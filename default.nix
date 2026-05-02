@@ -26,7 +26,7 @@ let
  };
  
   rpkgs = builtins.attrValues {
-    inherit (pkgs.rPackages) 
+    inherit (pkgs.rPackages)
       arrow
       cli
       devtools
@@ -42,6 +42,7 @@ let
       httr2
       knitr
       leaflet
+      osmdata
       pkgdown
       pointblank
       quarto

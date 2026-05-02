@@ -34,6 +34,7 @@ Suggests:
     arrow,
     duckdb,
     duckplyr,
+    osmdata,
     pointblank,
     targets
 Config/testthat/edition: 3
