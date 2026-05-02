@@ -1,0 +1,387 @@
+---
+title: "Methodology — Vienna ACD Building-Zone Linkage"
+subtitle: "What we asked, what failed, what works"
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    code-fold: true
+    code-summary: "Show code"
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+# Package loading — dev mode first, then installed, then graceful fail
+tryCatch(
+  pkgload::load_all(quiet = TRUE),
+  error = function(e) {
+    tryCatch(library(acd), error = function(e2) NULL)
+  }
+)
+
+library(dplyr)
+library(gt)
+library(readr)
+
+# Snapshot date constant (defined in R/snapshot.R; fallback if not loaded)
+if (!exists("SNAPSHOT_DATE")) SNAPSHOT_DATE <- "2026-05-01"
+
+# Load primary dataset
+joined    <- load_acd_data("joined",    source = "local")
+zones     <- load_acd_data("zones",     source = "local")
+buildings <- load_acd_data("buildings", source = "local")
+
+# Load OSM cross-check tables
+osm_by_district <- readr::read_csv(
+  system.file("extdata", "osm_coverage_by_district.csv", package = "acd"),
+  show_col_types = FALSE
+)
+osm_total <- readr::read_csv(
+  system.file("extdata", "osm_total_summary.csv", package = "acd"),
+  show_col_types = FALSE
+)
+
+# Load by-district stage-0 breakdown
+by_district <- readr::read_csv(
+  "/private/tmp/acd_stage5/analysis/stage_0/by_district.csv",
+  show_col_types = FALSE
+)
+
+# Confidence tier summary
+tier_summary <- confidence_tier_summary(joined)
+
+# Derived quantities used throughout
+n_buildings  <- nrow(joined)
+n_zones      <- nrow(zones)
+n_districts  <- 23L  # fixed by Vienna admin structure
+osm_total_n  <- osm_total$n_total[[1]]
+coverage_pct <- round(100 * n_buildings / osm_total_n, 1)
+```
+
+## 1. Question
+
+For each Vienna building in the city's open cadastre, which
+[Area Climate Design (ACD)](https://www.wien.gv.at/stadtentwicklung/energie/energieraumplanung/wuksea.html)
+energy-planning zone applies, and how confident are we in that linkage?
+
+The city publishes both datasets as open
+[<abbr title="Web Feature Service: OGC standard for serving geographic features over HTTP">WFS</abbr>](https://www.ogc.org/standard/wfs/)
+layers, but does not provide an authoritative join key between them.
+This package reconstructs the spatial linkage and quantifies confidence via proximity.
+
+## 2. Data Sources
+
+Three open <abbr title="Web Feature Service: OGC standard for serving geographic features over HTTP">WFS</abbr>
+layers from [data.gv.at](https://www.data.gv.at/), snapshot-pinned to
+`r SNAPSHOT_DATE`:
+
+| Layer | Description | Features |
+|---|---|---:|
+| `ogdwien:ENERGIERAUMPLANOGD` | ACD energy-planning zones | `r n_zones` |
+| `ogdwien:GEBAEUDEINFOOGD` | Building footprints with attributes | `r n_buildings` |
+| `ogdwien:BEZIRKSGRENZEOGD` | District boundaries | `r n_districts` |
+
+The zone layer contains `r n_zones` polygons covering specific development areas
+across Vienna's `r n_districts` districts.
+The building layer provides `r format(n_buildings, big.mark = ",")` footprints with
+attributes including year of construction (`BAUJAHR`), number of floors (`GESCH_ANZ`),
+and district (`BEZ`).
+
+All three layers use
+<abbr title="European Petroleum Survey Group: coordinate reference system identifier">EPSG</abbr>:31256
+as delivered; the pipeline reprojects to EPSG:31287 (Austria Lambert) for spatial operations.
+Schema was verified via `DescribeFeatureType` requests to the
+<abbr title="Web Feature Service: OGC standard for serving geographic features over HTTP">WFS</abbr>
+endpoint.
+
+## 3. The Plan That Did Not Work
+
+**Original approach:** compare the city's pre-linked `ACD` field on each building
+against an independent spatial join.
+Naive expectation: high agreement, with disagreements flagging data-quality cases.
+
+Result on full data:
+
+| Category | n | % |
+|---|---:|---:|
+| agree_in_zone | 16,246 | 27.9% |
+| acd_only | 42,009 | 72.1% |
+| spatial_only | 0 | 0% |
+| agree_no_zone | 0 | 0% |
+
+The 72% `acd_only` rate looked alarming: it appeared to mean 42,009 buildings where
+the city says "in zone" but the spatial join says "not in zone."
+
+The 0 `spatial_only` is also suspicious — it means every building the spatial join placed
+in a zone was also flagged by the `ACD` field.
+
+## 4. What Stage 0 Found: A Category Error
+
+The `ACD` field in `GEBAEUDEINFOOGD` is a **building registry number**
+(Adress-Code / Gebäudekennzahl), not a zone membership indicator.
+
+Evidence:
+
+- Every one of `r format(n_buildings, big.mark = ",")` buildings carries a unique 6-digit ACD
+  value (range 1–232,762). There are zero duplicates.
+- The zone layer has only `r n_zones` records. No ACD value matches any zone identifier
+  across PLANNR, ERPLABEL, OBJECTID, ID, or GEBID (0 string matches; apparent numeric
+  coincidences in the zero-padded space are spurious).
+- Among the 16,246 buildings classified as `agree_in_zone`, none of their ACD values
+  match the zone's identifier.
+
+The cross-validation code interpreted any non-empty `ACD` field as "city says this
+building is in a zone." Since all buildings have ACD populated, the code classified all
+`r format(n_buildings, big.mark = ",")` buildings as "city says yes," then flagged 42,009
+as `acd_only` because the spatial join placed them outside zones. This is a category error,
+not a data-quality problem.
+
+The correct reading: `r round(100 * sum(joined$inside_any_zone, na.rm = TRUE) / n_buildings, 1)`%
+of Vienna buildings in this layer fall inside an ACD zone (spatial join result). The
+remaining `r round(100 * (1 - sum(joined$inside_any_zone, na.rm = TRUE) / n_buildings), 1)`%
+are genuinely outside all `r n_zones` zone polygons. The zone layer covers specific
+development areas, not the whole city.
+
+See `analysis/stage_0/REPORT.md` for the full investigation and hypothesis log.
+
+## 5. What Works: Distance-Based Confidence Tiers
+
+The defunct `acd_agreement` factor is replaced by `confidence_tier`: a 5-level factor
+based on the distance from each building's centroid to the nearest zone boundary.
+
+Computed in `R/join_buildings_zones.R` via a single
+`sf::st_distance(centroids, sf::st_boundary(sf::st_union(zones)))` call.
+Thresholds: 5 m (inside precision), 25 m (roughly one street width), 500 m (nearby vs
+clearly outside zone coverage).
+
+```{r}
+#| label: tbl-tiers
+#| tbl-cap: |
+#|   **Confidence tier distribution — `r format(n_buildings, big.mark = ",")` buildings,
+#|   Vienna snapshot `r SNAPSHOT_DATE`.**
+#|   Tier A: centroid inside a zone, >5 m from the nearest boundary (high confidence).
+#|   Tier B: inside, ≤5 m from boundary (borderline — centroid may shift with higher-resolution
+#|   geometry). Tier C: outside, within 25 m of a zone edge (one street width — possible
+#|   boundary misalignment). Tier D: outside, 25–500 m (zone is nearby but building is
+#|   plausibly unzoned). Tier E: outside, >500 m (clearly outside any zone).
+#|   Source: `R/join_buildings_zones.R`; Parquet snapshot `inst/extdata/joined_2026-05-01.parquet`.
+#|   See also: §6 (per-district pattern).
+
+tier_labels <- c(
+  A_in_zone_high     = "A — in zone, high confidence",
+  B_in_zone_boundary = "B — in zone, near boundary",
+  C_outside_boundary = "C — outside, ≤25 m from zone",
+  D_outside_nearby   = "D — outside, 25–500 m",
+  E_outside_far      = "E — outside, >500 m"
+)
+
+tier_summary |>
+  dplyr::mutate(
+    Label      = tier_labels[as.character(confidence_tier)],
+    Definition = c(
+      "inside zone AND >5 m from boundary",
+      "inside zone AND ≤5 m from boundary",
+      "outside, ≤25 m from nearest zone",
+      "outside, 25–500 m from nearest zone",
+      "outside, >500 m from any zone"
+    ),
+    n_buildings = format(n_buildings, big.mark = ","),
+    pct         = paste0(pct, "%")
+  ) |>
+  dplyr::select(Label, Definition, n_buildings, pct) |>
+  gt::gt() |>
+  gt::cols_label(
+    Label       = "Tier",
+    Definition  = "Distance rule",
+    n_buildings = "n",
+    pct         = "%"
+  ) |>
+  gt::cols_align(align = "right", columns = c(n_buildings, pct)) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_column_labels()
+  )
+```
+
+## 6. Per-District Pattern
+
+Zone coverage is concentrated in the urban core and drops sharply in suburban districts.
+
+```{r}
+#| label: tbl-districts
+#| tbl-cap: |
+#|   **Per-district zone coverage — focus districts 20 (Brigittenau) and
+#|   21 (Floridsdorf) highlighted.**
+#|   n_buildings: buildings from GEBAEUDEINFOOGD in that district.
+#|   pct_in_zone: percentage whose centroid falls inside an ACD zone (spatial join).
+#|   Focus districts were selected for detailed study in issue #14 and show
+#|   middle-ranking coverage: district 20 at
+#|   `r round(100 - by_district$pct_acd_only[by_district$district == "20"], 1)`%
+#|   in-zone and district 21 at
+#|   `r round(100 - by_district$pct_acd_only[by_district$district == "21"], 1)`%,
+#|   both well above the suburban low of `r round(100 - max(by_district$pct_acd_only), 1)`%
+#|   (district 01, Innere Stadt, has the highest coverage).
+#|   Source: `analysis/stage_0/by_district.csv`; spatial join via `join_buildings_zones()`.
+#|   See also: §5 (confidence tiers), §7 (OSM cross-check).
+
+district_names <- c(
+  "01" = "Innere Stadt",       "02" = "Leopoldstadt",
+  "03" = "Landstrasse",        "04" = "Wieden",
+  "05" = "Margareten",         "06" = "Mariahilf",
+  "07" = "Neubau",             "08" = "Josefstadt",
+  "09" = "Alsergrund",         "10" = "Favoriten",
+  "11" = "Simmering",          "12" = "Meidling",
+  "13" = "Hietzing",           "14" = "Penzing",
+  "15" = "Rudolfsheim-F.",     "16" = "Ottakring",
+  "17" = "Hernals",            "18" = "Wahring",
+  "19" = "Doebling",           "20" = "Brigittenau",
+  "21" = "Floridsdorf",        "22" = "Donaustadt",
+  "23" = "Liesing"
+)
+
+focus_districts <- c("20", "21")
+
+by_district |>
+  dplyr::mutate(
+    pct_in_zone  = round(100 - pct_acd_only, 1),
+    district_name = district_names[district],
+    focus        = district %in% focus_districts
+  ) |>
+  dplyr::arrange(dplyr::desc(pct_in_zone)) |>
+  dplyr::mutate(
+    district_label = ifelse(focus,
+      paste0(district, " \u2605"),
+      district
+    )
+  ) |>
+  dplyr::select(district_label, district_name, n, pct_in_zone) |>
+  gt::gt() |>
+  gt::cols_label(
+    district_label = "District",
+    district_name  = "Name",
+    n              = "n buildings",
+    pct_in_zone    = "% in zone"
+  ) |>
+  gt::tab_style(
+    style = gt::cell_text(weight = "bold"),
+    locations = gt::cells_body(
+      rows = grepl("\u2605", district_label)
+    )
+  ) |>
+  gt::cols_align(align = "right", columns = c(n, pct_in_zone)) |>
+  gt::tab_footnote(
+    footnote = "Focus districts (issue #14)",
+    locations = gt::cells_column_labels(columns = district_label)
+  )
+```
+
+## 7. OSM Cross-Check (Stage 2) {#sec-osm}
+
+[OpenStreetMap (<abbr title="OpenStreetMap: the open collaborative geographic database">OSM</abbr>)](https://www.openstreetmap.org/)
+provides an independent count of Vienna's building stock.
+
+```{r}
+n_osm       <- osm_total$n_total[[1]]
+osm_ratio   <- round(n_osm / n_buildings, 1)
+```
+
+| Source | Total buildings |
+|---|---:|
+| GEBAEUDEINFOOGD (OGD) | `r format(n_buildings, big.mark = ",")` |
+| <abbr title="OpenStreetMap: the open collaborative geographic database">OSM</abbr> (full Vienna bounding box) | `r format(n_osm, big.mark = ",")` |
+| <abbr title="OpenStreetMap: the open collaborative geographic database">OSM</abbr> / OGD ratio | `r osm_ratio`× |
+
+GEBAEUDEINFOOGD covers approximately
+`r coverage_pct`% of Vienna's actual building stock
+(`r format(n_buildings, big.mark = ",")` / `r format(n_osm, big.mark = ",")`).
+This is a **curated subset**, not a comprehensive register: likely
+catalogued buildings, commercial properties, and multi-residence structures
+with rich administrative attributes (`BAUJAHR`, `GESCH_ANZ`, `BEZ`)
+absent from the full cadastre.
+
+This analysis covers `r coverage_pct`% of Vienna's stock. Switching to a more
+complete layer is tracked in [issue #14](https://github.com/JohnGavin/acd_area_climate_design/issues/14).
+The OGD layer is retained as primary because of attribute richness.
+
+OSM data licensed under [ODbL 1.0](https://www.openstreetmap.org/copyright).
+Per-district <abbr title="OpenStreetMap: the open collaborative geographic database">OSM</abbr>
+counts use bounding-box queries and overcount outer districts (21, 22) due to
+rectangular clip; city-wide total is authoritative.
+
+## 8. Limitations
+
+| Limitation | Detail |
+|---|---|
+| Coverage | `r coverage_pct`% of actual Vienna stock (§7) |
+| Single snapshot | No time series; pinned to `r SNAPSHOT_DATE` |
+| ACD field semantics | Inferred via experiments; not officially documented by the city |
+| Federal cross-walk | Statistik Austria <abbr title="Gebäude- und Wohnungsregister: Austria's federal building and dwelling register">GWR</abbr> deferred (authentication friction) |
+| Address validation | <abbr title="Bundesamt für Eich- und Vermessungswesen: Austria's national surveying authority">BEV</abbr> address register deferred |
+| Centroid join | Not area-weighted; straddle cases simplified to primary zone |
+| Multi-zone overlap | Simplified to a single primary zone per building |
+
+## 9. How to Use the Package
+
+```{r}
+#| label: usage-parse-check
+#| include: false
+
+# Parse check per vignette-targets-export rule
+usage_code <- '
+library(acd)
+joined <- load_acd_data("joined", source = "local")
+confidence_tier_summary(joined)
+confidence_tier_by_district(joined)
+'
+stopifnot(length(parse(text = usage_code)) > 0)
+```
+
+```r
+library(acd)
+
+# Load the full snapshot (reads from inst/extdata, no network needed)
+joined <- load_acd_data("joined", source = "local")
+
+# Confidence tier distribution
+confidence_tier_summary(joined)
+
+# District × tier pivot
+confidence_tier_by_district(joined)
+```
+
+For remote access (query Parquet on GitHub Pages via DuckDB):
+
+```r
+load_acd_data("joined", source = "remote", collect = FALSE) |>
+  dplyr::filter(district == "20") |>
+  dplyr::count(confidence_tier) |>
+  dplyr::collect()
+```
+
+## 10. Reproducibility
+
+- Snapshot date pinned in `R/snapshot.R` (`SNAPSHOT_DATE = "r SNAPSHOT_DATE"`)
+- WFS endpoints in `R/snapshot.R` (`WFS_BASE_URL`, `LAYER_ZONES`, `LAYER_BUILDINGS`, `LAYER_DISTRICTS`)
+- Fetch functions (`fetch_acd_zones()`, `fetch_buildings()`, `fetch_districts()`) are cache-first
+- All outputs derived from committed Parquet snapshots in `inst/extdata/`
+- Nix-pinned R + system dependencies (`default.nix`)
+- Code: <https://github.com/JohnGavin/acd_area_climate_design>
+
+## 11. Links and References
+
+- **Live dashboard:** <https://johngavin.github.io/acd_area_climate_design/vignettes/articles/dashboard.html>
+- **Stage 0 investigation:** `analysis/stage_0/REPORT.md` — ACD field semantics, buffer sweep, per-district breakdown
+- **Stage 2 OSM cross-check:** `analysis/stage_2/REPORT.md` — full methodology for OSM comparison
+- **Issue #14:** GEBAEUDEINFOOGD vs full building stock (coverage investigation)
+- **Issue #15:** Methodology vignette (this document)
+- **City's official tool:** [WUKSEA-GIS](https://www.wien.gv.at/stadtentwicklung/energie/energieraumplanung/wuksea.html) — interactive ACD zone viewer
+- **OSM data:** © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright), ODbL 1.0
+
+---
+
+## Recent Changes
+
+<!-- Placeholder: updated by each release -->
+- 2026-05-01: Stage 5 — methodology vignette added (closes #15)

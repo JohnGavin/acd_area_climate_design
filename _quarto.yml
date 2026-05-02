@@ -11,6 +11,8 @@ website:
         text: Home
       - href: vignettes/articles/dashboard.qmd
         text: Dashboard
+      - href: vignettes/articles/methodology.qmd
+        text: Methodology
   sidebar: false
 
 format:
