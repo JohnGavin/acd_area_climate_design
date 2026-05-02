@@ -63,7 +63,7 @@ in_zone_pct   <- round(100 * in_zone_total / n_buildings, 1)
 
 :::{.cr-section}
 
-## Schritt 1: Was ist ein Energieraumplan? {#cr-sticky1}
+::: {#cr-sticky1}
 
 ```{r sticky1}
 #| label: sticky1
@@ -100,9 +100,11 @@ if (!is.null(zones_sf)) {
 }
 ```
 
-[@cr-sticky1]
+:::
 
-Wien verpflichtet sich, bis 2040 klimaneutral zu sein. Ein zentrales Instrument dafür sind die **Energieraumpläne** (abgekürzt: **ERP**). Das sind rechtsverbindliche Planungsgrundlagen, die festlegen, welche Energieversorgungsform — Fernwärme, Erdwärme, solare Nahwärme — für welches Gebiet vorgesehen ist.
+## Schritt 1: Was ist ein Energieraumplan?
+
+Wien verpflichtet sich, bis 2040 klimaneutral zu sein [@cr-sticky1]. Ein zentrales Instrument dafür sind die **Energieraumpläne** (abgekürzt: **ERP**). Das sind rechtsverbindliche Planungsgrundlagen, die festlegen, welche Energieversorgungsform — Fernwärme, Erdwärme, solare Nahwärme — für welches Gebiet vorgesehen ist.
 
 Jeder Energieraumplan gilt für einen räumlich abgegrenzten **Energieraum**: ein Polygon auf der Karte Wiens, das einen oder mehrere Häuserblöcke umfasst. Das Ziel ist gebäudescharf: Die Stadt will wissen, *welches Haus* in welchem Energieraum liegt — und dafür ist eine saubere Verknüpfung von Gebäuden und Zonen unerlässlich.
 
@@ -114,7 +116,7 @@ Genau das versucht dieses Paket zu leisten.
 
 :::{.cr-section}
 
-## Schritt 2: Zwei offene Datenquellen {#cr-sticky2}
+::: {#cr-sticky2}
 
 ```{r sticky2}
 #| label: sticky2
@@ -164,9 +166,11 @@ m |> addLayersControl(
 )
 ```
 
-[@cr-sticky2]
+:::
 
-Das Paket kombiniert zwei öffentliche Datensätze von [data.gv.at](https://www.data.gv.at/):
+## Schritt 2: Zwei offene Datenquellen
+
+Das Paket kombiniert zwei öffentliche Datensätze von [data.gv.at](https://www.data.gv.at/) [@cr-sticky2]:
 
 **Energieraum-Polygone** (blau): `r n_zones` Polygone aus dem Wiener Energieraumplan-WFS, abgerufen am `r snapshot`. Jede Zone hat einen eindeutigen Bezeichner (`ERPLABEL`) und einen Weblink zur rechtlichen Grundlage.
 
@@ -180,7 +184,7 @@ Beide Datensätze sind **Momentaufnahmen** — keine Live-Daten. Die Parquet-Dat
 
 :::{.cr-section}
 
-## Schritt 3: Die Verbindung ist räumlich, nicht relational {#cr-sticky3}
+::: {#cr-sticky3}
 
 ```{r sticky3}
 #| label: sticky3
@@ -227,9 +231,11 @@ if (!is.null(bldgs_sf3)) {
 m3
 ```
 
-[@cr-sticky3]
+:::
 
-Die beiden Datensätze teilen **keinen gemeinsamen Schlüssel**. Es gibt keine Spalte `zone_id` in der Gebäudetabelle, die man einfach mit einer `zone_id` in der Zonentabelle verknüpfen könnte.
+## Schritt 3: Die Verbindung ist räumlich, nicht relational
+
+Die beiden Datensätze teilen **keinen gemeinsamen Schlüssel** [@cr-sticky3]. Es gibt keine Spalte `zone_id` in der Gebäudetabelle, die man einfach mit einer `zone_id` in der Zonentabelle verknüpfen könnte.
 
 Die einzige Möglichkeit, Gebäude und Zonen zu verbinden, ist eine **räumliche Verschneidung** — auf Englisch: *spatial join*. Das Paket prüft für jedes Gebäude, in welches Zonen-Polygon es fällt, oder — falls es außerhalb liegt — welche Zone am nächsten ist.
 
@@ -243,7 +249,7 @@ Das klingt simpel, bringt aber Komplikationen mit sich — die wir in den folgen
 
 :::{.cr-section}
 
-## Schritt 4: Was die ACD-Spalte NICHT ist {#cr-sticky4}
+::: {#cr-sticky4}
 
 ```{r sticky4}
 #| label: sticky4
@@ -287,9 +293,11 @@ gt(sample_data) |>
   tab_options(table.font.size = 12)
 ```
 
-[@cr-sticky4]
+:::
 
-Eine häufige Fehlannahme beim ersten Blick auf den Datensatz: Die Spalte `acd_native` im GEBAEUDEINFOOGD sieht aus wie ein Zonenverweis. Tatsächlich ist sie der **Adress-Code** des Gebäudes — eine interne Ordnungsnummer des Wiener Adressregisters, auch **Gebäudekennzahl** genannt.
+## Schritt 4: Was die ACD-Spalte NICHT ist
+
+Eine häufige Fehlannahme beim ersten Blick auf den Datensatz [@cr-sticky4]: Die Spalte `acd_native` im GEBAEUDEINFOOGD sieht aus wie ein Zonenverweis. Tatsächlich ist sie der **Adress-Code** des Gebäudes — eine interne Ordnungsnummer des Wiener Adressregisters, auch **Gebäudekennzahl** genannt.
 
 **Was `acd_native` nicht ist:** kein Verweis auf einen Energieraumplan, kein Fremdschlüssel in der Zonentabelle, kein sortierbarer Qualitätsindikator für die Verknüpfung.
 
@@ -303,7 +311,7 @@ Der korrekte Weg ist ausschließlich der räumliche Join.
 
 :::{.cr-section}
 
-## Schritt 5: Vertrauensstufen statt Ja/Nein {#cr-sticky5}
+::: {#cr-sticky5}
 
 ```{r sticky5}
 #| label: sticky5
@@ -368,9 +376,11 @@ if (!is.null(joined_sf5)) {
 }
 ```
 
-[@cr-sticky5]
+:::
 
-Ein einfaches Ja/Nein reicht nicht. Dass ein Gebäude geometrisch *außerhalb* einer Zone liegt, kann an einem Vermessungsfehler von wenigen Metern liegen — oder daran, dass das Gebäude tatsächlich 2 Kilometer entfernt von jeder Zone steht.
+## Schritt 5: Vertrauensstufen statt Ja/Nein
+
+Ein einfaches Ja/Nein reicht nicht [@cr-sticky5]. Dass ein Gebäude geometrisch *außerhalb* einer Zone liegt, kann an einem Vermessungsfehler von wenigen Metern liegen — oder daran, dass das Gebäude tatsächlich 2 Kilometer entfernt von jeder Zone steht.
 
 Das Paket löst das mit fünf **Vertrauensstufen**:
 
@@ -390,7 +400,7 @@ Für stadtplanerische Auswertungen empfiehlt sich, nur Stufen A und B zu verwend
 
 :::{.cr-section}
 
-## Schritt 6: Fokus auf Bezirk 20 und 21 {#cr-sticky6}
+::: {#cr-sticky6}
 
 ```{r sticky6}
 #| label: sticky6
@@ -451,9 +461,11 @@ if (!is.null(joined_2021_sf)) {
 m6
 ```
 
-[@cr-sticky6]
+:::
 
-Der aktuelle Arbeitsstand des Projekts legt besonderes Gewicht auf **Bezirk 20 (Brigittenau)** und **Bezirk 21 (Floridsdorf)** — zwei dicht bebaute Bezirke nördlich der Donau mit unterschiedlichem Fernwärme-Ausbaupotenzial.
+## Schritt 6: Fokus auf Bezirk 20 und 21
+
+Der aktuelle Arbeitsstand des Projekts legt besonderes Gewicht auf **Bezirk 20 (Brigittenau)** und **Bezirk 21 (Floridsdorf)** [@cr-sticky6] — zwei dicht bebaute Bezirke nördlich der Donau mit unterschiedlichem Fernwärme-Ausbaupotenzial.
 
 Die Abdeckung unterscheidet sich deutlich:
 
@@ -468,7 +480,7 @@ Diese Unterschiede spiegeln nicht die Qualität der Daten wider, sondern den Sta
 
 :::{.cr-section}
 
-## Schritt 7: OSM bestätigt — nur `r ogd_pct_of_osm` % Abdeckung {#cr-sticky7}
+::: {#cr-sticky7}
 
 ```{r sticky7}
 #| label: sticky7
@@ -506,9 +518,11 @@ gt(vergleich) |>
   tab_options(table.font.size = 13)
 ```
 
-[@cr-sticky7]
+:::
 
-Eine wichtige Einschränkung: GEBAEUDEINFOOGD ist ein **kurierter Datensatz** — er enthält nicht alle Wiener Gebäude, sondern jene, für die die Stadt Wien vollständige amtliche Daten führt. OpenStreetMap (OSM) zählt für dasselbe Stadtgebiet rund `r format(osm_total_n, big.mark = ".")` Gebäude.
+## Schritt 7: OSM bestätigt — nur `r ogd_pct_of_osm` % Abdeckung
+
+Eine wichtige Einschränkung: GEBAEUDEINFOOGD ist ein **kurierter Datensatz** [@cr-sticky7] — er enthält nicht alle Wiener Gebäude, sondern jene, für die die Stadt Wien vollständige amtliche Daten führt. OpenStreetMap (OSM) zählt für dasselbe Stadtgebiet rund `r format(osm_total_n, big.mark = ".")` Gebäude.
 
 Der OGD-Datensatz umfasst `r format(n_buildings, big.mark = ".")` Gebäude — das entspricht etwa `r ogd_pct_of_osm` % des OSM-Bestands.
 
@@ -520,7 +534,7 @@ Das ist keine Schwäche des Datensatzes, sondern eine Eigenschaft: OGD-Gebäude 
 
 :::{.cr-section}
 
-## Schritt 8: Was Sie damit tun können — und was nicht {#cr-sticky8}
+::: {#cr-sticky8}
 
 ```{r sticky8}
 #| label: sticky8
@@ -571,9 +585,11 @@ if (!is.null(ex_sf)) {
 m8
 ```
 
-[@cr-sticky8]
+:::
 
-**Was mit diesem Datensatz möglich ist:**
+## Schritt 8: Was Sie damit tun können — und was nicht
+
+**Was mit diesem Datensatz möglich ist** [@cr-sticky8]**:**
 
 - Zählen, wie viele Gebäude in welcher Energieraum-Zone liegen
 - Kartenauswertungen nach Bezirk, Baujahr oder Stockwerksanzahl
@@ -595,7 +611,7 @@ Die richtige Frage ist nicht „Darf ich das verwenden?", sondern „Wofür ist 
 
 :::{.cr-section}
 
-## Schritt 9: Wie weiter? {#cr-sticky9}
+::: {#cr-sticky9}
 
 ```{r sticky9}
 #| label: sticky9
@@ -649,9 +665,11 @@ gt(roadmap) |>
   tab_options(table.font.size = 12)
 ```
 
-[@cr-sticky9]
+:::
 
-Die aktuell vorliegende Version ist ein **Proof of Concept**. Sie zeigt, dass die räumliche Verknüpfung von Gebäuden und Energieraum-Zonen prinzipiell funktioniert — und wo die Grenzen liegen.
+## Schritt 9: Wie weiter?
+
+Die aktuell vorliegende Version ist ein **Proof of Concept** [@cr-sticky9]. Sie zeigt, dass die räumliche Verknüpfung von Gebäuden und Energieraum-Zonen prinzipiell funktioniert — und wo die Grenzen liegen.
 
 Die größte offene Frage ist die **Vollständigkeit**: Nur `r ogd_pct_of_osm` % des Gebäudebestands (nach OSM-Maßstab) sind im OGD-Datensatz erfasst. Eine Erweiterung über GEBAEUDETYPOGD oder einen direkten Abgleich mit Statistik-Austria-Daten könnte die Abdeckung erheblich verbessern.
 
