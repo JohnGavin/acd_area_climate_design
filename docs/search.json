@@ -606,7 +606,7 @@
     "href": "vignettes/articles/scrollytell_de.html",
     "title": "Wie die ACD-Daten funktionieren",
     "section": "",
-    "text": "Wien verpflichtet sich, bis 2040 klimaneutral zu sein. Ein zentrales Instrument dafür sind die Energieraumpläne (abgekürzt: ERP). Das sind rechtsverbindliche Planungsgrundlagen, die festlegen, welche Energieversorgungsform — Fernwärme, Erdwärme, solare Nahwärme — für welches Gebiet vorgesehen ist.\n\n\n\n\nJeder Energieraumplan gilt für einen räumlich abgegrenzten Energieraum: ein Polygon auf der Karte Wiens, das einen oder mehrere Häuserblöcke umfasst. Das Ziel ist gebäudescharf: Die Stadt will wissen, welches Haus in welchem Energieraum liegt — und dafür ist eine saubere Verknüpfung von Gebäuden und Zonen unerlässlich.\n\n\n\n\nGenau das versucht dieses Paket zu leisten."
+    "text": "Wien verpflichtet sich, bis 2040 klimaneutral zu seinEin zentrales Instrument dafür sind die Energieraumpläne (abgekürzt: ERP). Das sind rechtsverbindliche Planungsgrundlagen, die festlegen, welche Energieversorgungsform — Fernwärme, Erdwärme, solare Nahwärme — für welches Gebiet vorgesehen ist.\n\n\n\n\nJeder Energieraumplan gilt für einen räumlich abgegrenzten Energieraum: ein Polygon auf der Karte Wiens, das einen oder mehrere Häuserblöcke umfasst. Das Ziel ist gebäudescharf: Die Stadt will wissen, welches Haus in welchem Energieraum liegt — und dafür ist eine saubere Verknüpfung von Gebäuden und Zonen unerlässlich.\n\n\n\n\nGenau das versucht dieses Paket zu leisten."
   },
   {
     "objectID": "vignettes/articles/scrollytell_de.html#cr-sticky2",
@@ -670,5 +670,61 @@
     "title": "Wie die ACD-Daten funktionieren",
     "section": "Glossar",
     "text": "Glossar\n\nACD (Area Climate Design)\n\nEnglische Bezeichnung für den Wiener Ansatz, Klimaschutzziele räumlich auf Gebäudeebene herunterzubrechen. Gibt dem Paket seinen Namen.\n\nBezirk\n\nEiner der 23 Stadtbezirke Wiens. In diesem Paket als zweistellige Zahl gespeichert (z. B. \"07\" für Neubau, \"20\" für Brigittenau).\n\nEnergieraumplan (ERP)\n\nRechtsverbindliches Planungsinstrument der Stadt Wien, das für ein räumlich abgegrenztes Gebiet die vorgesehene Energieversorgungsform festlegt.\n\nGebäudekennzahl\n\nInterne Ordnungsnummer des Wiener Adressregisters. Im Datensatz als Spalte acd_native gespeichert. Kein Zonenverweis.\n\nEnergieraum-Polygon\n\nDas Kartenpolygon, das den räumlichen Geltungsbereich eines Energieraum-plans definiert. 416 Polygone in der aktuellen Snapshot-Version.\n\nRäumliche Verschneidung (Spatial Join)\n\nVerfahren, das zwei Geodatensätze ohne gemeinsamen Schlüssel über ihre geometrische Lage verknüpft. Hier: Prüfung, ob ein Gebäudepunkt innerhalb eines Zonen-Polygons liegt.\n\nVertrauensstufe (Confidence Tier)\n\nFünfstufige Klassifikation (A–E), die angibt, wie zuverlässig die Verknüpfung eines Gebäudes mit einer Zone ist — basierend auf der Distanz zwischen Gebäudepunkt und nächster Zonengrenze."
+  },
+  {
+    "objectID": "vignettes/articles/scrollytell_de.html#schritt-2-zwei-offene-datenquellen",
+    "href": "vignettes/articles/scrollytell_de.html#schritt-2-zwei-offene-datenquellen",
+    "title": "Wie die ACD-Daten funktionieren",
+    "section": "Schritt 2: Zwei offene Datenquellen",
+    "text": "Schritt 2: Zwei offene Datenquellen"
+  },
+  {
+    "objectID": "vignettes/articles/scrollytell_de.html#schritt-3-die-verbindung-ist-räumlich-nicht-relational",
+    "href": "vignettes/articles/scrollytell_de.html#schritt-3-die-verbindung-ist-räumlich-nicht-relational",
+    "title": "Wie die ACD-Daten funktionieren",
+    "section": "Schritt 3: Die Verbindung ist räumlich, nicht relational",
+    "text": "Schritt 3: Die Verbindung ist räumlich, nicht relational"
+  },
+  {
+    "objectID": "vignettes/articles/scrollytell_de.html#schritt-4-was-die-acd-spalte-nicht-ist",
+    "href": "vignettes/articles/scrollytell_de.html#schritt-4-was-die-acd-spalte-nicht-ist",
+    "title": "Wie die ACD-Daten funktionieren",
+    "section": "Schritt 4: Was die ACD-Spalte NICHT ist",
+    "text": "Schritt 4: Was die ACD-Spalte NICHT ist"
+  },
+  {
+    "objectID": "vignettes/articles/scrollytell_de.html#schritt-5-vertrauensstufen-statt-janein",
+    "href": "vignettes/articles/scrollytell_de.html#schritt-5-vertrauensstufen-statt-janein",
+    "title": "Wie die ACD-Daten funktionieren",
+    "section": "Schritt 5: Vertrauensstufen statt Ja/Nein",
+    "text": "Schritt 5: Vertrauensstufen statt Ja/Nein"
+  },
+  {
+    "objectID": "vignettes/articles/scrollytell_de.html#schritt-6-fokus-auf-bezirk-20-und-21",
+    "href": "vignettes/articles/scrollytell_de.html#schritt-6-fokus-auf-bezirk-20-und-21",
+    "title": "Wie die ACD-Daten funktionieren",
+    "section": "Schritt 6: Fokus auf Bezirk 20 und 21",
+    "text": "Schritt 6: Fokus auf Bezirk 20 und 21"
+  },
+  {
+    "objectID": "vignettes/articles/scrollytell_de.html#schritt-7-osm-bestätigt-nur-18.9-abdeckung",
+    "href": "vignettes/articles/scrollytell_de.html#schritt-7-osm-bestätigt-nur-18.9-abdeckung",
+    "title": "Wie die ACD-Daten funktionieren",
+    "section": "Schritt 7: OSM bestätigt — nur 18.9 % Abdeckung",
+    "text": "Schritt 7: OSM bestätigt — nur 18.9 % Abdeckung"
+  },
+  {
+    "objectID": "vignettes/articles/scrollytell_de.html#schritt-8-was-sie-damit-tun-können-und-was-nicht",
+    "href": "vignettes/articles/scrollytell_de.html#schritt-8-was-sie-damit-tun-können-und-was-nicht",
+    "title": "Wie die ACD-Daten funktionieren",
+    "section": "Schritt 8: Was Sie damit tun können — und was nicht",
+    "text": "Schritt 8: Was Sie damit tun können — und was nicht"
+  },
+  {
+    "objectID": "vignettes/articles/scrollytell_de.html#schritt-9-wie-weiter",
+    "href": "vignettes/articles/scrollytell_de.html#schritt-9-wie-weiter",
+    "title": "Wie die ACD-Daten funktionieren",
+    "section": "Schritt 9: Wie weiter?",
+    "text": "Schritt 9: Wie weiter?"
   }
 ]
