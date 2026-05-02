@@ -37,6 +37,28 @@ n_acd_codes      <- format(length(unique(addr_local$ACD)), big.mark = ",")
 addr_parquet_url <- paste0(REMOTE_BASE_URL, "/addresses_", ADDRESSES_SNAPSHOT_DATE, ".parquet")
 ```
 
+```{=html}
+<style>
+/* upload page typography + tables */
+main, .quarto-container, .upload-page-prose,
+.upload-page-prose p, .upload-page-prose li,
+.upload-page-prose td, .upload-page-prose th { font-size: 1.15em; }
+.upload-page-prose table { width: 100%; border-collapse: collapse; }
+.upload-page-prose table th, .upload-page-prose table td {
+  padding: 6px 10px; border-bottom: 1px solid #dee2e6;
+  vertical-align: top;
+}
+.upload-page-prose table th.step-col,
+.upload-page-prose table td.step-col {
+  width: 4.5em;        /* matches "Step" header width plus a hair */
+  text-align: center;
+  white-space: nowrap;
+}
+</style>
+```
+
+::: {.upload-page-prose}
+
 ## Quick guide
 
 Upload an Excel (`.xlsx`) or CSV file with **at least three columns**: postcode
@@ -44,23 +66,31 @@ Upload an Excel (`.xlsx`) or CSV file with **at least three columns**: postcode
 using [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html) — your file
 never leaves your device.
 
-| Step | What to do |
-|------|-----------|
-| 1 | Click **Choose file** (or drag-and-drop) |
-| 2 | Map your columns to PLZ / Street / HouseNumber if the auto-detect is wrong |
-| 3 | Click **Run lookup** |
-| 4 | Review results and click **Download CSV** |
+```{=html}
+<table>
+  <thead><tr><th class="step-col">Step</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td class="step-col">1</td><td>Click <strong>Choose file</strong> (or drag-and-drop)</td></tr>
+    <tr><td class="step-col">2</td><td>Map your columns to PLZ / Street / HouseNumber if the auto-detect is wrong</td></tr>
+    <tr><td class="step-col">3</td><td>Click <strong>Run lookup</strong></td></tr>
+    <tr><td class="step-col">4</td><td>Review results and click <strong>Download CSV</strong></td></tr>
+  </tbody>
+</table>
+```
 
 **Example values:** postcode `1210`, street `Achengasse`, house number `3`
 → ACD code `070268`, SCD `00012`.
 
 **Coverage:** `r n_addresses` registered address points,
 `r n_acd_codes` unique ACD codes.
-Source: Vienna Open Government Data WFS (`ogdwien:ADRESSENOGD`),
+Source: [Vienna Open Government Data WFS](https://www.data.gv.at/katalog/dataset/stadt-wien_adressenwien)
+([`ogdwien:ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD)),
 snapshot `r ADDRESSES_SNAPSHOT_DATE`.
 
 **Privacy:** addresses you upload are processed locally in your browser
-via DuckDB-Wasm. They are never sent to any server.
+via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). They are never sent to any server.
+
+:::
 
 ---
 
@@ -187,7 +217,14 @@ via DuckDB-Wasm. They are never sent to any server.
 
 ## Methodology
 
-The lookup performs an exact string join on three normalised keys:
+This page does **not** use the project's spatial join or building-footprint
+layer. It is a direct address-table lookup against
+[`ogdwien:ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD)
+(`r n_addresses` registered address points), running in
+[DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html) entirely in your
+browser.
+
+The join uses three normalised keys:
 
 - **PLZ** — four-digit postcode (cast to `VARCHAR`)
 - **Street name** — `LOWER(TRIM(name_str))` matched against the user column
@@ -196,15 +233,27 @@ The lookup performs an exact string join on three normalised keys:
 Schrebergärten / garden-plot addresses with a `/` in the street or `Parz` in
 the house-number column are split into two lookup attempts automatically.
 
-For full methodology, including the confidence-tier model and spatial enrichment
-from the building layer, see the [Methodology page](methodology.qmd#stage-0).
+### What this page does NOT do
+
+- ❌ It does not run the `R/join_buildings_zones.R` spatial join
+- ❌ It does not return `confidence_tier` (A–E distance-based labels)
+- ❌ It does not return `zone_id` or `nearest_zone_dist_m` for matched buildings
+- ❌ It does not consult the `GEBAEUDEINFOOGD` building-footprint layer
+
+Spatial enrichment of matched rows with these fields is tracked as a follow-up
+in [issue #42](https://github.com/JohnGavin/acd_area_climate_design/issues/42).
+
+For background on the dashboard's spatial pipeline (different layers, different
+question), see the [Methodology page](methodology.qmd) — particularly
+[Section 4](methodology.qmd#what-stage-0-found-a-category-error) on the Stage 0
+finding that ACD is a building registry number, not a zone reference.
 
 **Match quality legend:**
 
 | Value | Meaning |
 |-------|---------|
 | `exact` | All three keys matched exactly after normalisation |
-| `unmatched` | No row in ADRESSENOGD matched this combination |
+| `unmatched` | No row in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) matched this combination |
 
 ```{=html}
 <!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->

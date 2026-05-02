@@ -149,44 +149,57 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="quick-guide" class="level2">
+<style>
+/* upload page typography + tables */
+main, .quarto-container, .upload-page-prose,
+.upload-page-prose p, .upload-page-prose li,
+.upload-page-prose td, .upload-page-prose th { font-size: 1.15em; }
+.upload-page-prose table { width: 100%; border-collapse: collapse; }
+.upload-page-prose table th, .upload-page-prose table td {
+  padding: 6px 10px; border-bottom: 1px solid #dee2e6;
+  vertical-align: top;
+}
+.upload-page-prose table th.step-col,
+.upload-page-prose table td.step-col {
+  width: 4.5em;        /* matches "Step" header width plus a hair */
+  text-align: center;
+  white-space: nowrap;
+}
+</style>
+<section id="quick-guide" class="level2 upload-page-prose">
 <h2 class="anchored" data-anchor-id="quick-guide">Quick guide</h2>
 <p>Upload an Excel (<code>.xlsx</code>) or CSV file with <strong>at least three columns</strong>: postcode (<code>PLZ</code>), street name, and house number. The lookup runs entirely in your browser using <a href="https://duckdb.org/docs/api/wasm/overview.html">DuckDB-Wasm</a> — your file never leaves your device.</p>
 <table class="caption-top table">
-<colgroup>
-<col style="width: 35%">
-<col style="width: 64%">
-</colgroup>
 <thead>
 <tr class="header">
-<th>Step</th>
-<th>What to do</th>
+<th class="step-col" data-quarto-table-cell-role="th">Step</th>
+<th data-quarto-table-cell-role="th">What to do</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
-<td>1</td>
+<td class="step-col">1</td>
 <td>Click <strong>Choose file</strong> (or drag-and-drop)</td>
 </tr>
 <tr class="even">
-<td>2</td>
+<td class="step-col">2</td>
 <td>Map your columns to PLZ / Street / HouseNumber if the auto-detect is wrong</td>
 </tr>
 <tr class="odd">
-<td>3</td>
+<td class="step-col">3</td>
 <td>Click <strong>Run lookup</strong></td>
 </tr>
 <tr class="even">
-<td>4</td>
+<td class="step-col">4</td>
 <td>Review results and click <strong>Download CSV</strong></td>
 </tr>
 </tbody>
 </table>
 <p><strong>Example values:</strong> postcode <code>1210</code>, street <code>Achengasse</code>, house number <code>3</code> → ACD code <code>070268</code>, SCD <code>00012</code>.</p>
-<p><strong>Coverage:</strong> 291,823 registered address points, 196,142 unique ACD codes. Source: Vienna Open Government Data WFS (<code>ogdwien:ADRESSENOGD</code>), snapshot 2026-05-02.</p>
-<p><strong>Privacy:</strong> addresses you upload are processed locally in your browser via DuckDB-Wasm. They are never sent to any server.</p>
-<hr>
+<p><strong>Coverage:</strong> 291,823 registered address points, 196,142 unique ACD codes. Source: <a href="https://www.data.gv.at/katalog/dataset/stadt-wien_adressenwien">Vienna Open Government Data WFS</a> (<a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ogdwien:ADRESSENOGD</code></a>), snapshot 2026-05-02.</p>
+<p><strong>Privacy:</strong> addresses you upload are processed locally in your browser via <a href="https://duckdb.org/docs/api/wasm/overview.html">DuckDB-Wasm</a>. They are never sent to any server.</p>
 </section>
+<hr>
 <section id="upload-your-file" class="level2">
 <h2 class="anchored" data-anchor-id="upload-your-file">Upload your file</h2>
 <!-- ── CDN dependencies ─────────────────────────────────────────────────── -->
@@ -304,14 +317,24 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="methodology" class="level2">
 <h2 class="anchored" data-anchor-id="methodology">Methodology</h2>
-<p>The lookup performs an exact string join on three normalised keys:</p>
+<p>This page does <strong>not</strong> use the project’s spatial join or building-footprint layer. It is a direct address-table lookup against <a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ogdwien:ADRESSENOGD</code></a> (291,823 registered address points), running in <a href="https://duckdb.org/docs/api/wasm/overview.html">DuckDB-Wasm</a> entirely in your browser.</p>
+<p>The join uses three normalised keys:</p>
 <ul>
 <li><strong>PLZ</strong> — four-digit postcode (cast to <code>VARCHAR</code>)</li>
 <li><strong>Street name</strong> — <code>LOWER(TRIM(name_str))</code> matched against the user column</li>
 <li><strong>House number</strong> — <code>LOWER(TRIM(name_onr))</code> matched against the user column</li>
 </ul>
 <p>Schrebergärten / garden-plot addresses with a <code>/</code> in the street or <code>Parz</code> in the house-number column are split into two lookup attempts automatically.</p>
-<p>For full methodology, including the confidence-tier model and spatial enrichment from the building layer, see the <a href="../../vignettes/articles/methodology.html#stage-0">Methodology page</a>.</p>
+<section id="what-this-page-does-not-do" class="level3">
+<h3 class="anchored" data-anchor-id="what-this-page-does-not-do">What this page does NOT do</h3>
+<ul>
+<li>❌ It does not run the <code>R/join_buildings_zones.R</code> spatial join</li>
+<li>❌ It does not return <code>confidence_tier</code> (A–E distance-based labels)</li>
+<li>❌ It does not return <code>zone_id</code> or <code>nearest_zone_dist_m</code> for matched buildings</li>
+<li>❌ It does not consult the <code>GEBAEUDEINFOOGD</code> building-footprint layer</li>
+</ul>
+<p>Spatial enrichment of matched rows with these fields is tracked as a follow-up in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/42">issue #42</a>.</p>
+<p>For background on the dashboard’s spatial pipeline (different layers, different question), see the <a href="../../vignettes/articles/methodology.html">Methodology page</a> — particularly <a href="../../vignettes/articles/methodology.html#what-stage-0-found-a-category-error">Section 4</a> on the Stage 0 finding that ACD is a building registry number, not a zone reference.</p>
 <p><strong>Match quality legend:</strong></p>
 <table class="caption-top table">
 <thead>
@@ -327,7 +350,7 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 <tr class="even">
 <td><code>unmatched</code></td>
-<td>No row in ADRESSENOGD matched this combination</td>
+<td>No row in <a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ADRESSENOGD</code></a> matched this combination</td>
 </tr>
 </tbody>
 </table>
@@ -773,6 +796,7 @@ document.getElementById("download-btn").addEventListener("click", () => {
 </script>
 
 
+</section>
 </section>
 
 </main> <!-- /main -->
