@@ -161,10 +161,13 @@ validate_deploy <- function(
   n_total  <- length(leaflets)
   if (n_total == 0L) return(empty_result)
 
-  # Count markers or polygon JSON refs in the raw HTML
+  # Count markers or polygon JSON refs in the raw HTML.
+  # ignore.case=TRUE because htmlwidgets serialises method names with the
+  # original camelCase from the R API (addCircleMarkers, addPolygons etc.).
   has_geodata <- grepl(
-    "(leaflet-marker|circleMarker|addPolygons|latlng|coordinates)",
-    html_text
+    "(leaflet-marker|circleMarker|addPolygons|addMarkers|latlng|coordinates|setView)",
+    html_text,
+    ignore.case = TRUE
   )
 
   if (has_geodata) {
