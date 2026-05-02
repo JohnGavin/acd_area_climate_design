@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Lookup: upload addresses → ACD codes – acd: Vienna ACD</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-6366b8537f22fe2521dbe9c1a8a1a9f2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">acd: Vienna ACD</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../vignettes/articles/dashboard.html"> 
+<span class="menu-text">Dashboard</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../vignettes/articles/methodology.html"> 
+<span class="menu-text">Methodology</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../vignettes/articles/lookup.html"> 
+<span class="menu-text">Lookup</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link active" href="../../vignettes/articles/upload.html" aria-current="page"> 
+<span class="menu-text">Upload → ACD</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../vignettes/articles/scrollytell_de.html"> 
+<span class="menu-text">DE: Wie die Daten funktionieren</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    
+<!-- main -->
+<main class="content column-page" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Lookup: upload addresses → ACD codes</h1>
+<p class="subtitle lead">Bulk address resolution against Vienna’s ADRESSENOGD</p>
+</div>
+
+
+
+<div class="quarto-title-meta column-page">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="quick-guide" class="level2">
+<h2 class="anchored" data-anchor-id="quick-guide">Quick guide</h2>
+<p>Upload an Excel (<code>.xlsx</code>) or CSV file with <strong>at least three columns</strong>: postcode (<code>PLZ</code>), street name, and house number. The lookup runs entirely in your browser using <a href="https://duckdb.org/docs/api/wasm/overview.html">DuckDB-Wasm</a> — your file never leaves your device.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 35%">
+<col style="width: 64%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>What to do</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>Click <strong>Choose file</strong> (or drag-and-drop)</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>Map your columns to PLZ / Street / HouseNumber if the auto-detect is wrong</td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td>Click <strong>Run lookup</strong></td>
+</tr>
+<tr class="even">
+<td>4</td>
+<td>Review results and click <strong>Download CSV</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Example values:</strong> postcode <code>1210</code>, street <code>Achengasse</code>, house number <code>3</code> → ACD code <code>070268</code>, SCD <code>00012</code>.</p>
+<p><strong>Coverage:</strong> 291,823 registered address points, 196,142 unique ACD codes. Source: Vienna Open Government Data WFS (<code>ogdwien:ADRESSENOGD</code>), snapshot 2026-05-02.</p>
+<p><strong>Privacy:</strong> addresses you upload are processed locally in your browser via DuckDB-Wasm. They are never sent to any server.</p>
+<hr>
+</section>
+<section id="upload-your-file" class="level2">
+<h2 class="anchored" data-anchor-id="upload-your-file">Upload your file</h2>
+<!-- ── CDN dependencies ─────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- ── Upload UI ──────────────────────────────────────────────────────────── -->
+<div id="upload-section" style="font-family:sans-serif; max-width:900px;">
+
+  <!-- Drop zone -->
+  <div id="drop-zone" style="
+    border:2px dashed #6c757d; border-radius:8px; padding:24px 20px;
+    text-align:center; background:#f8f9fa; cursor:pointer; margin-bottom:16px;">
+    <p style="margin:0; font-size:1.05em; color:#495057;">
+      Drag &amp; drop your <strong>.xlsx</strong> or <strong>.csv</strong> file here,
+      or <label for="file-input" style="color:#0d6efd; cursor:pointer; text-decoration:underline;">choose file</label>.
+    </p>
+    <input type="file" id="file-input" accept=".xlsx,.csv" style="display:none;">
+    <p id="file-name-display" style="margin:8px 0 0; color:#6c757d; font-size:0.9em;"></p>
+  </div>
+
+  <!-- Column mapping -->
+  <div id="col-map-section" style="display:none; margin-bottom:16px;">
+    <h4 style="margin-bottom:8px;" class="anchored">Column mapping</h4>
+    <div style="display:flex; flex-wrap:wrap; gap:16px;">
+      <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9em;">
+        PLZ (postcode)
+        <select id="map-plz" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
+      </label>
+      <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9em;">
+        Street name
+        <select id="map-street" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
+      </label>
+      <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9em;">
+        House number
+        <select id="map-hausnr" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
+      </label>
+    </div>
+    <button id="run-btn" style="
+      margin-top:14px; padding:8px 20px; background:#0d6efd; color:#fff;
+      border:none; border-radius:6px; cursor:pointer; font-size:1em;">
+      Run lookup
+    </button>
+  </div>
+
+  <!-- Progress bar -->
+  <div id="progress-section" style="display:none; margin-bottom:12px;">
+    <p id="progress-msg" style="margin:0 0 6px; font-size:0.9em; color:#495057;"></p>
+    <div style="background:#dee2e6; border-radius:4px; height:8px; width:100%;">
+      <div id="progress-bar" style="background:#0d6efd; border-radius:4px; height:8px; width:0%; transition:width 0.3s;"></div>
+    </div>
+  </div>
+
+  <!-- Empty-state message (shown until upload runs) -->
+  <p id="empty-state-msg" style="color:#6c757d; font-style:italic; margin-top:8px;">
+    Upload a file to begin. No data will leave your browser.
+  </p>
+
+</div>
+
+<!-- ── Results section (hidden until lookup runs) ─────────────────────────── -->
+<div id="results-section" style="display:none; margin-top:24px; font-family:sans-serif; max-width:1100px;">
+  <h3 class="anchored">Results</h3>
+
+  <!-- Match rate summary -->
+  <div id="match-summary" style="
+    background:#f8f9fa; border:1px solid #dee2e6; border-radius:6px;
+    padding:12px 16px; margin-bottom:16px; font-size:0.92em;">
+  </div>
+
+  <!-- Per-district chart -->
+  <div id="chart-section" style="margin-bottom:16px;">
+    <h4 style="margin-bottom:6px;" class="anchored">Match rate by district (PLZ)</h4>
+    <canvas id="district-chart" height="160" style="max-width:700px; width:100%;"></canvas>
+  </div>
+
+  <!-- Results table (first 50 rows) -->
+  <h4 class="anchored">Preview (first 50 matched rows)</h4>
+  <div style="overflow-x:auto;">
+    <table id="results-table" style="
+      border-collapse:collapse; width:100%; font-size:0.85em;">
+    </table>
+  </div>
+
+  <!-- Download button -->
+  <button id="download-btn" style="
+    margin-top:14px; padding:8px 20px; background:#198754; color:#fff;
+    border:none; border-radius:6px; cursor:pointer; font-size:1em;">
+    Download filled CSV
+  </button>
+</div>
+<hr>
+</section>
+<section id="methodology" class="level2">
+<h2 class="anchored" data-anchor-id="methodology">Methodology</h2>
+<p>The lookup performs an exact string join on three normalised keys:</p>
+<ul>
+<li><strong>PLZ</strong> — four-digit postcode (cast to <code>VARCHAR</code>)</li>
+<li><strong>Street name</strong> — <code>LOWER(TRIM(name_str))</code> matched against the user column</li>
+<li><strong>House number</strong> — <code>LOWER(TRIM(name_onr))</code> matched against the user column</li>
+</ul>
+<p>Schrebergärten / garden-plot addresses with a <code>/</code> in the street or <code>Parz</code> in the house-number column are split into two lookup attempts automatically.</p>
+<p>For full methodology, including the confidence-tier model and spatial enrichment from the building layer, see the <a href="../../vignettes/articles/methodology.html#stage-0">Methodology page</a>.</p>
+<p><strong>Match quality legend:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>exact</code></td>
+<td>All three keys matched exactly after normalisation</td>
+</tr>
+<tr class="even">
+<td><code>unmatched</code></td>
+<td>No row in ADRESSENOGD matched this combination</td>
+</tr>
+</tbody>
+</table>
+<!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->
+
+<!-- Inline Chart.js for the per-district bar chart (no server needed) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<script type="module">
+// ── NOTE ON SQL USAGE ──────────────────────────────────────────────────────
+// The `await conn.query("...")` calls below are duckdb-wasm's JS API.
+// This is the idiomatic interface for duckdb-wasm; there is no JS equivalent
+// of the R-side duckplyr package. The duckdplyr-not-sql rule applies to R code
+// only. All R-side data access in this package uses duckplyr verbs.
+// ──────────────────────────────────────────────────────────────────────────
+
+import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.29.0/+esm";
+
+// ── Constants ──────────────────────────────────────────────────────────────
+const PARQUET_URL =
+  "https://johngavin.github.io/acd_area_climate_design/data/addresses_2026-05-02.parquet";
+
+// ── State ──────────────────────────────────────────────────────────────────
+let parsedRows   = [];   // [{PLZ, Strasse, HausNr, ...original cols}]
+let resultRows   = [];   // full result after JOIN
+let colHeaders   = [];   // original column names from user file
+let dbConn       = null; // duckdb-wasm connection (lazy init)
+let dbReady      = false;
+
+// ── Utility ────────────────────────────────────────────────────────────────
+function setProgress(pct, msg) {
+  const sec = document.getElementById("progress-section");
+  const bar = document.getElementById("progress-bar");
+  const txt = document.getElementById("progress-msg");
+  sec.style.display = pct < 100 ? "block" : "none";
+  bar.style.width   = pct + "%";
+  txt.textContent   = msg || "";
+}
+
+function escSql(s) {
+  return String(s ?? "").replace(/'/g, "''");
+}
+
+// ── Garden-plot detection & splitting ─────────────────────────────────────
+// Returns [{PLZ, strasse_norm, hausnr_norm, garden_plot, orig_idx}]
+function expandRows(rows, plzCol, streetCol, houseCol) {
+  const out = [];
+  rows.forEach((r, idx) => {
+    const plz    = String(r[plzCol]  ?? "").trim();
+    const street = String(r[streetCol] ?? "").trim();
+    const house  = String(r[houseCol]  ?? "").trim();
+    const isGarden = street.includes("/") || /parz/i.test(house);
+
+    if (isGarden && street.includes("/")) {
+      // Split "Achengasse 4/Lavantgasse 1a" into two attempts
+      const parts = street.split("/");
+      parts.forEach(p => {
+        out.push({
+          PLZ: plz,
+          strasse_norm: p.trim().toLowerCase(),
+          hausnr_norm:  house.toLowerCase(),
+          garden_plot:  true,
+          orig_idx:     idx
+        });
+      });
+    } else {
+      out.push({
+        PLZ: plz,
+        strasse_norm: street.toLowerCase(),
+        hausnr_norm:  house.toLowerCase(),
+        garden_plot:  isGarden,
+        orig_idx:     idx
+      });
+    }
+  });
+  return out;
+}
+
+// ── DuckDB-Wasm init ───────────────────────────────────────────────────────
+async function initDuck() {
+  if (dbReady) return;
+  setProgress(5, "Loading DuckDB-Wasm…");
+  const BUNDLES = duckdb.getJsDelivrBundles();
+  const bundle  = await duckdb.selectBundle(BUNDLES);
+  const worker  = await duckdb.createWorker(bundle.mainWorker);
+  const logger  = new duckdb.ConsoleLogger();
+  const db      = new duckdb.AsyncDuckDB(logger, worker);
+  await db.instantiate(bundle.mainModule);
+  dbConn  = await db.connect();
+
+  setProgress(15, "Installing httpfs extension…");
+  await dbConn.query("INSTALL httpfs; LOAD httpfs;");
+
+  setProgress(25, "Registering address Parquet view…");
+  await dbConn.query(`
+    CREATE OR REPLACE VIEW addr AS
+    SELECT *,
+      LOWER(TRIM(NAME_STR))  AS street_norm,
+      LOWER(TRIM(NAME_ONR))  AS house_norm,
+      CAST(PLZ AS VARCHAR)   AS plz_norm
+    FROM read_parquet('${PARQUET_URL}')
+  `);
+  dbReady = true;
+  setProgress(35, "Address lookup ready.");
+}
+
+// ── Run the JOIN ───────────────────────────────────────────────────────────
+async function runLookup(expanded) {
+  // Build VALUES list
+  const vals = expanded
+    .map(r => `('${escSql(r.PLZ)}','${escSql(r.strasse_norm)}','${escSql(r.hausnr_norm)}',${r.garden_plot ? 1 : 0},${r.orig_idx})`)
+    .join(",\n");
+
+  setProgress(55, "Creating user input table…");
+  await dbConn.query("DROP TABLE IF EXISTS user_in");
+  await dbConn.query(`
+    CREATE TABLE user_in (
+      plz_in      VARCHAR,
+      street_in   VARCHAR,
+      house_in    VARCHAR,
+      garden_plot INTEGER,
+      orig_idx    INTEGER
+    )
+  `);
+  await dbConn.query(`INSERT INTO user_in VALUES ${vals}`);
+
+  setProgress(70, "Joining against ADRESSENOGD…");
+  const res = await dbConn.query(`
+    SELECT
+      u.orig_idx,
+      u.plz_in,
+      u.street_in,
+      u.house_in,
+      u.garden_plot,
+      a.ACD,
+      a.SCD_NAME_STR       AS SCD,
+      a.STRABS_ZUGANG_STR  AS STRABS,
+      a.OBJEKT_ID,
+      a.lon,
+      a.lat,
+      CASE WHEN a.ACD IS NOT NULL THEN 'exact' ELSE 'unmatched' END AS match_quality
+    FROM user_in u
+    LEFT JOIN addr a
+      ON u.plz_in    = a.plz_norm
+     AND u.street_in = a.street_norm
+     AND u.house_in  = a.house_norm
+    ORDER BY u.orig_idx
+  `);
+
+  setProgress(85, "Processing results…");
+  return res.toArray().map(r => ({
+    orig_idx:      Number(r.orig_idx),
+    plz_in:        r.plz_in,
+    street_in:     r.street_in,
+    house_in:      r.house_in,
+    garden_plot:   r.garden_plot === 1,
+    ACD:           r.ACD,
+    SCD:           r.SCD,
+    STRABS:        r.STRABS,
+    OBJEKT_ID:     r.OBJEKT_ID,
+    lon:           r.lon,
+    lat:           r.lat,
+    match_quality: r.match_quality
+  }));
+}
+
+// ── Merge results back to original rows ───────────────────────────────────
+// For garden_plot rows with multiple lookup attempts, prefer the first match.
+function mergeResults(origRows, expanded, joinedRows) {
+  // Build best result per orig_idx (prefer exact over unmatched)
+  const best = {};
+  joinedRows.forEach(r => {
+    const k = r.orig_idx;
+    if (!best[k] || (best[k].match_quality !== "exact" && r.match_quality === "exact")) {
+      best[k] = r;
+    }
+  });
+  return origRows.map((row, idx) => {
+    const b = best[idx] || {};
+    return Object.assign({}, row, {
+      ACD:           b.ACD           ?? "",
+      SCD:           b.SCD           ?? "",
+      STRABS:        b.STRABS        ?? "",
+      OBJEKT_ID:     b.OBJEKT_ID     ?? "",
+      lon:           b.lon           ?? "",
+      lat:           b.lat           ?? "",
+      match_quality: b.match_quality ?? "unmatched"
+    });
+  });
+}
+
+// ── Match-rate chart ───────────────────────────────────────────────────────
+function renderChart(merged) {
+  const byDistrict = {};
+  merged.forEach(r => {
+    const plz = r[Object.keys(r).find(k => k === "PLZ" || k === "_plz_")] ??
+                r.__plzCol__ ?? r._plzVal_ ?? "";
+    // Use plz_in if available (we stored it separately)
+    const key = r.__plz__ || "";
+    if (!byDistrict[key]) byDistrict[key] = { total: 0, matched: 0 };
+    byDistrict[key].total++;
+    if (r.match_quality === "exact") byDistrict[key].matched++;
+  });
+  const labels = Object.keys(byDistrict).sort();
+  const rates  = labels.map(k => {
+    const d = byDistrict[k];
+    return d.total > 0 ? Math.round(100 * d.matched / d.total) : 0;
+  });
+
+  const canvas = document.getElementById("district-chart");
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+
+  new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Match rate (%)",
+        data: rates,
+        backgroundColor: "#0d6efd88",
+        borderColor: "#0d6efd",
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y + "%" } }
+      },
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + "%" } }
+      }
+    }
+  });
+}
+
+// ── HTML table (first 50 rows) ─────────────────────────────────────────────
+function renderTable(merged) {
+  const tbl  = document.getElementById("results-table");
+  const cols = Object.keys(merged[0] || {}).filter(c => !c.startsWith("__"));
+  const rows = merged.slice(0, 50);
+
+  const head = `<thead><tr>${cols.map(c =>
+    `<th style="border:1px solid #dee2e6; padding:4px 8px; background:#f8f9fa; white-space:nowrap;">${c}</th>`
+  ).join("")}</tr></thead>`;
+
+  const body = `<tbody>${rows.map(r =>
+    `<tr>${cols.map(c => {
+      const v   = r[c] ?? "";
+      const ok  = c === "match_quality" && v === "exact";
+      const bad = c === "match_quality" && v === "unmatched";
+      const style = ok  ? "background:#d1e7dd;" :
+                    bad ? "background:#f8d7da;" : "";
+      return `<td style="border:1px solid #dee2e6; padding:4px 8px; ${style}">${v}</td>`;
+    }).join("")}</tr>`
+  ).join("")}</tbody>`;
+
+  tbl.innerHTML = head + body;
+}
+
+// ── CSV download ───────────────────────────────────────────────────────────
+function downloadCsv(merged) {
+  const cols = Object.keys(merged[0] || {}).filter(c => !c.startsWith("__"));
+  const header = cols.join(",");
+  const body   = merged.map(r =>
+    cols.map(c => {
+      const v = String(r[c] ?? "");
+      return v.includes(",") || v.includes('"') || v.includes("\n")
+        ? `"${v.replace(/"/g, '""')}"` : v;
+    }).join(",")
+  ).join("\n");
+  const csv  = header + "\n" + body;
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = "addresses_with_acd.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// ── File parsing ───────────────────────────────────────────────────────────
+function autoDetect(cols) {
+  const norm = c => c.toLowerCase().replace(/[^a-z]/g, "");
+  const find = (keys) => cols.find(c => keys.includes(norm(c))) ?? cols[0];
+  return {
+    plz:    find(["plz", "postcode", "zip", "postleitzahl"]),
+    street: find(["strasse", "street", "strase", "str", "streetname", "strassename", "name"]),
+    house:  find(["hausnr", "hnr", "hausnummer", "nr", "housenumber", "number"])
+  };
+}
+
+function populateSelects(cols, detected) {
+  ["map-plz", "map-street", "map-hausnr"].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = cols.map(c =>
+      `<option value="${c}">${c}</option>`
+    ).join("");
+  });
+  document.getElementById("map-plz").value    = detected.plz;
+  document.getElementById("map-street").value = detected.street;
+  document.getElementById("map-hausnr").value = detected.house;
+}
+
+async function parseFile(file) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  if (ext === "csv") {
+    return new Promise(resolve => {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: r => resolve({ rows: r.data, cols: r.meta.fields })
+      });
+    });
+  } else {
+    // xlsx
+    const ab   = await file.arrayBuffer();
+    const wb   = XLSX.read(ab, { type: "array" });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
+    return { rows, cols };
+  }
+}
+
+// ── Wire up UI ─────────────────────────────────────────────────────────────
+document.getElementById("drop-zone").addEventListener("click", () =>
+  document.getElementById("file-input").click()
+);
+
+document.getElementById("drop-zone").addEventListener("dragover", e => {
+  e.preventDefault();
+  document.getElementById("drop-zone").style.background = "#e9ecef";
+});
+
+document.getElementById("drop-zone").addEventListener("dragleave", () => {
+  document.getElementById("drop-zone").style.background = "#f8f9fa";
+});
+
+document.getElementById("drop-zone").addEventListener("drop", async e => {
+  e.preventDefault();
+  document.getElementById("drop-zone").style.background = "#f8f9fa";
+  const file = e.dataTransfer.files[0];
+  if (file) await handleFile(file);
+});
+
+document.getElementById("file-input").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (file) await handleFile(file);
+});
+
+async function handleFile(file) {
+  document.getElementById("file-name-display").textContent = file.name;
+  document.getElementById("empty-state-msg").style.display = "none";
+  setProgress(5, "Parsing file…");
+
+  try {
+    const { rows, cols } = await parseFile(file);
+    parsedRows  = rows;
+    colHeaders  = cols;
+    const det   = autoDetect(cols);
+    populateSelects(cols, det);
+    document.getElementById("col-map-section").style.display = "block";
+    setProgress(100, "");
+  } catch (err) {
+    setProgress(100, "");
+    alert("Could not parse file: " + err.message);
+  }
+}
+
+document.getElementById("run-btn").addEventListener("click", async () => {
+  const plzCol    = document.getElementById("map-plz").value;
+  const streetCol = document.getElementById("map-street").value;
+  const houseCol  = document.getElementById("map-hausnr").value;
+
+  document.getElementById("empty-state-msg").style.display = "none";
+  document.getElementById("results-section").style.display = "none";
+
+  try {
+    await initDuck();
+
+    setProgress(40, "Expanding rows (garden-plot detection)…");
+    const expanded = expandRows(parsedRows, plzCol, streetCol, houseCol);
+
+    const joinedRows = await runLookup(expanded);
+
+    // Tag each orig row with its PLZ for chart
+    const withPlz = parsedRows.map((r, idx) => ({
+      ...r,
+      __plz__: String(r[plzCol] ?? "").trim()
+    }));
+
+    const merged = mergeResults(withPlz, expanded, joinedRows);
+
+    resultRows = merged;
+
+    const nTotal   = merged.length;
+    const nMatched = merged.filter(r => r.match_quality === "exact").length;
+    const pct      = nTotal > 0 ? Math.round(100 * nMatched / nTotal) : 0;
+
+    document.getElementById("match-summary").innerHTML =
+      `<strong>${nMatched.toLocaleString()}</strong> of <strong>${nTotal.toLocaleString()}</strong> ` +
+      `addresses matched (${pct}% match rate). ` +
+      `<span style="color:#198754;">&#10003; exact</span> / ` +
+      `<span style="color:#dc3545;">&#10007; unmatched</span>`;
+
+    renderChart(merged);
+    renderTable(merged);
+
+    document.getElementById("results-section").style.display = "block";
+    setProgress(100, "");
+  } catch (err) {
+    setProgress(100, "");
+    console.error(err);
+    alert("Lookup failed: " + err.message +
+          "\n\nCheck the browser console for details.");
+  }
+});
+
+document.getElementById("download-btn").addEventListener("click", () => {
+  if (resultRows.length > 0) downloadCsv(resultRows);
+});
+</script>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

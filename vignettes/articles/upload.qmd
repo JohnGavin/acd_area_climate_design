@@ -1,0 +1,611 @@
+---
+title: "Lookup: upload addresses → ACD codes"
+subtitle: "Bulk address resolution against Vienna's ADRESSENOGD"
+format:
+  html:
+    toc: false
+    page-layout: full
+    code-fold: true
+    code-summary: "Show code"
+execute:
+  echo: true
+  message: false
+  warning: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+
+# Load package in dev mode or installed
+tryCatch(
+  pkgload::load_all(quiet = TRUE),
+  error = function(e) {
+    tryCatch(library(acd), error = function(e2) NULL)
+  }
+)
+
+if (!exists("ADDRESSES_SNAPSHOT_DATE")) ADDRESSES_SNAPSHOT_DATE <- "2026-05-02"
+if (!exists("SNAPSHOT_DATE"))           SNAPSHOT_DATE           <- "2026-05-01"
+if (!exists("REMOTE_BASE_URL"))         REMOTE_BASE_URL         <- "https://johngavin.github.io/acd_area_climate_design/data"
+
+# Load addresses for inline summary stats only (not passed to JS)
+addr_local <- load_acd_data("addresses", source = "local")
+
+n_addresses      <- format(nrow(addr_local),        big.mark = ",")
+n_acd_codes      <- format(length(unique(addr_local$ACD)), big.mark = ",")
+addr_parquet_url <- paste0(REMOTE_BASE_URL, "/addresses_", ADDRESSES_SNAPSHOT_DATE, ".parquet")
+```
+
+## Quick guide
+
+Upload an Excel (`.xlsx`) or CSV file with **at least three columns**: postcode
+(`PLZ`), street name, and house number. The lookup runs entirely in your browser
+using [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html) — your file
+never leaves your device.
+
+| Step | What to do |
+|------|-----------|
+| 1 | Click **Choose file** (or drag-and-drop) |
+| 2 | Map your columns to PLZ / Street / HouseNumber if the auto-detect is wrong |
+| 3 | Click **Run lookup** |
+| 4 | Review results and click **Download CSV** |
+
+**Example values:** postcode `1210`, street `Achengasse`, house number `3`
+→ ACD code `070268`, SCD `00012`.
+
+**Coverage:** `r n_addresses` registered address points,
+`r n_acd_codes` unique ACD codes.
+Source: Vienna Open Government Data WFS (`ogdwien:ADRESSENOGD`),
+snapshot `r ADDRESSES_SNAPSHOT_DATE`.
+
+**Privacy:** addresses you upload are processed locally in your browser
+via DuckDB-Wasm. They are never sent to any server.
+
+---
+
+## Upload your file
+
+```{=html}
+<!-- ── CDN dependencies ─────────────────────────────────────────────────── -->
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<!-- ── Upload UI ──────────────────────────────────────────────────────────── -->
+<div id="upload-section" style="font-family:sans-serif; max-width:900px;">
+
+  <!-- Drop zone -->
+  <div id="drop-zone" style="
+    border:2px dashed #6c757d; border-radius:8px; padding:24px 20px;
+    text-align:center; background:#f8f9fa; cursor:pointer; margin-bottom:16px;">
+    <p style="margin:0; font-size:1.05em; color:#495057;">
+      Drag &amp; drop your <strong>.xlsx</strong> or <strong>.csv</strong> file here,
+      or <label for="file-input" style="color:#0d6efd; cursor:pointer; text-decoration:underline;">choose file</label>.
+    </p>
+    <input type="file" id="file-input" accept=".xlsx,.csv"
+           style="display:none;" />
+    <p id="file-name-display" style="margin:8px 0 0; color:#6c757d; font-size:0.9em;"></p>
+  </div>
+
+  <!-- Column mapping -->
+  <div id="col-map-section" style="display:none; margin-bottom:16px;">
+    <h4 style="margin-bottom:8px;">Column mapping</h4>
+    <div style="display:flex; flex-wrap:wrap; gap:16px;">
+      <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9em;">
+        PLZ (postcode)
+        <select id="map-plz" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
+      </label>
+      <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9em;">
+        Street name
+        <select id="map-street" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
+      </label>
+      <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9em;">
+        House number
+        <select id="map-hausnr" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
+      </label>
+    </div>
+    <button id="run-btn" style="
+      margin-top:14px; padding:8px 20px; background:#0d6efd; color:#fff;
+      border:none; border-radius:6px; cursor:pointer; font-size:1em;">
+      Run lookup
+    </button>
+  </div>
+
+  <!-- Progress bar -->
+  <div id="progress-section" style="display:none; margin-bottom:12px;">
+    <p id="progress-msg" style="margin:0 0 6px; font-size:0.9em; color:#495057;"></p>
+    <div style="background:#dee2e6; border-radius:4px; height:8px; width:100%;">
+      <div id="progress-bar" style="background:#0d6efd; border-radius:4px; height:8px; width:0%; transition:width 0.3s;"></div>
+    </div>
+  </div>
+
+  <!-- Empty-state message (shown until upload runs) -->
+  <p id="empty-state-msg" style="color:#6c757d; font-style:italic; margin-top:8px;">
+    Upload a file to begin. No data will leave your browser.
+  </p>
+
+</div>
+
+<!-- ── Results section (hidden until lookup runs) ─────────────────────────── -->
+<div id="results-section" style="display:none; margin-top:24px; font-family:sans-serif; max-width:1100px;">
+  <h3>Results</h3>
+
+  <!-- Match rate summary -->
+  <div id="match-summary" style="
+    background:#f8f9fa; border:1px solid #dee2e6; border-radius:6px;
+    padding:12px 16px; margin-bottom:16px; font-size:0.92em;">
+  </div>
+
+  <!-- Per-district chart -->
+  <div id="chart-section" style="margin-bottom:16px;">
+    <h4 style="margin-bottom:6px;">Match rate by district (PLZ)</h4>
+    <canvas id="district-chart" height="160"
+            style="max-width:700px; width:100%;"></canvas>
+  </div>
+
+  <!-- Results table (first 50 rows) -->
+  <h4>Preview (first 50 matched rows)</h4>
+  <div style="overflow-x:auto;">
+    <table id="results-table" style="
+      border-collapse:collapse; width:100%; font-size:0.85em;">
+    </table>
+  </div>
+
+  <!-- Download button -->
+  <button id="download-btn" style="
+    margin-top:14px; padding:8px 20px; background:#198754; color:#fff;
+    border:none; border-radius:6px; cursor:pointer; font-size:1em;">
+    Download filled CSV
+  </button>
+</div>
+```
+
+---
+
+## Methodology
+
+The lookup performs an exact string join on three normalised keys:
+
+- **PLZ** — four-digit postcode (cast to `VARCHAR`)
+- **Street name** — `LOWER(TRIM(name_str))` matched against the user column
+- **House number** — `LOWER(TRIM(name_onr))` matched against the user column
+
+Schrebergärten / garden-plot addresses with a `/` in the street or `Parz` in
+the house-number column are split into two lookup attempts automatically.
+
+For full methodology, including the confidence-tier model and spatial enrichment
+from the building layer, see the [Methodology page](methodology.qmd#stage-0).
+
+**Match quality legend:**
+
+| Value | Meaning |
+|-------|---------|
+| `exact` | All three keys matched exactly after normalisation |
+| `unmatched` | No row in ADRESSENOGD matched this combination |
+
+```{=html}
+<!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->
+
+<!-- Inline Chart.js for the per-district bar chart (no server needed) -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+<script type="module">
+// ── NOTE ON SQL USAGE ──────────────────────────────────────────────────────
+// The `await conn.query("...")` calls below are duckdb-wasm's JS API.
+// This is the idiomatic interface for duckdb-wasm; there is no JS equivalent
+// of the R-side duckplyr package. The duckdplyr-not-sql rule applies to R code
+// only. All R-side data access in this package uses duckplyr verbs.
+// ──────────────────────────────────────────────────────────────────────────
+
+import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.29.0/+esm";
+
+// ── Constants ──────────────────────────────────────────────────────────────
+const PARQUET_URL =
+  "https://johngavin.github.io/acd_area_climate_design/data/addresses_2026-05-02.parquet";
+
+// ── State ──────────────────────────────────────────────────────────────────
+let parsedRows   = [];   // [{PLZ, Strasse, HausNr, ...original cols}]
+let resultRows   = [];   // full result after JOIN
+let colHeaders   = [];   // original column names from user file
+let dbConn       = null; // duckdb-wasm connection (lazy init)
+let dbReady      = false;
+
+// ── Utility ────────────────────────────────────────────────────────────────
+function setProgress(pct, msg) {
+  const sec = document.getElementById("progress-section");
+  const bar = document.getElementById("progress-bar");
+  const txt = document.getElementById("progress-msg");
+  sec.style.display = pct < 100 ? "block" : "none";
+  bar.style.width   = pct + "%";
+  txt.textContent   = msg || "";
+}
+
+function escSql(s) {
+  return String(s ?? "").replace(/'/g, "''");
+}
+
+// ── Garden-plot detection & splitting ─────────────────────────────────────
+// Returns [{PLZ, strasse_norm, hausnr_norm, garden_plot, orig_idx}]
+function expandRows(rows, plzCol, streetCol, houseCol) {
+  const out = [];
+  rows.forEach((r, idx) => {
+    const plz    = String(r[plzCol]  ?? "").trim();
+    const street = String(r[streetCol] ?? "").trim();
+    const house  = String(r[houseCol]  ?? "").trim();
+    const isGarden = street.includes("/") || /parz/i.test(house);
+
+    if (isGarden && street.includes("/")) {
+      // Split "Achengasse 4/Lavantgasse 1a" into two attempts
+      const parts = street.split("/");
+      parts.forEach(p => {
+        out.push({
+          PLZ: plz,
+          strasse_norm: p.trim().toLowerCase(),
+          hausnr_norm:  house.toLowerCase(),
+          garden_plot:  true,
+          orig_idx:     idx
+        });
+      });
+    } else {
+      out.push({
+        PLZ: plz,
+        strasse_norm: street.toLowerCase(),
+        hausnr_norm:  house.toLowerCase(),
+        garden_plot:  isGarden,
+        orig_idx:     idx
+      });
+    }
+  });
+  return out;
+}
+
+// ── DuckDB-Wasm init ───────────────────────────────────────────────────────
+async function initDuck() {
+  if (dbReady) return;
+  setProgress(5, "Loading DuckDB-Wasm…");
+  const BUNDLES = duckdb.getJsDelivrBundles();
+  const bundle  = await duckdb.selectBundle(BUNDLES);
+  const worker  = await duckdb.createWorker(bundle.mainWorker);
+  const logger  = new duckdb.ConsoleLogger();
+  const db      = new duckdb.AsyncDuckDB(logger, worker);
+  await db.instantiate(bundle.mainModule);
+  dbConn  = await db.connect();
+
+  setProgress(15, "Installing httpfs extension…");
+  await dbConn.query("INSTALL httpfs; LOAD httpfs;");
+
+  setProgress(25, "Registering address Parquet view…");
+  await dbConn.query(`
+    CREATE OR REPLACE VIEW addr AS
+    SELECT *,
+      LOWER(TRIM(NAME_STR))  AS street_norm,
+      LOWER(TRIM(NAME_ONR))  AS house_norm,
+      CAST(PLZ AS VARCHAR)   AS plz_norm
+    FROM read_parquet('${PARQUET_URL}')
+  `);
+  dbReady = true;
+  setProgress(35, "Address lookup ready.");
+}
+
+// ── Run the JOIN ───────────────────────────────────────────────────────────
+async function runLookup(expanded) {
+  // Build VALUES list
+  const vals = expanded
+    .map(r => `('${escSql(r.PLZ)}','${escSql(r.strasse_norm)}','${escSql(r.hausnr_norm)}',${r.garden_plot ? 1 : 0},${r.orig_idx})`)
+    .join(",\n");
+
+  setProgress(55, "Creating user input table…");
+  await dbConn.query("DROP TABLE IF EXISTS user_in");
+  await dbConn.query(`
+    CREATE TABLE user_in (
+      plz_in      VARCHAR,
+      street_in   VARCHAR,
+      house_in    VARCHAR,
+      garden_plot INTEGER,
+      orig_idx    INTEGER
+    )
+  `);
+  await dbConn.query(`INSERT INTO user_in VALUES ${vals}`);
+
+  setProgress(70, "Joining against ADRESSENOGD…");
+  const res = await dbConn.query(`
+    SELECT
+      u.orig_idx,
+      u.plz_in,
+      u.street_in,
+      u.house_in,
+      u.garden_plot,
+      a.ACD,
+      a.SCD_NAME_STR       AS SCD,
+      a.STRABS_ZUGANG_STR  AS STRABS,
+      a.OBJEKT_ID,
+      a.lon,
+      a.lat,
+      CASE WHEN a.ACD IS NOT NULL THEN 'exact' ELSE 'unmatched' END AS match_quality
+    FROM user_in u
+    LEFT JOIN addr a
+      ON u.plz_in    = a.plz_norm
+     AND u.street_in = a.street_norm
+     AND u.house_in  = a.house_norm
+    ORDER BY u.orig_idx
+  `);
+
+  setProgress(85, "Processing results…");
+  return res.toArray().map(r => ({
+    orig_idx:      Number(r.orig_idx),
+    plz_in:        r.plz_in,
+    street_in:     r.street_in,
+    house_in:      r.house_in,
+    garden_plot:   r.garden_plot === 1,
+    ACD:           r.ACD,
+    SCD:           r.SCD,
+    STRABS:        r.STRABS,
+    OBJEKT_ID:     r.OBJEKT_ID,
+    lon:           r.lon,
+    lat:           r.lat,
+    match_quality: r.match_quality
+  }));
+}
+
+// ── Merge results back to original rows ───────────────────────────────────
+// For garden_plot rows with multiple lookup attempts, prefer the first match.
+function mergeResults(origRows, expanded, joinedRows) {
+  // Build best result per orig_idx (prefer exact over unmatched)
+  const best = {};
+  joinedRows.forEach(r => {
+    const k = r.orig_idx;
+    if (!best[k] || (best[k].match_quality !== "exact" && r.match_quality === "exact")) {
+      best[k] = r;
+    }
+  });
+  return origRows.map((row, idx) => {
+    const b = best[idx] || {};
+    return Object.assign({}, row, {
+      ACD:           b.ACD           ?? "",
+      SCD:           b.SCD           ?? "",
+      STRABS:        b.STRABS        ?? "",
+      OBJEKT_ID:     b.OBJEKT_ID     ?? "",
+      lon:           b.lon           ?? "",
+      lat:           b.lat           ?? "",
+      match_quality: b.match_quality ?? "unmatched"
+    });
+  });
+}
+
+// ── Match-rate chart ───────────────────────────────────────────────────────
+function renderChart(merged) {
+  const byDistrict = {};
+  merged.forEach(r => {
+    const plz = r[Object.keys(r).find(k => k === "PLZ" || k === "_plz_")] ??
+                r.__plzCol__ ?? r._plzVal_ ?? "";
+    // Use plz_in if available (we stored it separately)
+    const key = r.__plz__ || "";
+    if (!byDistrict[key]) byDistrict[key] = { total: 0, matched: 0 };
+    byDistrict[key].total++;
+    if (r.match_quality === "exact") byDistrict[key].matched++;
+  });
+  const labels = Object.keys(byDistrict).sort();
+  const rates  = labels.map(k => {
+    const d = byDistrict[k];
+    return d.total > 0 ? Math.round(100 * d.matched / d.total) : 0;
+  });
+
+  const canvas = document.getElementById("district-chart");
+  const existing = Chart.getChart(canvas);
+  if (existing) existing.destroy();
+
+  new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{
+        label: "Match rate (%)",
+        data: rates,
+        backgroundColor: "#0d6efd88",
+        borderColor: "#0d6efd",
+        borderWidth: 1
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => ctx.parsed.y + "%" } }
+      },
+      scales: {
+        y: { min: 0, max: 100, ticks: { callback: v => v + "%" } }
+      }
+    }
+  });
+}
+
+// ── HTML table (first 50 rows) ─────────────────────────────────────────────
+function renderTable(merged) {
+  const tbl  = document.getElementById("results-table");
+  const cols = Object.keys(merged[0] || {}).filter(c => !c.startsWith("__"));
+  const rows = merged.slice(0, 50);
+
+  const head = `<thead><tr>${cols.map(c =>
+    `<th style="border:1px solid #dee2e6; padding:4px 8px; background:#f8f9fa; white-space:nowrap;">${c}</th>`
+  ).join("")}</tr></thead>`;
+
+  const body = `<tbody>${rows.map(r =>
+    `<tr>${cols.map(c => {
+      const v   = r[c] ?? "";
+      const ok  = c === "match_quality" && v === "exact";
+      const bad = c === "match_quality" && v === "unmatched";
+      const style = ok  ? "background:#d1e7dd;" :
+                    bad ? "background:#f8d7da;" : "";
+      return `<td style="border:1px solid #dee2e6; padding:4px 8px; ${style}">${v}</td>`;
+    }).join("")}</tr>`
+  ).join("")}</tbody>`;
+
+  tbl.innerHTML = head + body;
+}
+
+// ── CSV download ───────────────────────────────────────────────────────────
+function downloadCsv(merged) {
+  const cols = Object.keys(merged[0] || {}).filter(c => !c.startsWith("__"));
+  const header = cols.join(",");
+  const body   = merged.map(r =>
+    cols.map(c => {
+      const v = String(r[c] ?? "");
+      return v.includes(",") || v.includes('"') || v.includes("\n")
+        ? `"${v.replace(/"/g, '""')}"` : v;
+    }).join(",")
+  ).join("\n");
+  const csv  = header + "\n" + body;
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement("a");
+  a.href     = url;
+  a.download = "addresses_with_acd.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+// ── File parsing ───────────────────────────────────────────────────────────
+function autoDetect(cols) {
+  const norm = c => c.toLowerCase().replace(/[^a-z]/g, "");
+  const find = (keys) => cols.find(c => keys.includes(norm(c))) ?? cols[0];
+  return {
+    plz:    find(["plz", "postcode", "zip", "postleitzahl"]),
+    street: find(["strasse", "street", "strase", "str", "streetname", "strassename", "name"]),
+    house:  find(["hausnr", "hnr", "hausnummer", "nr", "housenumber", "number"])
+  };
+}
+
+function populateSelects(cols, detected) {
+  ["map-plz", "map-street", "map-hausnr"].forEach(id => {
+    const sel = document.getElementById(id);
+    sel.innerHTML = cols.map(c =>
+      `<option value="${c}">${c}</option>`
+    ).join("");
+  });
+  document.getElementById("map-plz").value    = detected.plz;
+  document.getElementById("map-street").value = detected.street;
+  document.getElementById("map-hausnr").value = detected.house;
+}
+
+async function parseFile(file) {
+  const ext = file.name.split(".").pop().toLowerCase();
+  if (ext === "csv") {
+    return new Promise(resolve => {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: r => resolve({ rows: r.data, cols: r.meta.fields })
+      });
+    });
+  } else {
+    // xlsx
+    const ab   = await file.arrayBuffer();
+    const wb   = XLSX.read(ab, { type: "array" });
+    const ws   = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+    const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
+    return { rows, cols };
+  }
+}
+
+// ── Wire up UI ─────────────────────────────────────────────────────────────
+document.getElementById("drop-zone").addEventListener("click", () =>
+  document.getElementById("file-input").click()
+);
+
+document.getElementById("drop-zone").addEventListener("dragover", e => {
+  e.preventDefault();
+  document.getElementById("drop-zone").style.background = "#e9ecef";
+});
+
+document.getElementById("drop-zone").addEventListener("dragleave", () => {
+  document.getElementById("drop-zone").style.background = "#f8f9fa";
+});
+
+document.getElementById("drop-zone").addEventListener("drop", async e => {
+  e.preventDefault();
+  document.getElementById("drop-zone").style.background = "#f8f9fa";
+  const file = e.dataTransfer.files[0];
+  if (file) await handleFile(file);
+});
+
+document.getElementById("file-input").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (file) await handleFile(file);
+});
+
+async function handleFile(file) {
+  document.getElementById("file-name-display").textContent = file.name;
+  document.getElementById("empty-state-msg").style.display = "none";
+  setProgress(5, "Parsing file…");
+
+  try {
+    const { rows, cols } = await parseFile(file);
+    parsedRows  = rows;
+    colHeaders  = cols;
+    const det   = autoDetect(cols);
+    populateSelects(cols, det);
+    document.getElementById("col-map-section").style.display = "block";
+    setProgress(100, "");
+  } catch (err) {
+    setProgress(100, "");
+    alert("Could not parse file: " + err.message);
+  }
+}
+
+document.getElementById("run-btn").addEventListener("click", async () => {
+  const plzCol    = document.getElementById("map-plz").value;
+  const streetCol = document.getElementById("map-street").value;
+  const houseCol  = document.getElementById("map-hausnr").value;
+
+  document.getElementById("empty-state-msg").style.display = "none";
+  document.getElementById("results-section").style.display = "none";
+
+  try {
+    await initDuck();
+
+    setProgress(40, "Expanding rows (garden-plot detection)…");
+    const expanded = expandRows(parsedRows, plzCol, streetCol, houseCol);
+
+    const joinedRows = await runLookup(expanded);
+
+    // Tag each orig row with its PLZ for chart
+    const withPlz = parsedRows.map((r, idx) => ({
+      ...r,
+      __plz__: String(r[plzCol] ?? "").trim()
+    }));
+
+    const merged = mergeResults(withPlz, expanded, joinedRows);
+
+    resultRows = merged;
+
+    const nTotal   = merged.length;
+    const nMatched = merged.filter(r => r.match_quality === "exact").length;
+    const pct      = nTotal > 0 ? Math.round(100 * nMatched / nTotal) : 0;
+
+    document.getElementById("match-summary").innerHTML =
+      `<strong>${nMatched.toLocaleString()}</strong> of <strong>${nTotal.toLocaleString()}</strong> ` +
+      `addresses matched (${pct}% match rate). ` +
+      `<span style="color:#198754;">&#10003; exact</span> / ` +
+      `<span style="color:#dc3545;">&#10007; unmatched</span>`;
+
+    renderChart(merged);
+    renderTable(merged);
+
+    document.getElementById("results-section").style.display = "block";
+    setProgress(100, "");
+  } catch (err) {
+    setProgress(100, "");
+    console.error(err);
+    alert("Lookup failed: " + err.message +
+          "\n\nCheck the browser console for details.");
+  }
+});
+
+document.getElementById("download-btn").addEventListener("click", () => {
+  if (resultRows.length > 0) downloadCsv(resultRows);
+});
+</script>
+```

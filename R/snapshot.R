@@ -15,3 +15,8 @@ CRS_WORKING <- 31287L
 CRS_DISPLAY <- 4326L
 
 REMOTE_BASE_URL <- "https://johngavin.github.io/acd_area_climate_design/data"
+
+LAYER_ADDRESSES <- "ogdwien:ADRESSENOGD"
+
+# Snapshot date for the address layer (fetched 2026-05-02)
+ADDRESSES_SNAPSHOT_DATE <- "2026-05-02"

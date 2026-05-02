@@ -17,6 +17,8 @@ website:
         text: Methodology
       - href: vignettes/articles/lookup.qmd
         text: Lookup
+      - href: vignettes/articles/upload.qmd
+        text: "Upload → ACD"
       - href: vignettes/articles/scrollytell_de.qmd
         text: "DE: Wie die Daten funktionieren"
   sidebar: false

@@ -726,5 +726,33 @@
     "title": "Wie die ACD-Daten funktionieren",
     "section": "Schritt 9: Wie weiter?",
     "text": "Schritt 9: Wie weiter?"
+  },
+  {
+    "objectID": "vignettes/articles/upload.html",
+    "href": "vignettes/articles/upload.html",
+    "title": "Lookup: upload addresses → ACD codes",
+    "section": "",
+    "text": "Upload an Excel (.xlsx) or CSV file with at least three columns: postcode (PLZ), street name, and house number. The lookup runs entirely in your browser using DuckDB-Wasm — your file never leaves your device.\n\n\n\n\n\n\n\nStep\nWhat to do\n\n\n\n\n1\nClick Choose file (or drag-and-drop)\n\n\n2\nMap your columns to PLZ / Street / HouseNumber if the auto-detect is wrong\n\n\n3\nClick Run lookup\n\n\n4\nReview results and click Download CSV\n\n\n\nExample values: postcode 1210, street Achengasse, house number 3 → ACD code 070268, SCD 00012.\nCoverage: 291,823 registered address points, 196,142 unique ACD codes. Source: Vienna Open Government Data WFS (ogdwien:ADRESSENOGD), snapshot 2026-05-02.\nPrivacy: addresses you upload are processed locally in your browser via DuckDB-Wasm. They are never sent to any server."
+  },
+  {
+    "objectID": "vignettes/articles/upload.html#quick-guide",
+    "href": "vignettes/articles/upload.html#quick-guide",
+    "title": "Lookup: upload addresses → ACD codes",
+    "section": "",
+    "text": "Upload an Excel (.xlsx) or CSV file with at least three columns: postcode (PLZ), street name, and house number. The lookup runs entirely in your browser using DuckDB-Wasm — your file never leaves your device.\n\n\n\n\n\n\n\nStep\nWhat to do\n\n\n\n\n1\nClick Choose file (or drag-and-drop)\n\n\n2\nMap your columns to PLZ / Street / HouseNumber if the auto-detect is wrong\n\n\n3\nClick Run lookup\n\n\n4\nReview results and click Download CSV\n\n\n\nExample values: postcode 1210, street Achengasse, house number 3 → ACD code 070268, SCD 00012.\nCoverage: 291,823 registered address points, 196,142 unique ACD codes. Source: Vienna Open Government Data WFS (ogdwien:ADRESSENOGD), snapshot 2026-05-02.\nPrivacy: addresses you upload are processed locally in your browser via DuckDB-Wasm. They are never sent to any server."
+  },
+  {
+    "objectID": "vignettes/articles/upload.html#upload-your-file",
+    "href": "vignettes/articles/upload.html#upload-your-file",
+    "title": "Lookup: upload addresses → ACD codes",
+    "section": "Upload your file",
+    "text": "Upload your file\n\n\n\n\n\n\n\n  \n  \n    \n      Drag & drop your .xlsx or .csv file here,\n      or choose file.\n    \n    \n    \n  \n\n  \n  \n    Column mapping\n    \n      \n        PLZ (postcode)\n        \n      \n      \n        Street name\n        \n      \n      \n        House number\n        \n      \n    \n    \n      Run lookup\n    \n  \n\n  \n  \n    \n    \n      \n    \n  \n\n  \n  \n    Upload a file to begin. No data will leave your browser.\n  \n\n\n\n\n\n  Results\n\n  \n  \n  \n\n  \n  \n    Match rate by district (PLZ)\n    \n  \n\n  \n  Preview (first 50 matched rows)\n  \n    \n    \n  \n\n  \n  \n    Download filled CSV"
+  },
+  {
+    "objectID": "vignettes/articles/upload.html#methodology",
+    "href": "vignettes/articles/upload.html#methodology",
+    "title": "Lookup: upload addresses → ACD codes",
+    "section": "Methodology",
+    "text": "Methodology\nThe lookup performs an exact string join on three normalised keys:\n\nPLZ — four-digit postcode (cast to VARCHAR)\nStreet name — LOWER(TRIM(name_str)) matched against the user column\nHouse number — LOWER(TRIM(name_onr)) matched against the user column\n\nSchrebergärten / garden-plot addresses with a / in the street or Parz in the house-number column are split into two lookup attempts automatically.\nFor full methodology, including the confidence-tier model and spatial enrichment from the building layer, see the Methodology page.\nMatch quality legend:\n\n\n\nValue\nMeaning\n\n\n\n\nexact\nAll three keys matched exactly after normalisation\n\n\nunmatched\nNo row in ADRESSENOGD matched this combination"
   }
 ]

@@ -13,11 +13,16 @@
 #' Stage 3 (scale): switch `REMOTE_BASE_URL` to HuggingFace `hf://datasets/...`
 #'   or S3/R2 once the dataset outgrows GitHub Pages limits.
 #'
-#' @param layer One of "joined", "zones", "buildings".
+#' @param layer One of `"joined"`, `"zones"`, `"buildings"`, or `"addresses"`.
+#'   The `"addresses"` layer resolves to
+#'   `addresses_<ADDRESSES_SNAPSHOT_DATE>.parquet` (snapshot 2026-05-02,
+#'   291 k rows from `ogdwien:ADRESSENOGD`).
 #' @param source One of "local" (default) or "remote". Local reads from
 #'   `system.file("extdata", ...)`. Remote reads via duckplyr from
 #'   `REMOTE_BASE_URL`.
-#' @param snapshot_date ISO date string. Defaults to `SNAPSHOT_DATE`.
+#' @param snapshot_date ISO date string. Defaults to `SNAPSHOT_DATE` for
+#'   joined/zones/buildings layers; for `"addresses"` it defaults to
+#'   `ADDRESSES_SNAPSHOT_DATE` ("2026-05-02").
 #' @param collect Logical. If `TRUE` (default for "local"), pull everything
 #'   into memory as an `sf` data frame. If `FALSE` (default for "remote"),
 #'   return a lazy duckplyr frame so further verbs push down to DuckDB.
@@ -30,6 +35,9 @@
 #'   # Local mode — full snapshot loaded into memory as sf
 #'   joined_local <- load_acd_data("joined", source = "local")
 #'
+#'   # Addresses layer — 291 k rows, ACD + street/house/PLZ lookup table
+#'   addr <- load_acd_data("addresses", source = "local")
+#'
 #'   # Remote mode — query against Parquet on GitHub Pages, no full download
 #'   load_acd_data("joined", source = "remote", collect = FALSE) |>
 #'     dplyr::filter(district == "Leopoldstadt",
@@ -39,12 +47,17 @@
 #' }
 #'
 #' @export
-load_acd_data <- function(layer = c("joined", "zones", "buildings"),
+load_acd_data <- function(layer = c("joined", "zones", "buildings", "addresses"),
                           source = c("local", "remote"),
-                          snapshot_date = SNAPSHOT_DATE,
+                          snapshot_date = NULL,
                           collect = NULL) {
   layer <- rlang::arg_match(layer)
   source <- rlang::arg_match(source)
+
+  # Default snapshot_date depends on the layer
+  if (is.null(snapshot_date)) {
+    snapshot_date <- if (layer == "addresses") ADDRESSES_SNAPSHOT_DATE else SNAPSHOT_DATE
+  }
 
   if (is.null(collect)) {
     collect <- (source == "local")
