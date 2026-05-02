@@ -239,8 +239,8 @@ if (using_placeholder) {
   if (!"zone_type" %in% names(joined) && "acd_native" %in% names(joined)) {
     joined$zone_type <- as.character(joined$acd_native)
   }
-  if (!"legal_status" %in% names(joined) && "acd_agreement" %in% names(joined)) {
-    joined$legal_status <- as.character(joined$acd_agreement)
+  if (!"legal_status" %in% names(joined)) {
+    joined$legal_status <- NA_character_
   }
   if (!"height_m" %in% names(joined) && "n_stories" %in% names(joined)) {
     joined$height_m <- as.numeric(joined$n_stories)
@@ -329,77 +329,105 @@ orphan_zones <- tryCatch(
 )
 n_orphan <- nrow(orphan_zones)
 
-# ── ACD agreement pre-computation ─────────────────────────────────────────────
-# Confusion matrix: rows = spatial says in zone, cols = city says in zone.
-# Uses acd_agreement_summary() if available, else local fallback.
-.acd_agreement_summary_local <- function(df) {
-  df |>
-    sf::st_drop_geometry() |>
-    dplyr::count(acd_agreement, name = "n_buildings") |>
-    dplyr::mutate(pct = round(100 * n_buildings / sum(n_buildings), 1))
+# ── Districts loader ──────────────────────────────────────────────────────────
+districts <- tryCatch({
+  acd::load_acd_data("districts", source = data_source)
+}, error = function(e) {
+  message("load_acd_data('districts') failed; trying .cached_parquet fallback")
+  districts_raw <- .cached_parquet(paste0("districts_", SNAPSHOT_DATE, ".parquet"))
+  if (!is.null(districts_raw)) {
+    sf::st_as_sf(districts_raw, wkt = "geometry_wkt", crs = 31287L)
+  } else {
+    NULL
+  }
+})
+
+# Transform districts to WGS84 for leaflet (if available)
+if (!is.null(districts)) {
+  districts_wgs84 <- sf::st_transform(districts, crs = 4326L)
+  # Identify focus districts (BEZ "20" and "21")
+  districts_focus_idx <- which(
+    !is.na(districts_wgs84$BEZNR) &
+    as.character(districts_wgs84$BEZNR) %in% c("20", "21")
+  )
+} else {
+  districts_wgs84 <- NULL
+  districts_focus_idx <- integer(0)
 }
 
-acd_agree_sum <- tryCatch(
-  acd:::acd_agreement_summary(joined),
-  error = function(e) .acd_agreement_summary_local(joined)
+# ── Confidence tier palette ────────────────────────────────────────────────────
+tier_colors <- c(
+  "A_in_zone_high"      = "#2ca02c",
+  "B_in_zone_boundary"  = "#bcbd22",
+  "C_outside_boundary"  = "#ff7f0e",
+  "D_outside_nearby"    = "#9467bd",
+  "E_outside_far"       = "#7f7f7f"
+)
+tier_labels <- c(
+  "A_in_zone_high"      = "A. In zone (high confidence)",
+  "B_in_zone_boundary"  = "B. In zone (boundary)",
+  "C_outside_boundary"  = "C. Outside (boundary ≤25 m)",
+  "D_outside_nearby"    = "D. Outside (nearby 25–500 m)",
+  "E_outside_far"       = "E. Outside (far >500 m)"
 )
 
-# Disaggregated counts for inline prose (dynamic, no hardcoding)
-.ag <- function(level) {
-  v <- acd_agree_sum$n_buildings[acd_agree_sum$acd_agreement == level]
-  if (length(v) == 0L) 0L else as.integer(v)
-}
-n_agree_in_zone  <- .ag("agree_in_zone")
-n_agree_no_zone  <- .ag("agree_no_zone")
-n_spatial_only   <- .ag("spatial_only")
-n_acd_only       <- .ag("acd_only")
-n_agree_total    <- n_agree_in_zone + n_agree_no_zone
-n_disagree_total <- n_spatial_only + n_acd_only
-
-# Confusion matrix as a 2×2 data frame
-.cm_cell <- function(level) {
-  v <- acd_agree_sum$n_buildings[acd_agree_sum$acd_agreement == level]
-  pv <- acd_agree_sum$pct[acd_agree_sum$acd_agreement == level]
-  n  <- if (length(v)  == 0L) 0L  else as.integer(v)
-  p  <- if (length(pv) == 0L) 0.0 else as.numeric(pv)
-  paste0(n, " (", p, "%)")
-}
-confusion_matrix_df <- data.frame(
-  Spatial_join = c("Spatial: IN zone", "Spatial: NOT in zone"),
-  City_ACD_yes = c(.cm_cell("agree_in_zone"), .cm_cell("acd_only")),
-  City_ACD_no  = c(.cm_cell("spatial_only"),  .cm_cell("agree_no_zone")),
-  check.names  = FALSE,
-  stringsAsFactors = FALSE
-)
-colnames(confusion_matrix_df) <- c(
-  "Spatial join result",
-  "City ACD: yes (non-empty)",
-  "City ACD: no (empty/NA)"
+# Leaflet color function for confidence_tier
+pal_tier <- leaflet::colorFactor(
+  palette  = unname(tier_colors),
+  levels   = names(tier_colors),
+  na.color = "#999999"
 )
 
-# Disagreement subset for leaflet
-acd_disagree_sf <- tryCatch(
-  acd:::case_acd_disagreement(joined),
+# Confidence tier summary
+tier_summary <- tryCatch(
+  acd::confidence_tier_summary(joined),
   error = function(e) {
-    # Fallback: filter directly if the package function is unavailable
-    if ("acd_agreement" %in% names(joined)) {
-      joined[joined$acd_agreement %in% c("spatial_only", "acd_only"), ]
+    # local fallback
+    if ("confidence_tier" %in% names(joined)) {
+      joined |>
+        sf::st_drop_geometry() |>
+        dplyr::count(confidence_tier, name = "n_buildings") |>
+        dplyr::mutate(
+          pct   = round(100 * n_buildings / sum(n_buildings), 1),
+          color = tier_colors[as.character(confidence_tier)]
+        )
     } else {
-      joined[integer(0), ]
+      tibble::tibble(
+        confidence_tier = character(0),
+        n_buildings     = integer(0),
+        pct             = numeric(0),
+        color           = character(0)
+      )
     }
   }
 )
 
-# Colors for the disagreement leaflet (dark-background optimised)
-disagree_colors <- c(
-  spatial_only = "#ff69b4",   # hot pink — visible on dark
-  acd_only     = "#aaff44"    # lime green — visible on dark
+# ── Compatibility: keep .has_acd_agreement FALSE for page-6 guards ─────────────
+.has_acd_agreement <- FALSE  # Stage 1a removed acd_agreement; use confidence_tier
+
+# Placeholder for removed acd_agreement pre-computation
+.ag <- function(level) {
+  # acd_agreement removed in Stage 1a — returns 0 for all levels
+  0L
+}
+n_agree_in_zone  <- 0L
+n_agree_no_zone  <- 0L
+n_spatial_only   <- 0L
+n_acd_only       <- 0L
+n_agree_total    <- 0L
+n_disagree_total <- 0L
+
+# Kept for legacy references below that will not be rendered (Page 3 tab 2 replaced)
+confusion_matrix_df <- data.frame(
+  `Spatial join result` = character(0), check.names = FALSE
 )
-pal_disagree <- leaflet::colorFactor(
-  palette  = unname(disagree_colors),
-  levels   = names(disagree_colors),
-  na.color = "#999999"
-)
+acd_disagree_sf <- joined[integer(0), ]
+
+# Placeholder for removed .ag function body (unused after Stage 1a)
+.removed_ag_body <- function(level) {
+  v <- integer(0)  # acd_agreement removed in Stage 1a
+  if (length(v) == 0L) 0L else as.integer(v)
+}
 
 # ── Per-case subsets for page 4 ───────────────────────────────────────────────
 case_in_zone <- function(df, n = 50L) {
@@ -540,27 +568,7 @@ district_summary <- joined |>
   ) |>
   dplyr::arrange(district)
 
-# Stats per district table (T4): includes ACD agreement counts, focus districts first
-.has_acd_agreement <- "acd_agreement" %in% names(joined)
-
-.district_agree <- if (.has_acd_agreement) {
-  joined |>
-    sf::st_drop_geometry() |>
-    dplyr::filter(.data$acd_agreement == "agree_in_zone") |>
-    dplyr::count(district, name = "n_agree_in_zone")
-} else {
-  tibble::tibble(district = character(0), n_agree_in_zone = integer(0))
-}
-
-.district_acd_only <- if (.has_acd_agreement) {
-  joined |>
-    sf::st_drop_geometry() |>
-    dplyr::filter(.data$acd_agreement == "acd_only") |>
-    dplyr::count(district, name = "n_acd_only")
-} else {
-  tibble::tibble(district = character(0), n_acd_only = integer(0))
-}
-
+# Stats per district table (T4): focus districts first (Stage 1a: removed acd_agreement columns)
 district_stats_full <- joined |>
   sf::st_drop_geometry() |>
   dplyr::count(district, name = "n_buildings") |>
@@ -571,14 +579,10 @@ district_stats_full <- joined |>
       dplyr::count(district, name = "n_in_zone"),
     by = "district"
   ) |>
-  dplyr::left_join(.district_agree,    by = "district") |>
-  dplyr::left_join(.district_acd_only, by = "district") |>
   dplyr::mutate(
-    n_in_zone       = dplyr::coalesce(as.integer(n_in_zone), 0L),
-    pct_in_zone     = round(100 * n_in_zone / n_buildings, 1),
-    n_agree_in_zone = dplyr::coalesce(as.integer(n_agree_in_zone), 0L),
-    n_acd_only      = dplyr::coalesce(as.integer(n_acd_only), 0L),
-    is_focus        = district %in% FOCUS_DISTRICTS_NAMES
+    n_in_zone   = dplyr::coalesce(as.integer(n_in_zone), 0L),
+    pct_in_zone = round(100 * n_in_zone / n_buildings, 1),
+    is_focus    = district %in% FOCUS_DISTRICTS_NAMES
   ) |>
   dplyr::arrange(dplyr::desc(is_focus), dplyr::desc(n_buildings))
 
@@ -596,6 +600,57 @@ joined_for_map <- if (nrow(joined) > MAP_SAMPLE_N) {
   joined[sample.int(nrow(joined), MAP_SAMPLE_N), ]
 } else {
   joined
+}
+
+# ── District layer helper (T4) ────────────────────────────────────────────────
+# Adds district polygon outlines to a leaflet map. Focus districts (20, 21)
+# use a bright yellow stroke; all others use a subtle gray stroke.
+# Pass `show_layer_control = TRUE` to include a toggle in layer controls.
+.add_districts_to_leaflet <- function(m, group_name = "Districts") {
+  if (is.null(districts_wgs84) || nrow(districts_wgs84) == 0L) return(m)
+
+  is_focus <- as.character(districts_wgs84$BEZNR) %in% c("20", "21")
+
+  popup_html <- htmltools::HTML(paste0(
+    "<div style='color:#fff;background:#111;padding:5px;'>",
+    "<strong>Bezirk ", districts_wgs84$BEZNR, "</strong><br>",
+    districts_wgs84$NAMEG,
+    "</div>"
+  ))
+
+  # Non-focus districts
+  m <- leaflet::addPolygons(
+    m,
+    data        = districts_wgs84[!is_focus, ],
+    fillOpacity = 0,
+    color       = "#666666",
+    weight      = 1,
+    opacity     = 0.7,
+    group       = group_name,
+    popup       = ~ htmltools::HTML(paste0(
+      "<div style='color:#fff;background:#111;padding:5px;'>",
+      "<strong>Bezirk ", BEZNR, "</strong><br>",
+      NAMEG,
+      "</div>"
+    ))
+  )
+  # Focus districts (20 Brigittenau, 21 Floridsdorf)
+  m <- leaflet::addPolygons(
+    m,
+    data        = districts_wgs84[is_focus, ],
+    fillOpacity = 0,
+    color       = "#ffff00",
+    weight      = 4,
+    opacity     = 0.9,
+    group       = group_name,
+    popup       = ~ htmltools::HTML(paste0(
+      "<div style='color:#fff;background:#111;padding:5px;'>",
+      "<strong>Bezirk ", BEZNR, " (focus)</strong><br>",
+      NAMEG,
+      "</div>"
+    ))
+  )
+  m
 }
 ```
 
@@ -648,6 +703,7 @@ m_zone <- leaflet(data = zones_wgs84, height = "500px") |>
     color       = "#CC0000",
     weight      = 2,
     opacity     = 1,
+    group       = "Zones",
     popup       = ~ htmltools::HTML(paste0(
       "<div style='color:#fff;background:#000;padding:6px;'>",
       "<strong>Zone: </strong>", zone_id, "<br>",
@@ -669,6 +725,13 @@ m_zone <- leaflet(data = zones_wgs84, height = "500px") |>
     lat  = vienna_center[["lat"]],
     zoom = 12L
   )
+
+m_zone <- .add_districts_to_leaflet(m_zone)
+m_zone <- leaflet::addLayersControl(
+  m_zone,
+  overlayGroups = c("Zones", "Districts"),
+  options       = leaflet::layersControlOptions(collapsed = TRUE)
+)
 m_zone
 ```
 
@@ -732,7 +795,7 @@ Source columns used from the WFS layer: `ERPLABEL` (zone ID),
 
 bldg_sample <- if (nrow(buildings) > 200L) buildings[seq_len(200L), ] else buildings
 
-leaflet(data = bldg_sample, height = "500px") |>
+m_bldg <- leaflet(data = bldg_sample, height = "500px") |>
   leaflet::addProviderTiles(
     leaflet::providers$CartoDB.DarkMatter,
     options = leaflet::providerTileOptions(opacity = 0.95)
@@ -744,6 +807,7 @@ leaflet(data = bldg_sample, height = "500px") |>
     color       = "#999999",
     weight      = 0.5,
     opacity     = 0.7,
+    group       = "Buildings",
     popup       = ~ htmltools::HTML(paste0(
       "<div style='color:#fff;background:#000;padding:6px;'>",
       "<strong>Address: </strong>", address, "<br>",
@@ -764,6 +828,13 @@ leaflet(data = bldg_sample, height = "500px") |>
     lat  = vienna_center[["lat"]],
     zoom = 12L
   )
+m_bldg <- .add_districts_to_leaflet(m_bldg)
+m_bldg <- leaflet::addLayersControl(
+  m_bldg,
+  overlayGroups = c("Buildings", "Districts"),
+  options       = leaflet::layersControlOptions(collapsed = TRUE)
+)
+m_bldg
 ```
 
 :::
@@ -847,17 +918,12 @@ district_stats_full |>
   dplyr::select(-is_focus) |>
   gt::gt() |>
   gt::cols_label(
-    district        = "District",
-    n_buildings     = "N buildings",
-    n_in_zone       = "N in zone",
-    pct_in_zone     = "% in zone",
-    n_agree_in_zone = "N agree in zone",
-    n_acd_only      = "N ACD only"
+    district    = "District",
+    n_buildings = "N buildings",
+    n_in_zone   = "N in zone",
+    pct_in_zone = "% in zone"
   ) |>
-  gt::fmt_number(
-    columns  = c(n_buildings, n_in_zone, n_agree_in_zone, n_acd_only),
-    decimals = 0
-  ) |>
+  gt::fmt_number(columns = c(n_buildings, n_in_zone), decimals = 0) |>
   gt::fmt_number(columns = pct_in_zone, decimals = 1) |>
   gt::tab_style(
     style     = gt::cell_fill(color = "#fff8dc"),
@@ -871,12 +937,13 @@ district_stats_full |>
   ) |>
   gt::tab_caption(
     caption = paste0(
-      "Buildings per district (", SNAPSHOT_DATE, "). ",
+      "Buildings per district (snapshot: ", SNAPSHOT_DATE, "). ",
       "Focus districts Brigittenau (20) and Floridsdorf (21) are highlighted and sorted first. ",
-      "N agree in zone = spatial join and city ACD both say the building is in a zone; ",
-      "N ACD only = city ACD says in zone but spatial join disagrees. ",
-      "Source: ogdwien:GEBAEUDEINFOOGD + ogdwien:GEBAEUDEOGD. ",
-      "N = ", n_total, " buildings total across ", nrow(district_stats_full), " districts."
+      "N in zone = buildings whose centroid falls within at least one ACD energy-planning zone ",
+      "(link_status != outside_any_zone). ",
+      "Source: ogdwien:GEBAEUDEINFOOGD + ogdwien:ENERGIEPLANERPOGD. ",
+      "N = ", format(n_total, big.mark = ","), " buildings across ",
+      nrow(district_stats_full), " districts."
     )
   )
 ```
@@ -940,131 +1007,207 @@ leaflet(height = 500) |>
     opacity  = 0.9
   ) |>
   leaflet::addLayersControl(
-    overlayGroups = c("Buildings", "Zones"),
+    overlayGroups = c("Buildings", "Zones", "Districts"),
     options       = leaflet::layersControlOptions(collapsed = FALSE)
   ) |>
   leaflet::setView(
     lng  = vienna_center[["lng"]],
     lat  = vienna_center[["lat"]],
     zoom = 12L
-  )
+  ) |>
+  (\(m) .add_districts_to_leaflet(m))()
 ```
 
-**Map caption:** Spatial overlay of `r format(nrow(joined_for_map), big.mark = ",")` sampled buildings (coloured by `link_status`) on `r n_zones` ACD climate-zone polygons (red outlines). Variables: `link_status` (building–zone linkage outcome, 6 levels), `zone_id` (ACD polygon identifier). Colour definitions: bright green = clean in-zone join; light grey = outside all zones; warm orange = straddles boundary; soft purple = multiple overlapping zones; sky blue = orphan zone; bright red = invalid geometry. Key finding: the majority of buildings fall outside any ACD zone, reflecting Vienna's partial zone coverage. Focus districts Brigittenau (20) and Floridsdorf (21) may be inspected by zooming. Source: ogdwien:GEBAEUDEINFOOGD + ogdwien:ENERGIEPLANERPOGD, snapshot `r SNAPSHOT_DATE`. See tbl-link-summary for full count breakdown; see Cross-check tab for ACD agreement analysis.
+**Map caption:** Spatial overlay of `r format(nrow(joined_for_map), big.mark = ",")` sampled buildings (coloured by `link_status`) on `r n_zones` ACD climate-zone polygons (red outlines). Variables: `link_status` (building–zone linkage outcome, 6 levels), `zone_id` (ACD polygon identifier). Colour: bright green = in-zone; light grey = outside all zones; warm orange = straddles boundary; soft purple = multiple overlapping zones; sky blue = orphan zone; bright red = invalid geometry. Yellow outlines mark focus districts Brigittenau (20) and Floridsdorf (21). `r round(100 * n_in_zone / n_total, 1)`% of the `r format(n_total, big.mark = ",")` buildings fall within at least one ACD zone. Source: ogdwien:GEBAEUDEINFOOGD + ogdwien:ENERGIEPLANERPOGD, snapshot `r SNAPSHOT_DATE`. See tbl-link-summary for full count breakdown; see Confidence tab for tier analysis.
 
 :::
 
-### Cross-check: city's classification vs ours
+### Confidence: how sure are we?
 
-::: {.card title="Confusion matrix"}
+::: {.card title="Tier distribution"}
 
 ```{r}
-#| label: tbl-p3-acd-confusion-matrix
+#| label: tbl-p3-tier-dist
 
-confusion_matrix_df |>
-  gt::gt(rowname_col = "Spatial join result") |>
-  gt::tab_header(
-    title    = "Spatial join vs City ACD cross-validation",
-    subtitle = paste0("Snapshot: ", SNAPSHOT_DATE, " — N = ", n_total, " buildings")
-  ) |>
-  gt::tab_spanner(
-    label   = "City of Vienna ACD field",
-    columns = dplyr::starts_with("City ACD")
-  ) |>
-  gt::tab_caption(
-    caption = paste0(
-      "2×2 cross-validation of spatial join (rows) vs city ACD field (columns). ",
-      "Snapshot: ", SNAPSHOT_DATE, ". Total buildings: ", n_total, ". ",
-      "Agreement: ", n_agree_total, " buildings; Disagreements: ", n_disagree_total, ". ",
-      "Variables: acd_agreement (4-level factor: agree_in_zone, agree_no_zone, spatial_only, acd_only). ",
-      "Spatial only (", n_spatial_only, " buildings): our join finds a zone but city ACD is empty. ",
-      "ACD only (", n_acd_only, " buildings): city ACD is populated but spatial join finds no zone. ",
-      "Source: ogdwien:GEBAEUDEINFOOGD. See fig-p3-disagree-map for geographic distribution of disagreements."
+if (nrow(tier_summary) > 0L) {
+  tier_display <- tier_summary |>
+    dplyr::mutate(
+      tier_label = tier_labels[as.character(confidence_tier)],
+      tier_label = dplyr::coalesce(tier_label, as.character(confidence_tier))
+    ) |>
+    dplyr::select(tier_label, n_buildings, pct, color)
+
+  # Pre-compute row indices for each tier (for gt row styling)
+  tier_codes  <- as.character(tier_summary$confidence_tier)
+  row_A <- which(grepl("^A", tier_codes))
+  row_B <- which(grepl("^B", tier_codes))
+  row_C <- which(grepl("^C", tier_codes))
+  row_D <- which(grepl("^D", tier_codes))
+  row_E <- which(grepl("^E", tier_codes))
+
+  tbl_tier_summary <- tier_display |>
+    gt::gt() |>
+    gt::cols_label(
+      tier_label  = "Confidence tier",
+      n_buildings = "N buildings",
+      pct         = "% of total",
+      color       = "Color"
+    ) |>
+    gt::fmt_number(columns = n_buildings, decimals = 0) |>
+    gt::fmt_number(columns = pct, decimals = 1) |>
+    gt::cols_width(color ~ gt::px(60))
+
+  if (length(row_A)) tbl_tier_summary <- gt::tab_style(
+    tbl_tier_summary,
+    style = gt::cell_fill(color = "#2ca02c"),
+    locations = gt::cells_body(columns = color, rows = row_A)
+  )
+  if (length(row_B)) tbl_tier_summary <- gt::tab_style(
+    tbl_tier_summary,
+    style = gt::cell_fill(color = "#bcbd22"),
+    locations = gt::cells_body(columns = color, rows = row_B)
+  )
+  if (length(row_C)) tbl_tier_summary <- gt::tab_style(
+    tbl_tier_summary,
+    style = gt::cell_fill(color = "#ff7f0e"),
+    locations = gt::cells_body(columns = color, rows = row_C)
+  )
+  if (length(row_D)) tbl_tier_summary <- gt::tab_style(
+    tbl_tier_summary,
+    style = gt::cell_fill(color = "#9467bd"),
+    locations = gt::cells_body(columns = color, rows = row_D)
+  )
+  if (length(row_E)) tbl_tier_summary <- gt::tab_style(
+    tbl_tier_summary,
+    style = gt::cell_fill(color = "#7f7f7f"),
+    locations = gt::cells_body(columns = color, rows = row_E)
+  )
+
+  tbl_tier_summary |>
+    gt::tab_caption(
+      caption = paste0(
+        "Confidence tier distribution for ", format(n_total, big.mark = ","),
+        " Vienna buildings, snapshot ", SNAPSHOT_DATE, ". ",
+        "The 5 tiers are based on centroid-to-zone-boundary distance ",
+        "(EPSG:31287 metres), NOT the original broken 'city ACD vs spatial' comparison ",
+        "which Stage 0 falsified. ",
+        "Tiers A and B (inside any zone): ",
+        sum(tier_summary$n_buildings[startsWith(as.character(tier_summary$confidence_tier), "A") |
+                                     startsWith(as.character(tier_summary$confidence_tier), "B")]),
+        " buildings. ",
+        "Tiers C–E (outside any zone): ",
+        sum(tier_summary$n_buildings[startsWith(as.character(tier_summary$confidence_tier), "C") |
+                                     startsWith(as.character(tier_summary$confidence_tier), "D") |
+                                     startsWith(as.character(tier_summary$confidence_tier), "E")]),
+        " buildings. ",
+        "Source: join_buildings_zones() using sf::st_distance() on EPSG:31287 coordinates. ",
+        "See analysis/stage_0/REPORT.md for the Stage 0 falsification finding."
+      )
     )
-  )
+} else {
+  cat("confidence_tier column not available — tier distribution unavailable for this snapshot.")
+}
 ```
 
 :::
 
-::: {.card title="Disagreements on the map"}
+::: {.card title="Map of confidence tiers"}
 
 ```{r}
-#| label: fig-p3-disagree-map
+#| label: fig-p3-tier-map
 
-if (nrow(acd_disagree_sf) > 0L) {
-  leaflet(data = acd_disagree_sf, height = 500) |>
+if ("confidence_tier" %in% names(joined_for_map)) {
+  m_tier <- leaflet(height = 500) |>
     leaflet::addProviderTiles(
       leaflet::providers$CartoDB.DarkMatter,
       options = leaflet::providerTileOptions(opacity = 0.95)
     ) |>
-    leaflet::addCircleMarkers(
-      radius      = 5,
-      fillColor   = ~ pal_disagree(as.character(acd_agreement)),
-      fillOpacity = 0.85,
-      color       = "#333333",
-      weight      = 0.6,
+    leaflet::addPolygons(
+      data        = sf::st_transform(zones, crs = 4326L),
+      fillColor   = "#555555",
+      fillOpacity = 0.20,
+      color       = "#CC0000",
+      weight      = 1.5,
       opacity     = 0.7,
-      group       = ~ as.character(acd_agreement),
+      group       = "Zones",
       popup       = ~ htmltools::HTML(paste0(
-        "<div style='color:#fff;background:#000;padding:6px;'>",
+        "<div style='color:#fff;background:#000;padding:5px;'>",
+        "<strong>Zone: </strong>", zone_id,
+        "</div>"
+      ))
+    ) |>
+    leaflet::addCircleMarkers(
+      data        = joined_for_map,
+      radius      = 4,
+      fillColor   = ~ pal_tier(as.character(confidence_tier)),
+      fillOpacity = 0.80,
+      color       = "#333333",
+      weight      = 0.4,
+      opacity     = 0.6,
+      group       = "Buildings",
+      popup       = ~ htmltools::HTML(paste0(
+        "<div style='color:#fff;background:#000;padding:5px;'>",
         "<strong>Building: </strong>", building_id, "<br>",
-        "<strong>Agreement: </strong>", acd_agreement, "<br>",
-        "<strong>City ACD: </strong>", dplyr::coalesce(acd_native, "(empty)"), "<br>",
-        "<strong>Spatial join zone: </strong>", dplyr::coalesce(zone_id, "(none)"),
+        "<strong>Tier: </strong>", confidence_tier, "<br>",
+        "<strong>Distance: </strong>",
+        if ("nearest_zone_dist_m" %in% names(joined_for_map))
+          paste0(round(nearest_zone_dist_m, 0), " m")
+        else "(unavailable)",
         "</div>"
       ))
     ) |>
     leaflet::addLegend(
       position = "bottomright",
-      pal      = pal_disagree,
-      values   = ~ as.character(acd_agreement),
-      title    = "Disagreement type",
+      pal      = pal_tier,
+      values   = names(tier_colors),
+      title    = "Confidence tier",
       opacity  = 0.9
-    ) |>
-    leaflet::addLayersControl(
-      overlayGroups = c("spatial_only", "acd_only"),
-      options       = leaflet::layersControlOptions(collapsed = FALSE)
     ) |>
     leaflet::setView(
       lng  = vienna_center[["lng"]],
       lat  = vienna_center[["lat"]],
       zoom = 12L
     )
+  m_tier <- .add_districts_to_leaflet(m_tier)
+  m_tier <- leaflet::addLayersControl(
+    m_tier,
+    overlayGroups = c("Buildings", "Zones", "Districts"),
+    options       = leaflet::layersControlOptions(collapsed = FALSE)
+  )
+  m_tier
 } else {
-  cat("No disagreements found in this snapshot — spatial join and city ACD agree on all buildings.")
+  cat("confidence_tier column not present — map unavailable for this snapshot.")
 }
 ```
 
-**Map caption:** Geographic distribution of `r n_disagree_total` classification disagreements between our spatial join and the city's pre-linked ACD field. Variables: `acd_agreement` (spatial_only = our join finds a zone, city ACD empty; acd_only = city ACD populated, our join finds no zone). Hot pink = spatial_only (`r n_spatial_only` buildings); lime green = acd_only (`r n_acd_only` buildings). A spatial cluster of disagreements suggests a stale or redrawn zone polygon. Source: ogdwien:GEBAEUDEINFOOGD, snapshot `r SNAPSHOT_DATE`. See tbl-p3-acd-confusion-matrix for aggregate counts; see tbl-p6-district-decade-breakdown for breakdown by district and decade.
-
 :::
 
-::: {.card title="Notes"}
+::: {.card title="Tier explanation — Stage 0 finding"}
 
-### What this cross-validation tests
+### What the 5 tiers mean
 
-The City of Vienna already tags every building with an ACD identifier in
-the `ogdwien:GEBAEUDEINFOOGD` layer (the `ACD` field). Our spatial join is
-an **independent computation** — we overlay building footprints onto zone
-polygons geometrically, without consulting the city's pre-linked field.
+The `confidence_tier` column replaces the defunct `acd_agreement` metric.
+Stage 0 (falsification study, 2026-05-01) found that the original cross-validation
+was based on a **category error**: the `ACD` field in `GEBAEUDEINFOOGD` is a
+building registry number (Adress-Code), not a zone-membership indicator. Every
+building has this field populated, making the old "city says yes" comparison
+meaningless.
 
-Disagreements are **interesting findings**, not data errors:
+See the full finding in
+[analysis/stage_0/REPORT.md](https://github.com/JohnGavin/acd_area_climate_design/blob/main/analysis/stage_0/REPORT.md).
 
-- **`spatial_only`** (`r n_spatial_only` buildings): our spatial join finds
-  a zone, but the city's `ACD` field is empty or `NA`. Possible under-coverage
-  in the city's pre-linking step.
-- **`acd_only`** (`r n_acd_only` buildings): the city's `ACD` field is
-  populated, but our spatial join finds no overlapping zone. Possible stale
-  zone geometry, or a zone that was present when the city's field was computed
-  but has since been modified in the WFS layer.
+The **replacement metric** is centroid-to-boundary distance:
 
-Total agreements in this snapshot: **`r n_agree_total`** buildings.
-Total disagreements: **`r n_disagree_total`** buildings.
+| Tier | Definition | Threshold |
+|------|-----------|-----------|
+| A — in zone (high) | Inside zone, centroid > 5 m from boundary | >5 m inside |
+| B — in zone (boundary) | Inside zone, centroid ≤ 5 m from boundary | ≤5 m inside |
+| C — outside (boundary) | Outside, within 25 m of nearest zone | ≤25 m outside |
+| D — outside (nearby) | Outside, 25–500 m from nearest zone | 25–500 m outside |
+| E — outside (far) | Outside, > 500 m from any zone | >500 m outside |
 
-**Coverage:** This snapshot is the full `ogdwien:GEBAEUDEINFOOGD` WFS
-layer — `r format(n_total, big.mark = ",")` buildings. Any `acd_only` count
-in this view reflects a real divergence between the city's pre-linked `ACD`
-field and the independent spatial join, not a sampling artefact.
+Tiers A+B = `r sum(tier_summary$n_buildings[startsWith(as.character(tier_summary$confidence_tier), "A") | startsWith(as.character(tier_summary$confidence_tier), "B")])` buildings are confidently inside a zone.
+Tiers C–E = `r sum(tier_summary$n_buildings[startsWith(as.character(tier_summary$confidence_tier), "C") | startsWith(as.character(tier_summary$confidence_tier), "D") | startsWith(as.character(tier_summary$confidence_tier), "E")])` buildings are outside zones (varying proximity).
 
 :::
 
@@ -1568,6 +1711,62 @@ To refresh the analysis:
 Do not compare analysis results across snapshots without accounting for the
 change in building inventory.
 
+### Distance-to-zone — the right view
+
+**What this is:** Stage 0 found that the original cross-validation (ACD field vs spatial join) was a category error. The right way to think about zone-assignment uncertainty is the **centroid-to-boundary distance** shown below.
+
+**Why it matters:** A building 3 m outside a zone is quite different from one 3 km away. The distance distribution gives an honest picture of how many buildings are "close calls" versus definitively outside.
+
+```{r}
+#| label: fig-distance-hist
+
+if ("nearest_zone_dist_m" %in% names(joined)) {
+  # Show distribution for outside-zone buildings only (inside buildings have dist ~0)
+  outside_dist <- joined |>
+    sf::st_drop_geometry() |>
+    dplyr::filter(!.data$inside_any_zone | is.na(.data$inside_any_zone)) |>
+    dplyr::pull(nearest_zone_dist_m)
+  outside_dist <- outside_dist[!is.na(outside_dist) & outside_dist > 0]
+
+  if (length(outside_dist) > 0L) {
+    hist(
+      pmin(outside_dist, 2000),  # cap at 2 km for readability
+      breaks = 50,
+      col    = "#9467bd",
+      border = "#5c3880",
+      xlab   = "Distance to nearest zone boundary (m, capped at 2,000 m)",
+      ylab   = "Number of buildings",
+      main   = paste0(
+        "Distance to nearest zone — ", format(length(outside_dist), big.mark = ","),
+        " outside-zone buildings (snapshot ", SNAPSHOT_DATE, ")"
+      ),
+      las = 1
+    )
+    abline(v = 25,  col = "#ff7f0e", lty = 2, lwd = 2)
+    abline(v = 500, col = "#2ca02c", lty = 2, lwd = 2)
+    legend(
+      "topright",
+      legend = c("25 m (Tier B/C boundary)", "500 m (Tier D/E boundary)"),
+      col    = c("#ff7f0e", "#2ca02c"),
+      lty    = 2, lwd = 2, bg = "#222222", text.col = "white"
+    )
+  } else {
+    cat("No outside-zone buildings with distance data in this snapshot.")
+  }
+} else {
+  cat("nearest_zone_dist_m column not available — histogram unavailable for this snapshot.")
+}
+```
+
+The `confidence_tier` column on Page 6 thresholds this distance into 5 tiers using the constants defined in `R/join_buildings_zones.R`:
+
+- **Tier C boundary** (orange dashed): 25 m — buildings within this distance are "just outside"
+- **Tier D/E boundary** (green dashed): 500 m — buildings beyond this are far from any zone
+
+Stage 0 finding: the original cross-validation interpreted `ACD` (a 6-digit building registry code present for ALL `r format(n_total, big.mark = ",")` buildings) as "city says this building is in a zone". This made the `acd_only` category meaningless. The correct metric is spatial distance alone.
+
+See the full investigation: [analysis/stage_0/REPORT.md](https://github.com/JohnGavin/acd_area_climate_design/blob/main/analysis/stage_0/REPORT.md).
+
 :::
 
 # Stories — Worked Well / Failed Badly
@@ -1903,158 +2102,189 @@ link_summary |>
 
 ## Row
 
-::: {.card title="2×2 by District (T14)"}
+::: {.card title="Tier × District"}
 
 ```{r}
-#| label: tbl-p6-district-decade-breakdown
+#| label: tbl-p6-tier-by-district
 
-# Agreement breakdown by district — focus districts pinned first
-acd_by_district <- if (.has_acd_agreement) {
-  joined |>
-    sf::st_drop_geometry() |>
-    dplyr::count(district, acd_agreement, name = "n") |>
-    tidyr::pivot_wider(
-      names_from  = acd_agreement,
-      values_from = n,
-      values_fill = 0L
-    ) |>
-    dplyr::mutate(
-      is_focus = district %in% FOCUS_DISTRICTS_NAMES
-    ) |>
-    dplyr::arrange(dplyr::desc(is_focus), district)
-} else {
-  tibble::tibble(district = character(0))
-}
-
-if (nrow(acd_by_district) > 0L && ncol(acd_by_district) > 2L) {
-  acd_by_district |>
-    dplyr::select(-is_focus) |>
-    gt::gt() |>
-    gt::tab_style(
-      style     = gt::cell_fill(color = "#fff8dc"),
-      locations = gt::cells_body(
-        rows = district %in% FOCUS_DISTRICTS_NAMES
-      )
-    ) |>
-    gt::tab_caption(
-      caption = paste0(
-        "ACD agreement cross-tabulation by district (", SNAPSHOT_DATE, "). ",
-        "Focus districts Brigittenau (20) and Floridsdorf (21) are highlighted. ",
-        "agree_in_zone = both spatial join and city ACD agree building is in a zone; ",
-        "acd_only = city ACD says in zone but spatial join disagrees; ",
-        "spatial_only = spatial join finds zone but city ACD field is empty. ",
-        "N = ", n_total, " buildings. Source: ogdwien:GEBAEUDEINFOOGD + ogdwien:ENERGIEPLANERPOGD."
-      )
-    )
-} else {
-  cat("acd_agreement column not present in this snapshot — cross-tabulation unavailable.")
-}
-```
-
-:::
-
-::: {.card title="2×2 by Decade (T14)"}
-
-```{r}
-#| label: tbl-p6-decade-breakdown
-
-acd_by_decade <- if (.has_acd_agreement) {
-  joined |>
-    sf::st_drop_geometry() |>
-    dplyr::filter(!is.na(year_built)) |>
-    dplyr::mutate(decade = decade(year_built)) |>
-    dplyr::count(decade, acd_agreement, name = "n") |>
-    tidyr::pivot_wider(
-      names_from  = acd_agreement,
-      values_from = n,
-      values_fill = 0L
-    ) |>
-    dplyr::arrange(dplyr::desc(decade))
-} else {
-  tibble::tibble(decade = character(0))
-}
-
-if (nrow(acd_by_decade) > 0L && ncol(acd_by_decade) > 1L) {
-  acd_by_decade |>
-    gt::gt() |>
-    gt::tab_caption(
-      caption = paste0(
-        "ACD agreement cross-tabulation by construction decade (most recent first), ",
-        "snapshot ", SNAPSHOT_DATE, ". ",
-        "Newer buildings tend to be in recently designated zones — check whether ",
-        "acd_only rates differ across decades as a proxy for zone polygon recency. ",
-        "N = ", n_total, " buildings with known year_built. ",
-        "Source: ogdwien:GEBAEUDEINFOOGD + ogdwien:ENERGIEPLANERPOGD."
-      )
-    )
-} else {
-  cat("acd_agreement column not present in this snapshot — cross-tabulation unavailable.")
-}
-```
-
-:::
-
-::: {.card title="Sample Evidence Table (T14)"}
-
-```{r}
-#| label: tbl-p6-sample-evidence
-
-# 5 agree_in_zone + 5 acd_only buildings with full attributes
-set.seed(42L)
-.take5 <- function(df) {
-  n_rows <- nrow(df)
-  if (n_rows == 0L) return(df)
-  df[sample.int(n_rows, min(5L, n_rows)), ]
-}
-
-sample_agree <- if (.has_acd_agreement) {
-  joined |>
-    sf::st_drop_geometry() |>
-    dplyr::filter(.data$acd_agreement == "agree_in_zone") |>
-    .take5()
-} else {
-  joined |>
-    sf::st_drop_geometry() |>
-    dplyr::filter(.data$link_status == "in_zone") |>
-    .take5()
-}
-
-sample_acd_only <- if (.has_acd_agreement) {
-  joined |>
-    sf::st_drop_geometry() |>
-    dplyr::filter(.data$acd_agreement == "acd_only") |>
-    .take5()
-} else {
-  joined |>
-    sf::st_drop_geometry() |>
-    dplyr::filter(.data$link_status == "outside_any_zone") |>
-    .take5()
-}
-
-sample_evidence <- dplyr::bind_rows(sample_agree, sample_acd_only) |>
-  dplyr::select(
-    dplyr::any_of(c(
-      "building_id", "district", "year_built", "address",
-      "zone_id", "link_status", "acd_agreement",
-      dplyr::starts_with("acd_native")
-    ))
+if ("confidence_tier" %in% names(joined)) {
+  tier_by_dist <- tryCatch(
+    acd::confidence_tier_by_district(joined),
+    error = function(e) {
+      # local fallback
+      joined |>
+        sf::st_drop_geometry() |>
+        dplyr::mutate(tier = substr(as.character(.data$confidence_tier), 1L, 1L)) |>
+        dplyr::count(.data$district, .data$tier, name = "n") |>
+        tidyr::pivot_wider(
+          names_from  = tier,
+          values_from = n,
+          values_fill = 0L
+        )
+    }
   )
 
-if (nrow(sample_evidence) > 0L) {
-  gt::gt(sample_evidence) |>
+  # Add focus flag and row total; sort focus districts first
+  tier_letters_present <- intersect(c("A", "B", "C", "D", "E"), names(tier_by_dist))
+  tier_by_dist <- tier_by_dist |>
+    dplyr::mutate(
+      .is_focus = .data$district %in% FOCUS_DISTRICTS_NAMES,
+      .row_total = rowSums(dplyr::across(dplyr::all_of(tier_letters_present)), na.rm = TRUE)
+    ) |>
+    dplyr::arrange(dplyr::desc(.data$.is_focus), dplyr::desc(.data$.row_total))
+
+  is_focus_rows <- tier_by_dist$.is_focus
+  tier_by_dist <- dplyr::select(tier_by_dist, -.is_focus, -.row_total)
+
+  tbl_tier_dist <- gt::gt(tier_by_dist) |>
+    gt::cols_label(district = "District") |>
+    gt::fmt_number(columns = dplyr::all_of(tier_letters_present), decimals = 0) |>
+    gt::tab_style(
+      style     = gt::cell_fill(color = "#fff8dc"),
+      locations = gt::cells_body(rows = is_focus_rows)
+    ) |>
     gt::tab_caption(
       caption = paste0(
-        "Sample evidence: 5 agree_in_zone + 5 acd_only buildings with full attributes. ",
-        "Snapshot: ", SNAPSHOT_DATE, ". ",
-        "Used to manually verify that classification logic is behaving as expected. ",
-        "Columns: building_id (WFS OBJECTID), district (Vienna Bezirk), ",
-        "year_built (BAUJAHR), address (ADRESSE), zone_id (ACD polygon), ",
-        "link_status (spatial join outcome), acd_agreement (cross-validation category). ",
-        "Source: ogdwien:GEBAEUDEINFOOGD + ogdwien:ENERGIEPLANERPOGD."
+        "Confidence tier counts by Vienna district (snapshot: ", SNAPSHOT_DATE, "). ",
+        "Columns A–E are the five proximity tiers (A = inside zone, high confidence; ",
+        "E = outside, far from any zone). ",
+        "Focus districts Brigittenau (20) and Floridsdorf (21) are highlighted ",
+        "and sorted to the top. ",
+        "N = ", format(n_total, big.mark = ","), " buildings across ",
+        nrow(tier_by_dist), " districts. ",
+        "Source: join_buildings_zones() via ogdwien:GEBAEUDEINFOOGD + ogdwien:ENERGIEPLANERPOGD. ",
+        "See STUBS.md for tier threshold constants (TIER_BOUNDARY_INSIDE_M = 5, ",
+        "TIER_BOUNDARY_OUTSIDE_M = 25, TIER_NEARBY_OUTSIDE_M = 500)."
+      )
+    )
+  tbl_tier_dist
+} else {
+  cat("confidence_tier column not available in this snapshot.")
+}
+```
+
+:::
+
+::: {.card title="Tier × Decade"}
+
+```{r}
+#| label: tbl-p6-tier-by-decade
+
+if ("confidence_tier" %in% names(joined) && "year_built" %in% names(joined)) {
+  tier_by_dec <- joined |>
+    sf::st_drop_geometry() |>
+    dplyr::filter(!is.na(.data$year_built)) |>
+    dplyr::mutate(
+      decade = decade(.data$year_built),
+      tier   = substr(as.character(.data$confidence_tier), 1L, 1L)
+    ) |>
+    dplyr::count(.data$decade, .data$tier, name = "n") |>
+    tidyr::pivot_wider(
+      names_from  = tier,
+      values_from = n,
+      values_fill = 0L
+    ) |>
+    dplyr::arrange(dplyr::desc(.data$decade))
+
+  tier_cols_present <- intersect(c("A", "B", "C", "D", "E"), names(tier_by_dec))
+
+  gt::gt(tier_by_dec) |>
+    gt::cols_label(decade = "Decade") |>
+    gt::fmt_number(columns = dplyr::all_of(tier_cols_present), decimals = 0) |>
+    gt::tab_caption(
+      caption = paste0(
+        "Confidence tier counts by construction decade (most recent first), ",
+        "snapshot ", SNAPSHOT_DATE, ". ",
+        "Decades with higher Tier A/B shares indicate districts or eras ",
+        "where zone coverage is strongest. ",
+        "Buildings with missing year_built are excluded from this table. ",
+        "N = ", format(n_total, big.mark = ","),
+        " buildings with known year_built. ",
+        "Source: join_buildings_zones() via ogdwien:GEBAEUDEINFOOGD + ogdwien:ENERGIEPLANERPOGD. ",
+        "Replaces the old acd_agreement by-decade table, which Stage 0 falsified ",
+        "(ACD field is a building registry ID, not a zone-membership indicator)."
       )
     )
 } else {
-  cat("Insufficient data for sample evidence table in this snapshot.")
+  cat("confidence_tier or year_built column not available.")
+}
+```
+
+:::
+
+::: {.card title="Sample evidence — 5 from each tier"}
+
+```{r}
+#| label: tbl-p6-sample-evidence-tier
+
+if ("confidence_tier" %in% names(joined)) {
+  set.seed(42L)
+
+  # Centroid lon/lat for Google Maps link (joined is already WGS84)
+  joined_flat <- joined |>
+    sf::st_drop_geometry()
+
+  # Add centroid coords if available in the sf object
+  joined_coords <- tryCatch({
+    coords <- sf::st_coordinates(sf::st_centroid(joined))
+    dplyr::bind_cols(
+      joined_flat,
+      tibble::tibble(lon = round(coords[, 1], 6), lat = round(coords[, 2], 6))
+    )
+  }, error = function(e) {
+    dplyr::mutate(joined_flat, lon = NA_real_, lat = NA_real_)
+  })
+
+  sample_tiers <- joined_coords |>
+    dplyr::slice_sample(n = 5L, by = confidence_tier) |>
+    dplyr::arrange(confidence_tier) |>
+    dplyr::select(dplyr::any_of(c(
+      "building_id", "district", "year_built", "address",
+      "nearest_zone_dist_m", "confidence_tier", "lon", "lat"
+    ))) |>
+    dplyr::mutate(
+      nearest_zone_dist_m = round(
+        dplyr::coalesce(.data$nearest_zone_dist_m, NA_real_), 0
+      ),
+      google_maps = dplyr::if_else(
+        !is.na(.data$lon) & !is.na(.data$lat),
+        paste0("https://maps.google.com/?q=", .data$lat, ",", .data$lon),
+        NA_character_
+      )
+    ) |>
+    dplyr::select(-dplyr::any_of(c("lon", "lat")))
+
+  if (nrow(sample_tiers) > 0L) {
+    gt::gt(sample_tiers) |>
+      gt::cols_label(
+        building_id         = "Building ID",
+        district            = "District",
+        year_built          = "Year built",
+        address             = "Address",
+        nearest_zone_dist_m = "Dist. to zone (m)",
+        confidence_tier     = "Tier",
+        google_maps         = "Google Maps"
+      ) |>
+      gt::fmt_number(columns = dplyr::any_of("nearest_zone_dist_m"), decimals = 0) |>
+      gt::fmt_url(columns = dplyr::any_of("google_maps"), label = "Map") |>
+      gt::tab_caption(
+        caption = paste0(
+          "Random sample of 5 buildings from each confidence tier (25 rows total), ",
+          "snapshot ", SNAPSHOT_DATE, ". ",
+          "Columns: building_id (WFS OBJECTID), district (BEZ), year_built (BAUJAHR), ",
+          "address (ADRESSE), nearest_zone_dist_m (distance in metres to nearest zone boundary ",
+          "— always 0 for tiers A/B since they are inside zones), ",
+          "confidence_tier (A–E), Google Maps link for visual verification. ",
+          "Tiers are sorted A (highest confidence) first to E (clearly outside) last. ",
+          "Source: join_buildings_zones() via ogdwien:GEBAEUDEINFOOGD + ogdwien:ENERGIEPLANERPOGD. ",
+          "Use the Maps links to verify individual placements by hand."
+        )
+      )
+  } else {
+    cat("Insufficient data for tier sample table.")
+  }
+} else {
+  cat("confidence_tier column not available in this snapshot.")
 }
 ```
 
