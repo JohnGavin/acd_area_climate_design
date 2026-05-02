@@ -17,7 +17,9 @@ validate_deploy <- function(
   pages = c(
     "",
     "vignettes/articles/dashboard.html",
-    "vignettes/articles/methodology.html"
+    "vignettes/articles/methodology.html",
+    "vignettes/articles/lookup.html",
+    "vignettes/articles/scrollytell_de.html"
   )
 ) {
   urls <- ifelse(
