@@ -1068,13 +1068,20 @@ if (file.exists(.osm_cov_path)) {
 
 zones_wgs84_join <- sf::st_transform(zones, crs = 4326L)
 
-# T6: Investigate ~100 points — joined_for_map is 5000 rows but uses
-# clusterOptions to handle density; actual sample size is MAP_SAMPLE_N.
+# Joined map: explicit width + "500px" height string (numeric height is
+# silently ignored under panel-tabset wrappers in some Quarto + leaflet
+# combos). setView is called AFTER all layers so the cluster's auto-fit
+# does not override our intended zoom on Vienna centre.
 # Use markerClusterOptions to show all points without blobs.
-leaflet(height = 500) |>
+leaflet(width = "100%", height = "500px") |>
   leaflet::addProviderTiles(
     leaflet::providers$CartoDB.DarkMatter,
     options = leaflet::providerTileOptions(opacity = 0.95)
+  ) |>
+  leaflet::setView(
+    lng  = vienna_center[["lng"]],
+    lat  = vienna_center[["lat"]],
+    zoom = 12L
   ) |>
   leaflet::addPolygons(
     data        = zones_wgs84_join,
@@ -1090,10 +1097,18 @@ leaflet(height = 500) |>
       "</div>"
     ))
   ) |>
-  leaflet::addMarkers(
+  leaflet::addCircleMarkers(
     data  = joined_for_map,
     group = "Buildings",
-    clusterOptions = leaflet::markerClusterOptions(),
+    radius      = 4,
+    fillColor   = ~ pal_link(link_status),
+    fillOpacity = 0.85,
+    color       = "#222",
+    weight      = 0.5,
+    clusterOptions = leaflet::markerClusterOptions(
+      maxClusterRadius = 60,
+      disableClusteringAtZoom = 16
+    ),
     popup = ~ htmltools::HTML(paste0(
       "<div style='color:#fff;background:#000;padding:6px;'>",
       "<strong>Building: </strong>", building_id, "<br>",
@@ -1112,11 +1127,6 @@ leaflet(height = 500) |>
   leaflet::addLayersControl(
     overlayGroups = c("Buildings", "Zones", "Districts"),
     options       = leaflet::layersControlOptions(collapsed = FALSE)
-  ) |>
-  leaflet::setView(
-    lng  = vienna_center[["lng"]],
-    lat  = vienna_center[["lat"]],
-    zoom = 12L
   ) |>
   (\(m) .add_districts_to_leaflet(m))()
 ```
