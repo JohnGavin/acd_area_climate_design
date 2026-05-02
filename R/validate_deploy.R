@@ -22,7 +22,7 @@ validate_deploy <- function(
 ) {
   urls <- ifelse(
     nchar(pages) == 0L,
-    base_url,
+    paste0(base_url, "/"),  # trailing slash so url_absolute resolves into the project sub-path
     paste0(base_url, "/", pages)
   )
 
@@ -73,39 +73,51 @@ validate_deploy <- function(
 #' Count error marker strings in raw HTML text.
 #' @noRd
 .check_error_markers <- function(html_text) {
+  # Patterns are specific enough not to collide with normal English prose.
+  # Removed "Error in" and "not available" — too generic, hit legit text
+  # like "duckplyr is not available in this render environment".
+  # Kept patterns are tied to specific failure modes:
+  #   MISSING EVIDENCE   → placeholder text from missing target
+  #   not found in targets → safe_tar_read() fallback message
+  #   #> NULL            → knitr leaking a NULL print
+  #   Error in `         → R error with backtick (specific shape)
   patterns <- c(
-    "Error in"                  = "Error in",
     "MISSING EVIDENCE"          = "MISSING EVIDENCE",
-    "not available"             = "not available",
     "not found in targets"      = "not found in targets",
+    "Error in `"                = "Error in `",
     "NULL output"               = "#> NULL"
   )
   vapply(patterns, function(p) {
-    length(gregexpr(p, html_text, fixed = TRUE)[[1L]])
+    matches <- gregexpr(p, html_text, fixed = TRUE)[[1L]]
+    # gregexpr returns -1 (length 1) when no match — check first element
+    if (length(matches) == 1L && matches[[1L]] == -1L) 0L else length(matches)
   }, integer(1L))
 }
 
 #' HEAD-probe all linked CSS and JS assets, return status tibble.
+#' Relative paths are resolved against the PAGE URL, not the site root —
+#' a path like `../../site_libs/...` resolved against the site root would
+#' escape the site entirely.
 #' @noRd
-.check_assets <- function(doc, base_url) {
+.check_assets <- function(doc, page_url) {
   if (is.null(doc)) return(tibble::tibble(url = character(), status = integer(), ok = logical()))
 
   links  <- xml2::xml_attr(xml2::xml_find_all(doc, "//link[@href]"), "href")
   scripts <- xml2::xml_attr(xml2::xml_find_all(doc, "//script[@src]"), "src")
   asset_urls <- unique(c(links, scripts))
-  asset_urls <- asset_urls[!is.na(asset_urls)]
+  asset_urls <- asset_urls[!is.na(asset_urls) & nzchar(asset_urls)]
 
-  # Only check assets that look like paths from our site or absolute https
+  # Drop data: URIs and anchors
+  asset_urls <- asset_urls[!grepl("^(data:|#|javascript:)", asset_urls)]
+
+  # Only CSS / JS / fonts (drop API URLs, RSS feeds, etc.)
   asset_urls <- asset_urls[
-    grepl("^https?://", asset_urls) |
-    grepl("^[^:]+\\.(css|js)$", asset_urls)
+    grepl("\\.(css|js|woff2?|ttf|eot|svg|ico|png|jpg)([?#].*)?$", asset_urls) |
+      grepl("^https?://.*\\.(css|js)$", asset_urls)
   ]
-  # Resolve relative paths against base_url
-  asset_urls <- ifelse(
-    grepl("^https?://", asset_urls),
-    asset_urls,
-    paste0(base_url, "/", asset_urls)
-  )
+
+  # Resolve relative URLs against the PAGE url (xml2 handles `../` correctly)
+  asset_urls <- xml2::url_absolute(asset_urls, page_url)
   asset_urls <- unique(asset_urls)
 
   if (length(asset_urls) == 0L) {
@@ -290,8 +302,8 @@ validate_deploy <- function(
   markers   <- if (nchar(body) > 0L) .check_error_markers(body) else integer(0L)
   n_errors  <- if (length(markers) > 0L) sum(markers) else 0L
 
-  # Assets
-  assets     <- .check_assets(doc, base_url)
+  # Assets — resolve relatives against the page URL, not the site root
+  assets     <- .check_assets(doc, url)
   n_bad_assets <- if (nrow(assets) > 0L) sum(!assets$ok, na.rm = TRUE) else 0L
 
   # Leaflets
