@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-05-02
+
+### Completed
+- **Phase 4 fully closed.** Stage 0 falsified the cross-validation premise (ACD is a building registry ID, not a zone reference). Stage 1a + 3 + Phase 3 (#21) replaced the broken `acd_agreement` factor with a distance-based `confidence_tier` (A/B/C/D/E). Stage 4 (#22) added a per-zone drilldown card with WUKSEA-GIS verification links. Stage 2 (#24) confirmed via OSM that GEBAEUDEINFOOGD covers ~19% of Vienna's actual building stock (5.3× undercount). Stage 5 (#25) shipped a methodology vignette synthesising the project.
+- **HTML validation script** (#30, PR #31): `acd::validate_deploy()` using rvest + httr2 fetches every gh-pages URL and verifies HTTP status, error markers, broken assets, empty leaflets, empty tables, broken hash links. Found and fixed three of its own false-positive bugs during baselining (gregexpr -1 sentinel, relative-URL resolution, prose-pattern overlap). Caught a real fourth bug (case-sensitive marker regex) on first production use.
+- **ACD ↔ address lookup page** (#28, PR #32): standalone Quarto page with crosstalk-wired DT + Leaflet, 4 filters (district, tier, year-built slider, zone), virtual-rendered 58k rows via DT Scroller, CSV download. Site-wide live URL at /vignettes/articles/lookup.html.
+- **Dashboard fixes (PR #29):** building popups always showing district info (cause: district overlay added LAST, intercepting clicks; fix: pathOptions(interactive=FALSE)). Page 4 tabs with empty leaflets (cause: full Vienna has 0 in some link_status categories; fix: empty-state guards). Hex-code labels showing as cell text (cause: color column carried hex strings as data; fix: blank Color cells, drop the column on Page 6 link-status table).
+- **Methodology vignette CSS 404 fix:** library(readr) bug (not in nix shell), hardcoded /private/tmp/... path, single-file render hash mismatch. Resolved by full-site `quarto render` and replacing readr with utils::read.csv. Side effect: full render strips docs/data/*.parquet — restored from HEAD.
+- **3 global-rule amendments** in `~/docs_gh/llm/.claude/rules/`:
+  - `orchestrator-protocol.md` — mandatory background-agent activity-timeout rule (15-min idle → intervene; 30-min hard cap; combined process+filesystem signal). Tightened from earlier 20-min draft after observing actual completion times of 12-13 min.
+  - `nix-agent-shell-protocol.md` — worktree-isolated rix regenerations must use `(cd <worktree> && ...)` subshell or `setwd()` to avoid overwriting orchestrator's default.nix (root cause of #23, recurred once during Stage 2).
+- **Live URL set:** index, dashboard, methodology, lookup — all PASS validator.
+
+### Major findings logged
+- ACD field is the building's own Adress-Code / Gebäudekennzahl (`analysis/stage_0/REPORT.md`), 6-digit zero-padded, range 1–232,762, unique per building.
+- 27.9% of Vienna buildings (16,246 of 58,255) fall within an Energieraumplan zone.
+- GEBAEUDEINFOOGD covers ~19% of OSM's 307,715 buildings — disclosed via dashboard card and methodology.
+
+### Failed approaches / lessons
+- First attempt at Page 3 vertical spacing (PR #21) — claimed done but architecturally constrained by panel-tabset cap. Closed #16 as wontfix.
+- Stage 1a+3 dashboard agent (Agent B) stalled mid-task at ~20 min. Orchestrator took over and finished render + commit; agent's late completion notification arrived after merge with an orphaned commit on a deleted branch. No data loss; rule amended to mandate intervention earlier.
+- Stage 2 OSM agent regenerated default.nix in the wrong checkout (rix `project_path = "."` resolved to orchestrator's main, not its worktree). Stripped udunits + shellHook patches. Restored from HEAD; rule amended to mandate `(cd <worktree> && ...)` subshell pattern.
+- Validator's own initial bugs (gregexpr -1 sentinel, asset URL resolution against site root, prose-pattern overlap) were caught when baselining flagged "all FAIL" with implausibly uniform marker counts. Fixed before any deploy regressed.
+- Quarto full-site render strips docs/data/*.parquet — open as #26.
+
 ## 2026-05-01
 
 ### Completed
