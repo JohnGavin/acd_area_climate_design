@@ -2292,6 +2292,184 @@ if ("confidence_tier" %in% names(joined)) {
 
 ## Row
 
+::: {.card title="Drill into one zone — worked example"}
+
+```{r}
+#| label: tbl-drill-zone
+
+# Pick an example zone: prefer focus districts (20 Brigittenau or 21 Floridsdorf),
+# largest by N buildings inside; fall back to the most-populated zone overall.
+if ("zone_id" %in% names(joined)) {
+  zone_counts <- joined |>
+    sf::st_drop_geometry() |>
+    dplyr::filter(!is.na(.data$zone_id)) |>
+    dplyr::count(
+      .data$zone_id,
+      .data$zone_district,
+      .data$zone_area_ha,
+      .data$zone_legal_url,
+      name = "n_buildings"
+    ) |>
+    dplyr::mutate(.is_focus = .data$zone_district %in% c(20L, 21L)) |>
+    dplyr::arrange(dplyr::desc(.data$.is_focus), dplyr::desc(.data$n_buildings))
+
+  example_zone <- if (nrow(zone_counts) > 0L) zone_counts[1L, ] else NULL
+} else {
+  example_zone <- NULL
+}
+
+if (!is.null(example_zone)) {
+  zone_buildings <- joined |>
+    dplyr::filter(.data$zone_id == example_zone$zone_id)
+
+  zone_n <- nrow(zone_buildings)
+  zone_tier_counts <- zone_buildings |>
+    sf::st_drop_geometry() |>
+    dplyr::count(.data$confidence_tier, name = "n") |>
+    dplyr::arrange(.data$confidence_tier)
+
+  zone_meta <- tibble::tibble(
+    Field = c("ERPLABEL", "Bezirk", "Area (ha)", "N buildings", "Legal document"),
+    Value = c(
+      example_zone$zone_id,
+      paste0(example_zone$zone_district,
+             ifelse(example_zone$zone_district %in% c(20L, 21L),
+                    " (focus district)", "")),
+      format(round(example_zone$zone_area_ha, 2), big.mark = ","),
+      format(zone_n, big.mark = ","),
+      ifelse(!is.na(example_zone$zone_legal_url) && nzchar(example_zone$zone_legal_url),
+             paste0("[Verordnung](", example_zone$zone_legal_url, ")"),
+             "—")
+    )
+  )
+
+  gt::gt(zone_meta) |>
+    gt::fmt_markdown(columns = "Value") |>
+    gt::tab_caption(
+      caption = paste0(
+        "Worked example: zone ", example_zone$zone_id,
+        " in district ", example_zone$zone_district,
+        ifelse(example_zone$zone_district %in% c(20L, 21L), " (a focus district)", ""),
+        ". ",
+        "This is the most-populated zone among focus districts (Brigittenau, Floridsdorf); ",
+        "if no focus zone has buildings, the globally most-populated zone is shown. ",
+        "Use the Verordnung link to read the legal text. ",
+        "Source: join_buildings_zones() via ogdwien:ENERGIERAUMPLANOGD."
+      )
+    )
+} else {
+  cat("No zone with buildings found in this snapshot.")
+}
+```
+
+:::
+
+::: {.card title="Tier breakdown for the example zone"}
+
+```{r}
+#| label: tbl-drill-zone-tiers
+
+if (exists("zone_tier_counts") && nrow(zone_tier_counts) > 0L) {
+  zone_tier_counts |>
+    dplyr::mutate(
+      Tier  = tier_labels[as.character(.data$confidence_tier)],
+      Tier  = dplyr::coalesce(.data$Tier, as.character(.data$confidence_tier)),
+      Pct   = round(100 * .data$n / sum(.data$n), 1),
+      Color = tier_colors[as.character(.data$confidence_tier)]
+    ) |>
+    dplyr::select(Tier, .data$n, Pct, Color) |>
+    dplyr::rename(`N buildings` = n) |>
+    gt::gt() |>
+    gt::cols_width(Color ~ gt::px(60)) |>
+    gt::tab_caption(
+      caption = paste0(
+        "Tier distribution within zone ", example_zone$zone_id, ". ",
+        "All buildings here are spatially inside the same zone polygon, so most ",
+        "should be Tier A or B (deep inside / boundary inside). Any C/D/E in this ",
+        "table would indicate a join anomaly. ",
+        "N = ", format(zone_n, big.mark = ","), " buildings in this zone. ",
+        "Source: confidence_tier column in joined data."
+      )
+    )
+} else {
+  cat("Tier breakdown unavailable.")
+}
+```
+
+:::
+
+::: {.card title="Sample buildings in the example zone"}
+
+```{r}
+#| label: tbl-drill-zone-buildings
+
+if (exists("zone_buildings") && nrow(zone_buildings) > 0L) {
+  zone_coords <- tryCatch({
+    coords <- sf::st_coordinates(sf::st_centroid(zone_buildings))
+    list(lon = round(coords[, 1], 6), lat = round(coords[, 2], 6))
+  }, error = function(e) {
+    list(lon = rep(NA_real_, nrow(zone_buildings)),
+         lat = rep(NA_real_, nrow(zone_buildings)))
+  })
+
+  set.seed(42L)
+  n_sample <- min(8L, nrow(zone_buildings))
+  picked <- sample.int(nrow(zone_buildings), n_sample)
+
+  sample_df <- zone_buildings[picked, ] |>
+    sf::st_drop_geometry() |>
+    dplyr::mutate(
+      `Map link` = ifelse(
+        !is.na(zone_coords$lat[picked]) & !is.na(zone_coords$lon[picked]),
+        paste0("[map](https://maps.google.com/?q=",
+               zone_coords$lat[picked], ",", zone_coords$lon[picked], ")"),
+        "—"
+      ),
+      `WUKSEA-GIS` = paste0(
+        "[city viewer](https://www.wien.gv.at/stadtentwicklung/energie/",
+        "energieraumplanung/wuksea.html)"
+      )
+    ) |>
+    dplyr::select(dplyr::any_of(c(
+      "building_id", "address", "year_built", "n_stories",
+      "nearest_zone_dist_m", "confidence_tier", "Map link", "WUKSEA-GIS"
+    )))
+
+  gt::gt(sample_df) |>
+    gt::fmt_markdown(columns = c("Map link", "WUKSEA-GIS")) |>
+    gt::cols_label(
+      building_id         = "OBJECTID",
+      address             = "Address",
+      year_built          = "Built",
+      n_stories           = "Storeys",
+      nearest_zone_dist_m = "Dist. to boundary (m)",
+      confidence_tier     = "Tier"
+    ) |>
+    gt::fmt_number(
+      columns  = "nearest_zone_dist_m",
+      decimals = 0,
+      use_seps = FALSE
+    ) |>
+    gt::tab_caption(
+      caption = paste0(
+        "Random sample of ", n_sample, " buildings from zone ", example_zone$zone_id,
+        " (out of ", format(zone_n, big.mark = ","), " total). ",
+        "Each row links out to Google Maps for the building location and to the ",
+        "city's WUKSEA-GIS viewer to verify the zone designation independently. ",
+        "Use these links as a manual check on our spatial join — if the city viewer ",
+        "disagrees with our classification, the building merits investigation. ",
+        "Source: joined dataset, snapshot ", SNAPSHOT_DATE, "."
+      )
+    )
+} else {
+  cat("No sample buildings available.")
+}
+```
+
+:::
+
+## Row
+
 ::: {.card title="Sanity Checks"}
 
 ```{r}
