@@ -1,7 +1,7 @@
 # Deploy Validation Report — 2026-05-02
 
 **Site:** https://johngavin.github.io/acd_area_climate_design
-**Run at:** 2026-05-02 13:22:06 UTC
+**Run at:** 2026-05-02 13:55:24 UTC
 
 ## Summary
 
@@ -11,6 +11,7 @@
 | `https://johngavin.github.io/acd_area_climate_design/vignettes/articles/dashboard.html` | 200 | 0 | 0 | 0 | 0 | 0 | **PASS** |
 | `https://johngavin.github.io/acd_area_climate_design/vignettes/articles/methodology.html` | 200 | 0 | 0 | 0 | 0 | 0 | **PASS** |
 | `https://johngavin.github.io/acd_area_climate_design/vignettes/articles/lookup.html` | 200 | 0 | 0 | 0 | 0 | 0 | **PASS** |
+| `https://johngavin.github.io/acd_area_climate_design/vignettes/articles/scrollytell_de.html` | 200 | 0 | 0 | 0 | 0 | 0 | **PASS** |
 
 ## Verdict Logic
 
