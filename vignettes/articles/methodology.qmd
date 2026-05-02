@@ -23,7 +23,6 @@ tryCatch(
 
 library(dplyr)
 library(gt)
-library(readr)
 
 # Snapshot date constant (defined in R/snapshot.R; fallback if not loaded)
 if (!exists("SNAPSHOT_DATE")) SNAPSHOT_DATE <- "2026-05-01"
@@ -33,21 +32,43 @@ joined    <- load_acd_data("joined",    source = "local")
 zones     <- load_acd_data("zones",     source = "local")
 buildings <- load_acd_data("buildings", source = "local")
 
-# Load OSM cross-check tables
-osm_by_district <- readr::read_csv(
-  system.file("extdata", "osm_coverage_by_district.csv", package = "acd"),
-  show_col_types = FALSE
+# Resolve a path under the package: prefers system.file (installed), falls
+# back to a relative path under the project root for dev-mode rendering.
+.resolve_pkg_file <- function(...) {
+  p <- system.file(..., package = "acd")
+  if (nzchar(p)) return(p)
+  file.path(...)
+}
+
+# Load OSM cross-check tables (Stage 2 outputs, bundled in inst/extdata)
+osm_by_district <- utils::read.csv(
+  .resolve_pkg_file("extdata", "osm_coverage_by_district.csv"),
+  stringsAsFactors = FALSE
 )
-osm_total <- readr::read_csv(
-  system.file("extdata", "osm_total_summary.csv", package = "acd"),
-  show_col_types = FALSE
+osm_total <- utils::read.csv(
+  .resolve_pkg_file("extdata", "osm_total_summary.csv"),
+  stringsAsFactors = FALSE
 )
 
-# Load by-district stage-0 breakdown
-by_district <- readr::read_csv(
-  "/private/tmp/acd_stage5/analysis/stage_0/by_district.csv",
-  show_col_types = FALSE
-)
+# Compute by-district breakdown directly from joined data (more reliable than
+# reading the static analysis/stage_0/by_district.csv from a relative path,
+# and the joined data already has every column we need).
+by_district <- joined |>
+  sf::st_drop_geometry() |>
+  dplyr::filter(!is.na(.data$district)) |>
+  dplyr::count(.data$district, name = "n") |>
+  dplyr::left_join(
+    joined |>
+      sf::st_drop_geometry() |>
+      dplyr::filter(.data$inside_any_zone) |>
+      dplyr::count(.data$district, name = "n_in_zone"),
+    by = "district"
+  ) |>
+  dplyr::mutate(
+    n_in_zone   = tidyr::replace_na(.data$n_in_zone, 0L),
+    pct_in_zone = round(100 * .data$n_in_zone / .data$n, 1)
+  ) |>
+  dplyr::arrange(dplyr::desc(.data$pct_in_zone))
 
 # Confidence tier summary
 tier_summary <- confidence_tier_summary(joined)
@@ -218,12 +239,11 @@ Zone coverage is concentrated in the urban core and drops sharply in suburban di
 #|   pct_in_zone: percentage whose centroid falls inside an ACD zone (spatial join).
 #|   Focus districts were selected for detailed study in issue #14 and show
 #|   middle-ranking coverage: district 20 at
-#|   `r round(100 - by_district$pct_acd_only[by_district$district == "20"], 1)`%
+#|   `r by_district$pct_in_zone[by_district$district == "20"]`%
 #|   in-zone and district 21 at
-#|   `r round(100 - by_district$pct_acd_only[by_district$district == "21"], 1)`%,
-#|   both well above the suburban low of `r round(100 - max(by_district$pct_acd_only), 1)`%
-#|   (district 01, Innere Stadt, has the highest coverage).
-#|   Source: `analysis/stage_0/by_district.csv`; spatial join via `join_buildings_zones()`.
+#|   `r by_district$pct_in_zone[by_district$district == "21"]`%,
+#|   both well above the suburban low of `r min(by_district$pct_in_zone)`%.
+#|   Source: computed inline from joined data; spatial join via `join_buildings_zones()`.
 #|   See also: §5 (confidence tiers), §7 (OSM cross-check).
 
 district_names <- c(
@@ -245,7 +265,6 @@ focus_districts <- c("20", "21")
 
 by_district |>
   dplyr::mutate(
-    pct_in_zone  = round(100 - pct_acd_only, 1),
     district_name = district_names[district],
     focus        = district %in% focus_districts
   ) |>

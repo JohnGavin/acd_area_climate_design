@@ -1,0 +1,569 @@
+[
+  {
+    "objectID": "CHARTER.html",
+    "href": "CHARTER.html",
+    "title": "Project Charter — acd",
+    "section": "",
+    "text": "For each building in Vienna, which Area Climate Design (ACD) zone (if any) does it fall under, and what is the resulting legal heating mandate?\n\n\n\nA reproducible R package that: 1. Fetches Vienna’s two open-data sources (Energieraumpläne zones + Gebäudeinformation buildings) from data.wien.gv.at WFS, pinned to a single snapshot date. 2. Joins them spatially with a 6-state diagnostic link_status enum that distinguishes legitimate “no zone applies” cases from data-quality failures. 3. Renders an interactive Quarto dashboard showing each source individually, the join, every missing-link case, and worked/failed example stories.\n\n\n\n\nDashboard renders against real WFS data (smoke-tested, not synthetic)\nAll 6 link_status values populated and shown on dedicated tabs\nAt least 2 worked stories + 3 failed stories, each with real building IDs\nSnapshot Parquet committed to inst/extdata/\nRepo public on GitHub with deployed gh-pages dashboard\n\n\n\n\nSelf (proof-of-concept). Future users: anyone analysing Vienna heating policy at the building level.\n\n\n\nPOC end-state: this session or next. Two-district focus + Austria extension: deferred.\n\n\n\n\nIndoor specs (boiler age, energy bills, EPCs from ZEUS) — privacy-restricted\nAddress geocoding fallback (we use spatial join only)\nArea-weighted overlap for straddle cases (centroid join sufficient for POC)\nMulti-zone list-column (single primary zone per building)\nTime series of zone changes (single snapshot only)\nAll-Austria coverage (Vienna only; sources for extension documented in CHANGELOG)\nDeployment to anything other than GitHub Pages\nHugging Face Datasets upload (data &lt;100 MB, doesn’t warrant it yet)\n\n\n\n\nIf any of these come up, stop and file a separate issue rather than expand the POC: - “Let’s also add district X…” - “Could we time-series this?” - “Maybe pull Linz / Graz data too?” - “While we’re here, fit a model of zone designation likelihood…”"
+  },
+  {
+    "objectID": "CHARTER.html#question",
+    "href": "CHARTER.html#question",
+    "title": "Project Charter — acd",
+    "section": "",
+    "text": "For each building in Vienna, which Area Climate Design (ACD) zone (if any) does it fall under, and what is the resulting legal heating mandate?"
+  },
+  {
+    "objectID": "CHARTER.html#deliverable",
+    "href": "CHARTER.html#deliverable",
+    "title": "Project Charter — acd",
+    "section": "",
+    "text": "A reproducible R package that: 1. Fetches Vienna’s two open-data sources (Energieraumpläne zones + Gebäudeinformation buildings) from data.wien.gv.at WFS, pinned to a single snapshot date. 2. Joins them spatially with a 6-state diagnostic link_status enum that distinguishes legitimate “no zone applies” cases from data-quality failures. 3. Renders an interactive Quarto dashboard showing each source individually, the join, every missing-link case, and worked/failed example stories."
+  },
+  {
+    "objectID": "CHARTER.html#done-looks-like",
+    "href": "CHARTER.html#done-looks-like",
+    "title": "Project Charter — acd",
+    "section": "",
+    "text": "Dashboard renders against real WFS data (smoke-tested, not synthetic)\nAll 6 link_status values populated and shown on dedicated tabs\nAt least 2 worked stories + 3 failed stories, each with real building IDs\nSnapshot Parquet committed to inst/extdata/\nRepo public on GitHub with deployed gh-pages dashboard"
+  },
+  {
+    "objectID": "CHARTER.html#audience",
+    "href": "CHARTER.html#audience",
+    "title": "Project Charter — acd",
+    "section": "",
+    "text": "Self (proof-of-concept). Future users: anyone analysing Vienna heating policy at the building level."
+  },
+  {
+    "objectID": "CHARTER.html#timeline",
+    "href": "CHARTER.html#timeline",
+    "title": "Project Charter — acd",
+    "section": "",
+    "text": "POC end-state: this session or next. Two-district focus + Austria extension: deferred."
+  },
+  {
+    "objectID": "CHARTER.html#out-of-scope-explicitly-not-doing",
+    "href": "CHARTER.html#out-of-scope-explicitly-not-doing",
+    "title": "Project Charter — acd",
+    "section": "",
+    "text": "Indoor specs (boiler age, energy bills, EPCs from ZEUS) — privacy-restricted\nAddress geocoding fallback (we use spatial join only)\nArea-weighted overlap for straddle cases (centroid join sufficient for POC)\nMulti-zone list-column (single primary zone per building)\nTime series of zone changes (single snapshot only)\nAll-Austria coverage (Vienna only; sources for extension documented in CHANGELOG)\nDeployment to anything other than GitHub Pages\nHugging Face Datasets upload (data &lt;100 MB, doesn’t warrant it yet)"
+  },
+  {
+    "objectID": "CHARTER.html#scope-creep-tripwires",
+    "href": "CHARTER.html#scope-creep-tripwires",
+    "title": "Project Charter — acd",
+    "section": "",
+    "text": "If any of these come up, stop and file a separate issue rather than expand the POC: - “Let’s also add district X…” - “Could we time-series this?” - “Maybe pull Linz / Graz data too?” - “While we’re here, fit a model of zone designation likelihood…”"
+  },
+  {
+    "objectID": "prompt.html",
+    "href": "prompt.html",
+    "title": "acd: Vienna ACD",
+    "section": "",
+    "text": "There is no single file named “ACD Database” that contains private engineering specs for every building. However, the data you are looking for—Area Climate Design (ACD) restrictions at the building level—is open-source and downloadable via the City of Vienna’s Open Data Portal.\nTo get “exact details” for each building, you must combine two specific datasets.\n\nThe Primary Dataset: Energieraumpläne (ACD Zones) This is the spatial database of the Climate Protection Areas (Klimaschutzgebiete). It defines the legal boundaries where fossil-fuel heating is banned for new buildings or major renovations.\n\nFormat: GeoJSON, Shapefile (SHP), or CSV.\nContent: Polygons of the zones, legal status, and the ERPLABEL (Zone ID).\nDownload: data.gv.at - Energieraumpläne Wien\n\nThe Building Details: Gebäudeinformation (FM Data) To see how the ACD rules apply to a specific building, you join the spatial zone data with the Vienna Building Inventory.\n\nContent: Object ID, construction year, address, and building height.\nDownload: data.gv.at - Gebäudeinformation Standorte Wien\nHow to Access Exact Building-Level Details If you want to view this data without a GIS expert’s setup, the city provides a “readily downloadable” web-interface version:\nMethod A: The WUKSEA-GIS Viewer (Browser-based) This is the professional tool used by engineers to check building-level heating requirements.\nGo to the WUKSEA-GIS Portal.\nSwitch on the layer: “Energieraumpläne”.\nClick on any individual building. It will provide the exact legal status (e.g., “Connection to district heating mandatory” or “Heat pump required”).\nMethod B: Bulk Download for Developers If you are building an app or a database, you should use the WFS (Web Feature Service) provided by the city. This allows your script to query every building’s position relative to the ACD zone.\nWFS URL: https://data.wien.gv.at/daten/geo?service=WFS&request=GetCapabilities\nLayers to pull: ENERGIEPLANERPOGD (The ACD zones) and GEBAEUDEOGD (The buildings).\nWhy you won’t find “Indoor” Specs For privacy and security reasons, certain “exact details”—such as the specific age of a private boiler inside an apartment or individual energy bills—are not open source. You can only download:\nThe Legal Mandate (What heating is allowed at that address).\nThe External Metrics (Age of building, size, and whether a district heating pipe exists in the street).\nPro Tip: If you need the Energy Performance Certificate (EPC) data for a specific building, that is stored in the ZEUS Database. While the map of zones is open, individual EPCs are usually only accessible to the building owner or authorized planners."
+  },
+  {
+    "objectID": "CHANGELOG.html",
+    "href": "CHANGELOG.html",
+    "title": "Changelog",
+    "section": "",
+    "text": "Initialized R package skeleton: DESCRIPTION, LICENSE, .gitignore, .Rprofile, default.R, default.nix\nTemplated from /Users/johngavin/docs_gh/proj/data/maps/ (preserves udunits overlay + R_LIBS_SITE shellHook)\nCreated STUBS.md with shared conventions for parallel work\nDispatched parallel agents: skeleton (haiku), fetch + join (sonnet), dashboard (sonnet) — all completed\nR/fetch_acd_zones.R, R/fetch_buildings.R, R/join_buildings_zones.R, R/missing_data_cases.R written (cache-first WFS fetch, centroid-based join, 6-state link_status enum, all helpers)\ntests/testthat/test-join.R written (5 test blocks, all synthetic, zero network)\nvignettes/articles/dashboard.qmd written (1533 lines, 6 pages including 8-tab missing-link panel and stories tabset)\nAdded httr2, cli, digest, tibble, duckplyr to DESCRIPTION Imports\nCHARTER.md added (per project-charter rule) — question, deliverable, “done”, out-of-scope, scope-creep tripwires\nR/load_data.R added — single entry point with source = c(“local”, “remote”); remote uses duckplyr::read_parquet_duckdb() (zero raw SQL per duckdplyr-not-sql rule)\nREMOTE_BASE_URL added to R/snapshot.R pointing at GitHub Pages docs/data/\nFiled JohnGavin/llm#97 to track the noisy “Stop hook error: Failed with non-blocking status code” emitted by session_stop.sh\n\n\n\n\n(nothing — all dispatched parallel work complete)\n\n\n\n\nGenerate default.nix via rix (Rscript default.R) and re-apply udunits + shellHook patches\nctx_audit DESCRIPTION (httr2/cli/digest/tibble/duckplyr added — may need ctx_sync)\nVerify WFS column name assumptions via DescribeFeatureType (BAUJAHR, HOEHE, ADRESSE, ERPTYP, ERPRECHTSTAT)\nSmoke-test fetch with max_features=100 (zones), 500 (buildings) — ~2.5 MB, ~15 s\nRender dashboard locally\ngit init + push to GitHub (JohnGavin/acd_area_climate_design, public)\n\n\n\n\n\nLayer names corrected via GetCapabilities. Assumed ENERGIEPLANERPOGD and GEBAEUDEOGD; actual are ENERGIERAUMPLANOGD and GEBAEUDEINFOOGD. Updated R/snapshot.R and STUBS.md.\nThe buildings layer (GEBAEUDEINFOOGD) has a pre-populated ACD column. The City of Vienna already labels each building with its ACD designation. This reframes the project from “compute the link via spatial join” to “cross-validate the pre-linked ACD against an independent spatial join”. Much stronger POC story: we can quantify agreement, find disagreements, and flag suspect classifications.\nThe zones layer has GEBID (building ID) and BEZNR (district number). Zones already claim which buildings they cover. This gives us a third linkage to compare: spatial join vs. building-side ACD vs. zone-side GEBID.\nNo ERPTYP/ERPRECHTSTAT/HOEHE/ADRESSE fields exist. Zone type/legal status must be inferred from ERPLABEL parsing or WEBLINK_VO. Building height proxied via GESCH_ANZ (story count). Address composed from STRNAML + VONA + VONN.\nAdded new acd_agreement factor column to joined schema: spatial=acd_native / mismatch / spatial_only / acd_only / neither. This becomes a 7th tab on the missing-link page.\n\n\n\n\n\nSnapshot-pinned by date (SNAPSHOT_DATE &lt;- \"2026-05-01\") for reproducibility\nSpatial join via centroid + st_within for POC; area-weighted overlap deferred\nStorage tier 1: inst/extdata Parquet (~30 MB committed). Tier 2 (GitHub Pages + DuckDB httpfs via duckplyr::read_parquet_duckdb) wired into R/load_data.R as source = \"remote\" — flip to enable. Tier 3 (HF Datasets / S3) deferred.\nVienna-only POC; Austria extension sources documented (BEV cadastre, Statistik Austria, INSPIRE AT, GeoSphere, Eurostat GISCO, OSM) — deferred\n\n\n\n\n\nInitial layer name guesses (ENERGIEPLANERPOGD, GEBAEUDEOGD) — wrong; corrected via GetCapabilities to ENERGIERAUMPLANOGD, GEBAEUDEINFOOGD. Lesson: always verify WFS layer names before writing fetch code.\nInitial column assumptions (ERPTYP, ERPRECHTSTAT, HOEHE, ADRESSE) — none exist. The dplyr::any_of() rename guard prevented runtime errors but produced silently un-renamed columns. Real schema documented in STUBS.md.\nSubagent prompt suggesting dplyr::tbl(con, sql(\"SELECT...\")) for remote DuckDB — flagged by user as raw-SQL violation per ~/docs_gh/llm/.claude/rules/duckdplyr-not-sql.md lines 38-40. Replaced with duckplyr::read_parquet_duckdb().\n\n\n\n\n\nInitial commit pushed to https://github.com/JohnGavin/acd_area_climate_design (public, branch main)\n6 follow-up issues filed (#1–#6) covering: schema alignment, ACD-agreement dashboard tab, default.nix regen, smoke-fetch, stage-2 remote storage, ctx_audit\n1 upstream issue filed: JohnGavin/llm#97 (noisy session_stop.sh hook)\n\n\n\n\n\nNo live data committed yet — dashboard renders against synthetic placeholder\nCode uses pre-verification column names; behaviour is graceful (any_of guards) but rename map needs update (#1)\nTests are synthetic only — no smoke test against real WFS yet (#4)\ndefault.nix copied from maps template; not regenerated for this project’s deps (#3)\nctx files for new dependencies (httr2, cli, digest, tibble, duckplyr) not yet generated (#6)\n\n\n\n\n\nFiles committed: 29\nR/ source files: 6 (snapshot, fetch_acd_zones, fetch_buildings, join_buildings_zones, missing_data_cases, load_data)\nTest files: 2 (test-join.R 270 lines, test-placeholder.R)\nDashboard: 1533 lines, 6 pages, 8-tab missing-link panel, 5-story tabset\nDependencies declared: 9 Imports (sf, dplyr, rlang, glue, fs, httr2, cli, digest, tibble), 11 Suggests\nTests not yet run (Nix shell regen pending #3) — will report PASS counts after smoke test"
+  },
+  {
+    "objectID": "CHANGELOG.html#section",
+    "href": "CHANGELOG.html#section",
+    "title": "Changelog",
+    "section": "",
+    "text": "Initialized R package skeleton: DESCRIPTION, LICENSE, .gitignore, .Rprofile, default.R, default.nix\nTemplated from /Users/johngavin/docs_gh/proj/data/maps/ (preserves udunits overlay + R_LIBS_SITE shellHook)\nCreated STUBS.md with shared conventions for parallel work\nDispatched parallel agents: skeleton (haiku), fetch + join (sonnet), dashboard (sonnet) — all completed\nR/fetch_acd_zones.R, R/fetch_buildings.R, R/join_buildings_zones.R, R/missing_data_cases.R written (cache-first WFS fetch, centroid-based join, 6-state link_status enum, all helpers)\ntests/testthat/test-join.R written (5 test blocks, all synthetic, zero network)\nvignettes/articles/dashboard.qmd written (1533 lines, 6 pages including 8-tab missing-link panel and stories tabset)\nAdded httr2, cli, digest, tibble, duckplyr to DESCRIPTION Imports\nCHARTER.md added (per project-charter rule) — question, deliverable, “done”, out-of-scope, scope-creep tripwires\nR/load_data.R added — single entry point with source = c(“local”, “remote”); remote uses duckplyr::read_parquet_duckdb() (zero raw SQL per duckdplyr-not-sql rule)\nREMOTE_BASE_URL added to R/snapshot.R pointing at GitHub Pages docs/data/\nFiled JohnGavin/llm#97 to track the noisy “Stop hook error: Failed with non-blocking status code” emitted by session_stop.sh\n\n\n\n\n(nothing — all dispatched parallel work complete)\n\n\n\n\nGenerate default.nix via rix (Rscript default.R) and re-apply udunits + shellHook patches\nctx_audit DESCRIPTION (httr2/cli/digest/tibble/duckplyr added — may need ctx_sync)\nVerify WFS column name assumptions via DescribeFeatureType (BAUJAHR, HOEHE, ADRESSE, ERPTYP, ERPRECHTSTAT)\nSmoke-test fetch with max_features=100 (zones), 500 (buildings) — ~2.5 MB, ~15 s\nRender dashboard locally\ngit init + push to GitHub (JohnGavin/acd_area_climate_design, public)\n\n\n\n\n\nLayer names corrected via GetCapabilities. Assumed ENERGIEPLANERPOGD and GEBAEUDEOGD; actual are ENERGIERAUMPLANOGD and GEBAEUDEINFOOGD. Updated R/snapshot.R and STUBS.md.\nThe buildings layer (GEBAEUDEINFOOGD) has a pre-populated ACD column. The City of Vienna already labels each building with its ACD designation. This reframes the project from “compute the link via spatial join” to “cross-validate the pre-linked ACD against an independent spatial join”. Much stronger POC story: we can quantify agreement, find disagreements, and flag suspect classifications.\nThe zones layer has GEBID (building ID) and BEZNR (district number). Zones already claim which buildings they cover. This gives us a third linkage to compare: spatial join vs. building-side ACD vs. zone-side GEBID.\nNo ERPTYP/ERPRECHTSTAT/HOEHE/ADRESSE fields exist. Zone type/legal status must be inferred from ERPLABEL parsing or WEBLINK_VO. Building height proxied via GESCH_ANZ (story count). Address composed from STRNAML + VONA + VONN.\nAdded new acd_agreement factor column to joined schema: spatial=acd_native / mismatch / spatial_only / acd_only / neither. This becomes a 7th tab on the missing-link page.\n\n\n\n\n\nSnapshot-pinned by date (SNAPSHOT_DATE &lt;- \"2026-05-01\") for reproducibility\nSpatial join via centroid + st_within for POC; area-weighted overlap deferred\nStorage tier 1: inst/extdata Parquet (~30 MB committed). Tier 2 (GitHub Pages + DuckDB httpfs via duckplyr::read_parquet_duckdb) wired into R/load_data.R as source = \"remote\" — flip to enable. Tier 3 (HF Datasets / S3) deferred.\nVienna-only POC; Austria extension sources documented (BEV cadastre, Statistik Austria, INSPIRE AT, GeoSphere, Eurostat GISCO, OSM) — deferred\n\n\n\n\n\nInitial layer name guesses (ENERGIEPLANERPOGD, GEBAEUDEOGD) — wrong; corrected via GetCapabilities to ENERGIERAUMPLANOGD, GEBAEUDEINFOOGD. Lesson: always verify WFS layer names before writing fetch code.\nInitial column assumptions (ERPTYP, ERPRECHTSTAT, HOEHE, ADRESSE) — none exist. The dplyr::any_of() rename guard prevented runtime errors but produced silently un-renamed columns. Real schema documented in STUBS.md.\nSubagent prompt suggesting dplyr::tbl(con, sql(\"SELECT...\")) for remote DuckDB — flagged by user as raw-SQL violation per ~/docs_gh/llm/.claude/rules/duckdplyr-not-sql.md lines 38-40. Replaced with duckplyr::read_parquet_duckdb().\n\n\n\n\n\nInitial commit pushed to https://github.com/JohnGavin/acd_area_climate_design (public, branch main)\n6 follow-up issues filed (#1–#6) covering: schema alignment, ACD-agreement dashboard tab, default.nix regen, smoke-fetch, stage-2 remote storage, ctx_audit\n1 upstream issue filed: JohnGavin/llm#97 (noisy session_stop.sh hook)\n\n\n\n\n\nNo live data committed yet — dashboard renders against synthetic placeholder\nCode uses pre-verification column names; behaviour is graceful (any_of guards) but rename map needs update (#1)\nTests are synthetic only — no smoke test against real WFS yet (#4)\ndefault.nix copied from maps template; not regenerated for this project’s deps (#3)\nctx files for new dependencies (httr2, cli, digest, tibble, duckplyr) not yet generated (#6)\n\n\n\n\n\nFiles committed: 29\nR/ source files: 6 (snapshot, fetch_acd_zones, fetch_buildings, join_buildings_zones, missing_data_cases, load_data)\nTest files: 2 (test-join.R 270 lines, test-placeholder.R)\nDashboard: 1533 lines, 6 pages, 8-tab missing-link panel, 5-story tabset\nDependencies declared: 9 Imports (sf, dplyr, rlang, glue, fs, httr2, cli, digest, tibble), 11 Suggests\nTests not yet run (Nix shell regen pending #3) — will report PASS counts after smoke test"
+  },
+  {
+    "objectID": "analysis/stage_0/sample_acd_only.html",
+    "href": "analysis/stage_0/sample_acd_only.html",
+    "title": "Sample acd_only Buildings",
+    "section": "",
+    "text": "5 randomly-selected buildings where city ACD field is set but spatial join finds no zone. Selection seed: 42. Total acd_only pool: 42009\n\n\n\nbuilding_id (OBJECTID): 169414041\naddress: Praterstraße 68\ndistrict: 02\nacd_native (city ACD field): 002830\nyear_built: NA\nn_stories: 4\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.389132 lat: 48.216576\nGoogle Maps: https://maps.google.com/?q=48.216576,16.389132\n\n\n\n\n\nbuilding_id (OBJECTID): 169379043\naddress: Schützengasse 1\ndistrict: 03\nacd_native (city ACD field): 005797\nyear_built: NA\nn_stories: 4\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.386855 lat: 48.194991\nGoogle Maps: https://maps.google.com/?q=48.194991,16.386855\n\n\n\n\n\nbuilding_id (OBJECTID): 169389949\naddress: Benedikt-Schellinger-Gasse 15\ndistrict: 15\nacd_native (city ACD field): 045582\nyear_built: NA\nn_stories: 4\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.329416 lat: 48.197827\nGoogle Maps: https://maps.google.com/?q=48.197827,16.329416\n\n\n\n\n\nbuilding_id (OBJECTID): 169377507\naddress: Obere Donaustraße 97 -99\ndistrict: 02\nacd_native (city ACD field): 001799\nyear_built: NA\nn_stories: 8\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.377978 lat: 48.213285\nGoogle Maps: https://maps.google.com/?q=48.213285,16.377978\n\n\n\n\n\nbuilding_id (OBJECTID): 169417763\naddress: Spittelberggasse 13\ndistrict: 07\nacd_native (city ACD field): 102621\nyear_built: NA\nn_stories: 2\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.354999 lat: 48.203677\nGoogle Maps: https://maps.google.com/?q=48.203677,16.354999"
+  },
+  {
+    "objectID": "analysis/stage_0/sample_acd_only.html#building-1",
+    "href": "analysis/stage_0/sample_acd_only.html#building-1",
+    "title": "Sample acd_only Buildings",
+    "section": "",
+    "text": "building_id (OBJECTID): 169414041\naddress: Praterstraße 68\ndistrict: 02\nacd_native (city ACD field): 002830\nyear_built: NA\nn_stories: 4\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.389132 lat: 48.216576\nGoogle Maps: https://maps.google.com/?q=48.216576,16.389132"
+  },
+  {
+    "objectID": "analysis/stage_0/sample_acd_only.html#building-2",
+    "href": "analysis/stage_0/sample_acd_only.html#building-2",
+    "title": "Sample acd_only Buildings",
+    "section": "",
+    "text": "building_id (OBJECTID): 169379043\naddress: Schützengasse 1\ndistrict: 03\nacd_native (city ACD field): 005797\nyear_built: NA\nn_stories: 4\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.386855 lat: 48.194991\nGoogle Maps: https://maps.google.com/?q=48.194991,16.386855"
+  },
+  {
+    "objectID": "analysis/stage_0/sample_acd_only.html#building-3",
+    "href": "analysis/stage_0/sample_acd_only.html#building-3",
+    "title": "Sample acd_only Buildings",
+    "section": "",
+    "text": "building_id (OBJECTID): 169389949\naddress: Benedikt-Schellinger-Gasse 15\ndistrict: 15\nacd_native (city ACD field): 045582\nyear_built: NA\nn_stories: 4\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.329416 lat: 48.197827\nGoogle Maps: https://maps.google.com/?q=48.197827,16.329416"
+  },
+  {
+    "objectID": "analysis/stage_0/sample_acd_only.html#building-4",
+    "href": "analysis/stage_0/sample_acd_only.html#building-4",
+    "title": "Sample acd_only Buildings",
+    "section": "",
+    "text": "building_id (OBJECTID): 169377507\naddress: Obere Donaustraße 97 -99\ndistrict: 02\nacd_native (city ACD field): 001799\nyear_built: NA\nn_stories: 8\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.377978 lat: 48.213285\nGoogle Maps: https://maps.google.com/?q=48.213285,16.377978"
+  },
+  {
+    "objectID": "analysis/stage_0/sample_acd_only.html#building-5",
+    "href": "analysis/stage_0/sample_acd_only.html#building-5",
+    "title": "Sample acd_only Buildings",
+    "section": "",
+    "text": "building_id (OBJECTID): 169417763\naddress: Spittelberggasse 13\ndistrict: 07\nacd_native (city ACD field): 102621\nyear_built: NA\nn_stories: 2\nlink_status: outside_any_zone\nzone_id (spatial join result): NA - no zone found\ncentroid lon: 16.354999 lat: 48.203677\nGoogle Maps: https://maps.google.com/?q=48.203677,16.354999"
+  },
+  {
+    "objectID": "analysis/stage_2/REPORT.html",
+    "href": "analysis/stage_2/REPORT.html",
+    "title": "Stage 2 Report: GEBAEUDEINFOOGD Coverage vs OpenStreetMap",
+    "section": "",
+    "text": "Date: 2026-05-01 Branch: feat/stage-2-osm-coverage Answers: GitHub issue #14\n\n\n\nDoes GEBAEUDEINFOOGD’s 58,255 buildings undercount Vienna’s actual building stock? An independent estimate suggested ~225,000 buildings. The GEBAEUDETYPOGD layer has 438,000 features but lacks the rich attributes needed for energy-zone linkage.\n\n\n\n\nSource: OpenStreetMap (OSM), queried via the Overpass API on 2026-05-01. Data licensed under ODbL 1.0 (https://www.openstreetmap.org/copyright).\nOSM full-city count: All features tagged building=* within the Vienna bounding box (16.18 E - 16.58 E, 48.12 N - 48.32 N) were counted via the osmdata R package. The full geometry pull returned 307,715 features (303,018 polygons + 4,697 multipolygons).\nPer-district count (method note): District-level breakdown used a second round of Overpass out count queries, one per district bounding box. Because district bounding boxes are rectangular (not polygon-clipped), counts for large or irregularly shaped districts – especially outer districts 21 (Floridsdorf) and 22 (Donaustadt) – include buildings from neighbouring districts’ rectangles. Per-district ratios are upper-bound estimates; the city-wide total (307,715) is the authoritative figure.\nOGD baseline: GEBAEUDEINFOOGD joined layer (inst/extdata/joined_2026-05-01.parquet) counts 58,255 buildings across all 23 districts.\n\n\n\n\n\n\n\n\n\nSource\nTotal buildings\n\n\n\n\nGEBAEUDEINFOOGD (OGD)\n58,255\n\n\nOpenStreetMap (OSM, full bbox)\n307,715\n\n\nOSM / OGD ratio\n5.3x\n\n\n\nOSM has 5.3 times more building records than GEBAEUDEINFOOGD. The pre-analysis estimate of ~225,000 was a conservative floor; OSM shows the true total is ~308,000.\n\n\n\n\n\n\nDistrict\nName\nOGD\nOSM (bbox)\nRatio\n\n\n\n\n21 star\nFloridsdorf\n2,962\n54,445\n18.4x\n\n\n20 star\nBrigittenau\n1,617\n5,381\n3.3x\n\n\n22\nDonaustadt\n1,389\n109,150\n78.6x\n\n\n23\nLiesing\n1,137\n37,392\n32.9x\n\n\n11\nSimmering\n911\n19,440\n21.3x\n\n\n02\nLeopoldstadt\n2,594\n47,158\n18.2x\n\n\n14\nPenzing\n3,020\n42,601\n14.1x\n\n\n10\nFavoriten\n3,362\n35,451\n10.5x\n\n\n17\nHernals\n2,986\n25,565\n8.6x\n\n\n13\nHietzing\n4,265\n31,728\n7.4x\n\n\n18\nWahring\n3,648\n20,326\n5.6x\n\n\n16\nOttakring\n3,600\n18,170\n5.1x\n\n\n12\nMeidling\n3,729\n13,120\n3.5x\n\n\n19\nDoebling\n5,935\n19,207\n3.2x\n\n\n03\nLandstrasse\n3,157\n8,932\n2.8x\n\n\n06\nMariahilf\n1,405\n3,441\n2.5x\n\n\n09\nAlsergrund\n1,930\n4,233\n2.2x\n\n\n05\nMargareten\n2,071\n4,008\n1.9x\n\n\n15\nRudolfsheim-Fuenfhaus\n2,998\n5,774\n1.9x\n\n\n01\nInnere Stadt\n1,514\n2,767\n1.8x\n\n\n07\nNeubau\n1,461\n2,538\n1.7x\n\n\n04\nWieden\n1,464\n2,395\n1.6x\n\n\n08\nJosefstadt\n1,100\n1,505\n1.4x\n\n\n\nstar = focus districts for issue #14.\n\n\n\n\nDistrict 20 (Brigittenau): 1,617 OGD vs 5,381 OSM-bbox – ratio 3.3x.\nDistrict 21 (Floridsdorf): 2,962 OGD vs 54,445 OSM-bbox – ratio 18.4x.\n\nThe extreme Floridsdorf ratio is partly due to the large rectangular bbox capturing buildings from adjacent Donaustadt. The true ratio is likely 5-10x, consistent with the city-wide average.\n\n\n\n\n\nYes, GEBAEUDEINFOOGD substantially undercounts Vienna. At 58,255 buildings vs OSM’s 307,715, the OGD layer covers approximately 19% of the actual building stock. This confirms the hypothesis in issue #14: GEBAEUDEINFOOGD is a curated attribute-rich subset – likely restricted to buildings above a size or permit threshold – rather than a comprehensive cadastre.\nEvery district shows OSM &gt; OGD. Inner-city districts (01-08) show 1.4-2.5x (dense multi-unit blocks inflate OGD counts); outer suburban districts (21-23) show 18-79x (single-family homes and garden structures are in OSM but absent from OGD).\n\n\n\n\n\n\n\n\n\n\n\nOption\nRecommendation\n\n\n\n\nKeep OGD as primary layer (58,255 curated buildings with EY, HJ, area attributes)\nYES – retain for zone-linkage\n\n\nSwitch to GEBAEUDETYPOGD (438,000 features, poor attributes)\nNo – loses attribute richness\n\n\nSupplement with OSM as coverage denominator\nYES – adopt as coverage baseline\n\n\nSwitch to BEV/GWR (deferred in Stage 0)\nRevisit if Stage 3 scale-up needed\n\n\n\nRecommended action: Retain GEBAEUDEINFOOGD as primary layer. Add OSM count (307,715) as the coverage denominator: dashboard and vignettes should disclose that the analysis covers ~19% of Vienna’s actual building stock.\n\n\n\n\n\nPer-district OSM counts use bounding boxes, not polygon clipping – ratios for large outer districts are inflated. The city-wide 5.3x ratio is more reliable.\nOSM completeness varies by area type. Garden sheds and minor outbuildings in outer districts may add noise to OSM totals.\nGEBAEUDEINFOOGD selection criteria are not publicly documented. We cannot quantify what fraction of the undercount is definitional vs truly missing.\nOSM is community-contributed, not officially validated – treat as cross-check, not ground truth.\n\n\n\n\n\n\n\n\n\n\n\n\nFile\nDescription\n\n\n\n\nanalysis/stage_2/osm_total_summary.csv\nOSM full-bbox total (307,715)\n\n\nanalysis/stage_2/osm_by_district_bbox.csv\nPer-district OSM counts (bbox method)\n\n\nanalysis/stage_2/coverage_by_district.csv\nOGD vs OSM, all 23 districts\n\n\nanalysis/stage_2/pull_osm_buildings.R\nosmdata full-geometry pull script\n\n\nanalysis/stage_2/overpass_count_by_district.R\nPer-district Overpass count script\n\n\nanalysis/stage_2/merge_comparison.R\nDistrict ID normalisation and merge"
+  },
+  {
+    "objectID": "analysis/stage_2/REPORT.html#question",
+    "href": "analysis/stage_2/REPORT.html#question",
+    "title": "Stage 2 Report: GEBAEUDEINFOOGD Coverage vs OpenStreetMap",
+    "section": "",
+    "text": "Does GEBAEUDEINFOOGD’s 58,255 buildings undercount Vienna’s actual building stock? An independent estimate suggested ~225,000 buildings. The GEBAEUDETYPOGD layer has 438,000 features but lacks the rich attributes needed for energy-zone linkage."
+  },
+  {
+    "objectID": "analysis/stage_2/REPORT.html#method",
+    "href": "analysis/stage_2/REPORT.html#method",
+    "title": "Stage 2 Report: GEBAEUDEINFOOGD Coverage vs OpenStreetMap",
+    "section": "",
+    "text": "Source: OpenStreetMap (OSM), queried via the Overpass API on 2026-05-01. Data licensed under ODbL 1.0 (https://www.openstreetmap.org/copyright).\nOSM full-city count: All features tagged building=* within the Vienna bounding box (16.18 E - 16.58 E, 48.12 N - 48.32 N) were counted via the osmdata R package. The full geometry pull returned 307,715 features (303,018 polygons + 4,697 multipolygons).\nPer-district count (method note): District-level breakdown used a second round of Overpass out count queries, one per district bounding box. Because district bounding boxes are rectangular (not polygon-clipped), counts for large or irregularly shaped districts – especially outer districts 21 (Floridsdorf) and 22 (Donaustadt) – include buildings from neighbouring districts’ rectangles. Per-district ratios are upper-bound estimates; the city-wide total (307,715) is the authoritative figure.\nOGD baseline: GEBAEUDEINFOOGD joined layer (inst/extdata/joined_2026-05-01.parquet) counts 58,255 buildings across all 23 districts."
+  },
+  {
+    "objectID": "analysis/stage_2/REPORT.html#results",
+    "href": "analysis/stage_2/REPORT.html#results",
+    "title": "Stage 2 Report: GEBAEUDEINFOOGD Coverage vs OpenStreetMap",
+    "section": "",
+    "text": "Source\nTotal buildings\n\n\n\n\nGEBAEUDEINFOOGD (OGD)\n58,255\n\n\nOpenStreetMap (OSM, full bbox)\n307,715\n\n\nOSM / OGD ratio\n5.3x\n\n\n\nOSM has 5.3 times more building records than GEBAEUDEINFOOGD. The pre-analysis estimate of ~225,000 was a conservative floor; OSM shows the true total is ~308,000.\n\n\n\n\n\n\nDistrict\nName\nOGD\nOSM (bbox)\nRatio\n\n\n\n\n21 star\nFloridsdorf\n2,962\n54,445\n18.4x\n\n\n20 star\nBrigittenau\n1,617\n5,381\n3.3x\n\n\n22\nDonaustadt\n1,389\n109,150\n78.6x\n\n\n23\nLiesing\n1,137\n37,392\n32.9x\n\n\n11\nSimmering\n911\n19,440\n21.3x\n\n\n02\nLeopoldstadt\n2,594\n47,158\n18.2x\n\n\n14\nPenzing\n3,020\n42,601\n14.1x\n\n\n10\nFavoriten\n3,362\n35,451\n10.5x\n\n\n17\nHernals\n2,986\n25,565\n8.6x\n\n\n13\nHietzing\n4,265\n31,728\n7.4x\n\n\n18\nWahring\n3,648\n20,326\n5.6x\n\n\n16\nOttakring\n3,600\n18,170\n5.1x\n\n\n12\nMeidling\n3,729\n13,120\n3.5x\n\n\n19\nDoebling\n5,935\n19,207\n3.2x\n\n\n03\nLandstrasse\n3,157\n8,932\n2.8x\n\n\n06\nMariahilf\n1,405\n3,441\n2.5x\n\n\n09\nAlsergrund\n1,930\n4,233\n2.2x\n\n\n05\nMargareten\n2,071\n4,008\n1.9x\n\n\n15\nRudolfsheim-Fuenfhaus\n2,998\n5,774\n1.9x\n\n\n01\nInnere Stadt\n1,514\n2,767\n1.8x\n\n\n07\nNeubau\n1,461\n2,538\n1.7x\n\n\n04\nWieden\n1,464\n2,395\n1.6x\n\n\n08\nJosefstadt\n1,100\n1,505\n1.4x\n\n\n\nstar = focus districts for issue #14.\n\n\n\n\nDistrict 20 (Brigittenau): 1,617 OGD vs 5,381 OSM-bbox – ratio 3.3x.\nDistrict 21 (Floridsdorf): 2,962 OGD vs 54,445 OSM-bbox – ratio 18.4x.\n\nThe extreme Floridsdorf ratio is partly due to the large rectangular bbox capturing buildings from adjacent Donaustadt. The true ratio is likely 5-10x, consistent with the city-wide average."
+  },
+  {
+    "objectID": "analysis/stage_2/REPORT.html#conclusion",
+    "href": "analysis/stage_2/REPORT.html#conclusion",
+    "title": "Stage 2 Report: GEBAEUDEINFOOGD Coverage vs OpenStreetMap",
+    "section": "",
+    "text": "Yes, GEBAEUDEINFOOGD substantially undercounts Vienna. At 58,255 buildings vs OSM’s 307,715, the OGD layer covers approximately 19% of the actual building stock. This confirms the hypothesis in issue #14: GEBAEUDEINFOOGD is a curated attribute-rich subset – likely restricted to buildings above a size or permit threshold – rather than a comprehensive cadastre.\nEvery district shows OSM &gt; OGD. Inner-city districts (01-08) show 1.4-2.5x (dense multi-unit blocks inflate OGD counts); outer suburban districts (21-23) show 18-79x (single-family homes and garden structures are in OSM but absent from OGD)."
+  },
+  {
+    "objectID": "analysis/stage_2/REPORT.html#recommendation-issue-14",
+    "href": "analysis/stage_2/REPORT.html#recommendation-issue-14",
+    "title": "Stage 2 Report: GEBAEUDEINFOOGD Coverage vs OpenStreetMap",
+    "section": "",
+    "text": "Option\nRecommendation\n\n\n\n\nKeep OGD as primary layer (58,255 curated buildings with EY, HJ, area attributes)\nYES – retain for zone-linkage\n\n\nSwitch to GEBAEUDETYPOGD (438,000 features, poor attributes)\nNo – loses attribute richness\n\n\nSupplement with OSM as coverage denominator\nYES – adopt as coverage baseline\n\n\nSwitch to BEV/GWR (deferred in Stage 0)\nRevisit if Stage 3 scale-up needed\n\n\n\nRecommended action: Retain GEBAEUDEINFOOGD as primary layer. Add OSM count (307,715) as the coverage denominator: dashboard and vignettes should disclose that the analysis covers ~19% of Vienna’s actual building stock."
+  },
+  {
+    "objectID": "analysis/stage_2/REPORT.html#limitations",
+    "href": "analysis/stage_2/REPORT.html#limitations",
+    "title": "Stage 2 Report: GEBAEUDEINFOOGD Coverage vs OpenStreetMap",
+    "section": "",
+    "text": "Per-district OSM counts use bounding boxes, not polygon clipping – ratios for large outer districts are inflated. The city-wide 5.3x ratio is more reliable.\nOSM completeness varies by area type. Garden sheds and minor outbuildings in outer districts may add noise to OSM totals.\nGEBAEUDEINFOOGD selection criteria are not publicly documented. We cannot quantify what fraction of the undercount is definitional vs truly missing.\nOSM is community-contributed, not officially validated – treat as cross-check, not ground truth."
+  },
+  {
+    "objectID": "analysis/stage_2/REPORT.html#files",
+    "href": "analysis/stage_2/REPORT.html#files",
+    "title": "Stage 2 Report: GEBAEUDEINFOOGD Coverage vs OpenStreetMap",
+    "section": "",
+    "text": "File\nDescription\n\n\n\n\nanalysis/stage_2/osm_total_summary.csv\nOSM full-bbox total (307,715)\n\n\nanalysis/stage_2/osm_by_district_bbox.csv\nPer-district OSM counts (bbox method)\n\n\nanalysis/stage_2/coverage_by_district.csv\nOGD vs OSM, all 23 districts\n\n\nanalysis/stage_2/pull_osm_buildings.R\nosmdata full-geometry pull script\n\n\nanalysis/stage_2/overpass_count_by_district.R\nPer-district Overpass count script\n\n\nanalysis/stage_2/merge_comparison.R\nDistrict ID normalisation and merge"
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html",
+    "href": "vignettes/articles/methodology.html",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "",
+    "text": "For each Vienna building in the city’s open cadastre, which Area Climate Design (ACD) energy-planning zone applies, and how confident are we in that linkage?\nThe city publishes both datasets as open WFS layers, but does not provide an authoritative join key between them. This package reconstructs the spatial linkage and quantifies confidence via proximity."
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#question",
+    "href": "vignettes/articles/methodology.html#question",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "",
+    "text": "For each Vienna building in the city’s open cadastre, which Area Climate Design (ACD) energy-planning zone applies, and how confident are we in that linkage?\nThe city publishes both datasets as open WFS layers, but does not provide an authoritative join key between them. This package reconstructs the spatial linkage and quantifies confidence via proximity."
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#data-sources",
+    "href": "vignettes/articles/methodology.html#data-sources",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "2. Data Sources",
+    "text": "2. Data Sources\nThree open WFS layers from data.gv.at, snapshot-pinned to 2026-05-01:\n\n\n\n\n\n\n\n\nLayer\nDescription\nFeatures\n\n\n\n\nogdwien:ENERGIERAUMPLANOGD\nACD energy-planning zones\n416\n\n\nogdwien:GEBAEUDEINFOOGD\nBuilding footprints with attributes\n58255\n\n\nogdwien:BEZIRKSGRENZEOGD\nDistrict boundaries\n23\n\n\n\nThe zone layer contains 416 polygons covering specific development areas across Vienna’s 23 districts. The building layer provides 58,255 footprints with attributes including year of construction (BAUJAHR), number of floors (GESCH_ANZ), and district (BEZ).\nAll three layers use EPSG:31256 as delivered; the pipeline reprojects to EPSG:31287 (Austria Lambert) for spatial operations. Schema was verified via DescribeFeatureType requests to the WFS endpoint."
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#the-plan-that-did-not-work",
+    "href": "vignettes/articles/methodology.html#the-plan-that-did-not-work",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "3. The Plan That Did Not Work",
+    "text": "3. The Plan That Did Not Work\nOriginal approach: compare the city’s pre-linked ACD field on each building against an independent spatial join. Naive expectation: high agreement, with disagreements flagging data-quality cases.\nResult on full data:\n\n\n\nCategory\nn\n%\n\n\n\n\nagree_in_zone\n16,246\n27.9%\n\n\nacd_only\n42,009\n72.1%\n\n\nspatial_only\n0\n0%\n\n\nagree_no_zone\n0\n0%\n\n\n\nThe 72% acd_only rate looked alarming: it appeared to mean 42,009 buildings where the city says “in zone” but the spatial join says “not in zone.”\nThe 0 spatial_only is also suspicious — it means every building the spatial join placed in a zone was also flagged by the ACD field."
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#what-stage-0-found-a-category-error",
+    "href": "vignettes/articles/methodology.html#what-stage-0-found-a-category-error",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "4. What Stage 0 Found: A Category Error",
+    "text": "4. What Stage 0 Found: A Category Error\nThe ACD field in GEBAEUDEINFOOGD is a building registry number (Adress-Code / Gebäudekennzahl), not a zone membership indicator.\nEvidence:\n\nEvery one of 58,255 buildings carries a unique 6-digit ACD value (range 1–232,762). There are zero duplicates.\nThe zone layer has only 416 records. No ACD value matches any zone identifier across PLANNR, ERPLABEL, OBJECTID, ID, or GEBID (0 string matches; apparent numeric coincidences in the zero-padded space are spurious).\nAmong the 16,246 buildings classified as agree_in_zone, none of their ACD values match the zone’s identifier.\n\nThe cross-validation code interpreted any non-empty ACD field as “city says this building is in a zone.” Since all buildings have ACD populated, the code classified all 58,255 buildings as “city says yes,” then flagged 42,009 as acd_only because the spatial join placed them outside zones. This is a category error, not a data-quality problem.\nThe correct reading: 27.9% of Vienna buildings in this layer fall inside an ACD zone (spatial join result). The remaining 72.1% are genuinely outside all 416 zone polygons. The zone layer covers specific development areas, not the whole city.\nSee analysis/stage_0/REPORT.md for the full investigation and hypothesis log."
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#what-works-distance-based-confidence-tiers",
+    "href": "vignettes/articles/methodology.html#what-works-distance-based-confidence-tiers",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "5. What Works: Distance-Based Confidence Tiers",
+    "text": "5. What Works: Distance-Based Confidence Tiers\nThe defunct acd_agreement factor is replaced by confidence_tier: a 5-level factor based on the distance from each building’s centroid to the nearest zone boundary.\nComputed in R/join_buildings_zones.R via a single sf::st_distance(centroids, sf::st_boundary(sf::st_union(zones))) call. Thresholds: 5 m (inside precision), 25 m (roughly one street width), 500 m (nearby vs clearly outside zone coverage).\n\n\n\n\nTable 1: Confidence tier distribution — r format(n_buildings, big.mark = \",\") buildings, Vienna snapshot r SNAPSHOT_DATE. Tier A: centroid inside a zone, &gt;5 m from the nearest boundary (high confidence). Tier B: inside, ≤5 m from boundary (borderline — centroid may shift with higher-resolution geometry). Tier C: outside, within 25 m of a zone edge (one street width — possible boundary misalignment). Tier D: outside, 25–500 m (zone is nearby but building is plausibly unzoned). Tier E: outside, &gt;500 m (clearly outside any zone). Source: R/join_buildings_zones.R; Parquet snapshot inst/extdata/joined_2026-05-01.parquet. See also: §6 (per-district pattern).\n\n\n\n\n\n\n\n\n\nTier\nDistance rule\nn\n%\n\n\n\n\nA — in zone, high confidence\ninside zone AND &gt;5 m from boundary\n13,959\n24%\n\n\nB — in zone, near boundary\ninside zone AND ≤5 m from boundary\n2,287\n3.9%\n\n\nC — outside, ≤25 m from zone\noutside, ≤25 m from nearest zone\n5,932\n10.2%\n\n\nD — outside, 25–500 m\noutside, 25–500 m from nearest zone\n29,045\n49.9%\n\n\nE — outside, &gt;500 m\noutside, &gt;500 m from any zone\n7,032\n12.1%"
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#per-district-pattern",
+    "href": "vignettes/articles/methodology.html#per-district-pattern",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "6. Per-District Pattern",
+    "text": "6. Per-District Pattern\nZone coverage is concentrated in the urban core and drops sharply in suburban districts.\n\n\n\n\nTable 2: Per-district zone coverage — focus districts 20 (Brigittenau) and 21 (Floridsdorf) highlighted. n_buildings: buildings from GEBAEUDEINFOOGD in that district. pct_in_zone: percentage whose centroid falls inside an ACD zone (spatial join). Focus districts were selected for detailed study in issue #14 and show middle-ranking coverage: district 20 at r by_district$pct_in_zone[by_district$district == \"20\"]% in-zone and district 21 at r by_district$pct_in_zone[by_district$district == \"21\"]%, both well above the suburban low of r min(by_district$pct_in_zone)%. Source: computed inline from joined data; spatial join via join_buildings_zones(). See also: §5 (confidence tiers), §7 (OSM cross-check).\n\n\n\n\n\n\n\n\n\nDistrict1\nName\nn buildings\n% in zone\n\n\n\n\n01\nInnere Stadt\n1514\n80.3\n\n\n20 ★\nBrigittenau\n1617\n60.8\n\n\n05\nMargareten\n2071\n49.0\n\n\n06\nMariahilf\n1405\n43.8\n\n\n21 ★\nFloridsdorf\n2962\n41.7\n\n\n12\nMeidling\n3729\n41.1\n\n\n10\nFavoriten\n3362\n40.6\n\n\n11\nSimmering\n911\n38.3\n\n\n15\nRudolfsheim-F.\n2998\n31.1\n\n\n07\nNeubau\n1461\n30.3\n\n\n04\nWieden\n1464\n30.2\n\n\n22\nDonaustadt\n1389\n29.0\n\n\n16\nOttakring\n3600\n25.8\n\n\n02\nLeopoldstadt\n2594\n25.6\n\n\n17\nHernals\n2986\n24.2\n\n\n09\nAlsergrund\n1930\n23.8\n\n\n03\nLandstrasse\n3157\n22.3\n\n\n14\nPenzing\n3020\n22.3\n\n\n08\nJosefstadt\n1100\n20.5\n\n\n18\nWahring\n3648\n13.2\n\n\n19\nDoebling\n5935\n11.7\n\n\n23\nLiesing\n1137\n4.1\n\n\n13\nHietzing\n4265\n2.6\n\n\n\n1 Focus districts (issue #14)"
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#sec-osm",
+    "href": "vignettes/articles/methodology.html#sec-osm",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "7. OSM Cross-Check (Stage 2)",
+    "text": "7. OSM Cross-Check (Stage 2)\nOpenStreetMap (OSM) provides an independent count of Vienna’s building stock.\n\n\n\n\n\n\n\nSource\nTotal buildings\n\n\n\n\nGEBAEUDEINFOOGD (OGD)\n58,255\n\n\nOSM (full Vienna bounding box)\n307,715\n\n\nOSM / OGD ratio\n5.3×\n\n\n\nGEBAEUDEINFOOGD covers approximately 18.9% of Vienna’s actual building stock (58,255 / 307,715). This is a curated subset, not a comprehensive register: likely catalogued buildings, commercial properties, and multi-residence structures with rich administrative attributes (BAUJAHR, GESCH_ANZ, BEZ) absent from the full cadastre.\nThis analysis covers 18.9% of Vienna’s stock. Switching to a more complete layer is tracked in issue #14. The OGD layer is retained as primary because of attribute richness.\nOSM data licensed under ODbL 1.0. Per-district OSM counts use bounding-box queries and overcount outer districts (21, 22) due to rectangular clip; city-wide total is authoritative."
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#limitations",
+    "href": "vignettes/articles/methodology.html#limitations",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "8. Limitations",
+    "text": "8. Limitations\n\n\n\n\n\n\n\nLimitation\nDetail\n\n\n\n\nCoverage\n18.9% of actual Vienna stock (§7)\n\n\nSingle snapshot\nNo time series; pinned to 2026-05-01\n\n\nACD field semantics\nInferred via experiments; not officially documented by the city\n\n\nFederal cross-walk\nStatistik Austria GWR deferred (authentication friction)\n\n\nAddress validation\nBEV address register deferred\n\n\nCentroid join\nNot area-weighted; straddle cases simplified to primary zone\n\n\nMulti-zone overlap\nSimplified to a single primary zone per building"
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#how-to-use-the-package",
+    "href": "vignettes/articles/methodology.html#how-to-use-the-package",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "9. How to Use the Package",
+    "text": "9. How to Use the Package\nlibrary(acd)\n\n# Load the full snapshot (reads from inst/extdata, no network needed)\njoined &lt;- load_acd_data(\"joined\", source = \"local\")\n\n# Confidence tier distribution\nconfidence_tier_summary(joined)\n\n# District × tier pivot\nconfidence_tier_by_district(joined)\nFor remote access (query Parquet on GitHub Pages via DuckDB):\nload_acd_data(\"joined\", source = \"remote\", collect = FALSE) |&gt;\n  dplyr::filter(district == \"20\") |&gt;\n  dplyr::count(confidence_tier) |&gt;\n  dplyr::collect()"
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#reproducibility",
+    "href": "vignettes/articles/methodology.html#reproducibility",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "10. Reproducibility",
+    "text": "10. Reproducibility\n\nSnapshot date pinned in R/snapshot.R (SNAPSHOT_DATE = \"r SNAPSHOT_DATE\")\nWFS endpoints in R/snapshot.R (WFS_BASE_URL, LAYER_ZONES, LAYER_BUILDINGS, LAYER_DISTRICTS)\nFetch functions (fetch_acd_zones(), fetch_buildings(), fetch_districts()) are cache-first\nAll outputs derived from committed Parquet snapshots in inst/extdata/\nNix-pinned R + system dependencies (default.nix)\nCode: https://github.com/JohnGavin/acd_area_climate_design"
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#links-and-references",
+    "href": "vignettes/articles/methodology.html#links-and-references",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "11. Links and References",
+    "text": "11. Links and References\n\nLive dashboard: https://johngavin.github.io/acd_area_climate_design/vignettes/articles/dashboard.html\nStage 0 investigation: analysis/stage_0/REPORT.md — ACD field semantics, buffer sweep, per-district breakdown\nStage 2 OSM cross-check: analysis/stage_2/REPORT.md — full methodology for OSM comparison\nIssue #14: GEBAEUDEINFOOGD vs full building stock (coverage investigation)\nIssue #15: Methodology vignette (this document)\nCity’s official tool: WUKSEA-GIS — interactive ACD zone viewer\nOSM data: © OpenStreetMap contributors, ODbL 1.0"
+  },
+  {
+    "objectID": "vignettes/articles/methodology.html#recent-changes",
+    "href": "vignettes/articles/methodology.html#recent-changes",
+    "title": "Methodology — Vienna ACD Building-Zone Linkage",
+    "section": "Recent Changes",
+    "text": "Recent Changes\n\n\n2026-05-01: Stage 5 — methodology vignette added (closes #15)"
+  },
+  {
+    "objectID": "CURRENT_WORK.html",
+    "href": "CURRENT_WORK.html",
+    "title": "Current Work",
+    "section": "",
+    "text": "Phase 2 visual rework merged + live. Stage 0 investigation falsified the cross-validation premise — the ACD field is the building’s own registry ID, not a zone reference. Currently combining Stage 1a (districts layer) + Stage 3 (confidence_tier) + Phase 3 (dashboard rework) into a single PR.\n\n\n\n\nSite: https://johngavin.github.io/acd_area_climate_design/\nDashboard: https://johngavin.github.io/acd_area_climate_design/vignettes/articles/dashboard.html\nRepo: https://github.com/JohnGavin/acd_area_climate_design\n\n\n\n\nThe ACD column on buildings is the building’s own registry number (Adress-Code / Gebäudekennzahl), NOT a zone reference. Every building has a unique 6-digit ACD value (range 1 to 232,762). 0 string matches across PLANNR / ERPLABEL / OBJECTID / ID / GEBID.\nThe acd_agreement factor we built is a category error. Levels agree_in_zone (27.9%) and acd_only (72.1%) compare “is in spatial zone” vs “has a registry ID” (universal). The legitimate result is simpler: 27.9% of Vienna buildings fall within an Energieraumplan zone.\nBuffer sweep falsified CRS / boundary precision (H1): 5m buffer adds only 184 buildings (0.3pp). Buildings outside zones are genuinely outside, not edge cases.\nReplacement design: distance-based confidence_tier (A/B/C/D/E): - A: inside zone, &gt;5m from boundary (~26%) - B: inside zone, ≤5m from boundary (~2%) - C: outside, ≤25m from zone (~10%) - D: outside, 25-500m from zone (~50%) - E: outside, &gt;500m from zone (~12%)\nFull report: analysis/stage_0/REPORT.md on main.\n\n\n\n\n\nBranch: feat/stage-1a-and-3 (worktree at /private/tmp/acd_stage1a_3)\nTwo sequential agents on the same branch: 1. Agent A (in progress): R-code only — fetch BEZIRKSGRENZEOGD (23 districts), drop acd_agreement, build confidence_tier, refresh joined Parquet, update tests. Sonnet general-purpose. 2. Agent B (next): Dashboard rework — replace acd_agreement cards with confidence tier visualizations, drill-downs, district 20+21 highlighting via the new districts layer. Sonnet general-purpose.\nThen orchestrator opens PR + merges.\n\n\n\nResearch for #14 found GEBAEUDETYPOGD has 438k buildings (vs 58k for our current GEBAEUDEINFOOGD primary), but lacks BAUJAHR / GESCH_ANZ / BEZ — the rich attributes the dashboard depends on. Decision: keep GEBAEUDEINFOOGD primary, document the coverage limitation. Comment on #14: https://github.com/JohnGavin/acd_area_climate_design/issues/14#issuecomment-4361370443\n\n\n\n\n\n\n\n\n\n\n\n\n#\nTitle\nStatus\n\n\n\n\n2\n(closed in #11)\n—\n\n\n8\nCloseread scrollytelling vignette\nLater — needs full data\n\n\n12\nDark-theme all interactive maps\n✅ landed in PR #18\n\n\n14\nGEBAEUDEINFOOGD coverage (58k vs 220k)\nResearched (see comment); switch deferred\n\n\n15\nCross-validation deep dive\nStage 0 done (#19); Stages 1a+3 in progress; Stages 1b/2/4/5 open\n\n\n16\nPage 3 vertical spacing\nArchitecturally constrained (panel-tabset cap); commented\n\n\n17\nPhase 3: drill-downs + confidence categories\nIn progress (combined with Stage 1a)\n\n\n\n\n\n\n\nR/snapshot.R — constants (SNAPSHOT_DATE, layer names, CRS)\nR/fetch_acd_zones.R, R/fetch_buildings.R — paginated WFS fetch\nR/join_buildings_zones.R — spatial join + 6-state link_status + acd_agreement (BROKEN, being replaced)\nR/missing_data_cases.R — per-case helpers + dark-theme palette\nR/load_data.R — local/remote dispatcher (duckplyr remote)\nvignettes/articles/dashboard.qmd — 6 pages, 2.78 MB raw / 11.8 MB gzip on the wire (post-Phase 2)\ninst/extdata/{zones,buildings,joined}_2026-05-01.parquet — Vienna snapshots\ndocs/data/*.parquet — HTTP-serving copies\nanalysis/stage_0/ — Stage 0 investigation outputs\nanalysis/rationale/DECISIONS.md — forking-paths log\n\n\n\n\n\nTwo-agent parallelism via git worktree add — independent worktrees, clean merges\nWFS pagination via startIndex + count = 5000 (12 pages for full buildings)\ndplyr::any_of() rename guards survive WFS schema variations\nBurn-rate-aware delegation: every code-execution agent has been sonnet, not opus\n“List all asks before fixing” discipline catches a lot of redundant work\nStage 0 hypothesis-experiment-conclusion structure pinpointed the broken cross-validation premise quickly\n\n\n\n\n\nInitial layer name guesses (ENERGIEPLANERPOGD, GEBAEUDEOGD) — corrected via GetCapabilities\nInitial column assumptions (ERPTYP, ERPRECHTSTAT, HOEHE, ADRESSE) — none exist\nFirst Page 3 vertical spacing fix — claimed done but architecturally constrained by panel-tabset cap\n“220,000 buildings” estimate — actual GEBAEUDEINFOOGD layer is 58,255 (curated subset)\nSubagent suggesting dplyr::tbl(con, sql(\"SELECT...\")) — flagged by user as raw-SQL violation (rule duckdplyr-not-sql.md line 38-40)\nbldg_geom[[i]] (sfg, no CRS) → bug, fixed to bldg_geom[i] (sfc retains CRS)\nSynthetic placeholder fallback hid real issues until full data exposed them\nThe cross-validation acd_agreement factor was conceptually broken from the start — built on the assumption that ACD references zone membership, when it’s actually a building registry ID. Stage 0 caught this. Lesson: validate the SEMANTICS of every field before building logic on it. Schema verification (DescribeFeatureType) tells you what columns exist; it doesn’t tell you what they MEAN.\nStage 0 agent hit rate limit before completing buffer sweep + REPORT synthesis — orchestrator finished both directly. Lesson: split long agent runs into smaller checkpointed phases.\n\n\n\n\n\nSnapshot pinning by date (2026-05-01)\nCentroid-based spatial join (not area-weighted) for POC\nlink_status 6-state enum as diagnostic\nacd_agreement factor — broken, being replaced with confidence_tier (Stage 0 finding)\nStorage tier 1 = inst/extdata/, tier 2 = docs/data/ via duckplyr (no SQL)\nDistricts 20 (Brigittenau) + 21 (Floridsdorf) are the focus districts\n2026-05-02: Distance-based confidence_tier (A/B/C/D/E) replaces acd_agreement\n2026-05-02: Keep GEBAEUDEINFOOGD primary; defer GEBAEUDETYPOGD swap (lacks BAUJAHR/GESCH_ANZ/BEZ)\n\n\n\n\n\nRead this file + analysis/stage_0/REPORT.md + CHANGELOG.md + STUBS.md\nCheck open issues: gh issue list --repo JohnGavin/acd_area_climate_design --state open\nCheck open PRs: gh pr list --repo JohnGavin/acd_area_climate_design\nCheck active worktrees: git -C /Users/johngavin/docs_gh/proj/finance/data/acd_area_climate_design worktree list\nIf feat/stage-1a-and-3 worktree has uncommitted work, that’s where the in-progress R refactor + dashboard rework lives.\nThe cross-validation logic is being replaced — anything referring to acd_agreement is legacy. The new contract is confidence_tier (A/B/C/D/E) based on distance to nearest zone boundary.\n\n\n\n\nCRITICAL at start of session ($380/$500). All execution agents are sonnet. Opus reserved for orchestration.\n\n\n\n(none currently)"
+  },
+  {
+    "objectID": "CURRENT_WORK.html#status-2026-05-02",
+    "href": "CURRENT_WORK.html#status-2026-05-02",
+    "title": "Current Work",
+    "section": "",
+    "text": "Phase 2 visual rework merged + live. Stage 0 investigation falsified the cross-validation premise — the ACD field is the building’s own registry ID, not a zone reference. Currently combining Stage 1a (districts layer) + Stage 3 (confidence_tier) + Phase 3 (dashboard rework) into a single PR."
+  },
+  {
+    "objectID": "CURRENT_WORK.html#live-urls",
+    "href": "CURRENT_WORK.html#live-urls",
+    "title": "Current Work",
+    "section": "",
+    "text": "Site: https://johngavin.github.io/acd_area_climate_design/\nDashboard: https://johngavin.github.io/acd_area_climate_design/vignettes/articles/dashboard.html\nRepo: https://github.com/JohnGavin/acd_area_climate_design"
+  },
+  {
+    "objectID": "CURRENT_WORK.html#critical-finding-stage-0-2026-05-02",
+    "href": "CURRENT_WORK.html#critical-finding-stage-0-2026-05-02",
+    "title": "Current Work",
+    "section": "",
+    "text": "The ACD column on buildings is the building’s own registry number (Adress-Code / Gebäudekennzahl), NOT a zone reference. Every building has a unique 6-digit ACD value (range 1 to 232,762). 0 string matches across PLANNR / ERPLABEL / OBJECTID / ID / GEBID.\nThe acd_agreement factor we built is a category error. Levels agree_in_zone (27.9%) and acd_only (72.1%) compare “is in spatial zone” vs “has a registry ID” (universal). The legitimate result is simpler: 27.9% of Vienna buildings fall within an Energieraumplan zone.\nBuffer sweep falsified CRS / boundary precision (H1): 5m buffer adds only 184 buildings (0.3pp). Buildings outside zones are genuinely outside, not edge cases.\nReplacement design: distance-based confidence_tier (A/B/C/D/E): - A: inside zone, &gt;5m from boundary (~26%) - B: inside zone, ≤5m from boundary (~2%) - C: outside, ≤25m from zone (~10%) - D: outside, 25-500m from zone (~50%) - E: outside, &gt;500m from zone (~12%)\nFull report: analysis/stage_0/REPORT.md on main."
+  },
+  {
+    "objectID": "CURRENT_WORK.html#active-workstream",
+    "href": "CURRENT_WORK.html#active-workstream",
+    "title": "Current Work",
+    "section": "",
+    "text": "Branch: feat/stage-1a-and-3 (worktree at /private/tmp/acd_stage1a_3)\nTwo sequential agents on the same branch: 1. Agent A (in progress): R-code only — fetch BEZIRKSGRENZEOGD (23 districts), drop acd_agreement, build confidence_tier, refresh joined Parquet, update tests. Sonnet general-purpose. 2. Agent B (next): Dashboard rework — replace acd_agreement cards with confidence tier visualizations, drill-downs, district 20+21 highlighting via the new districts layer. Sonnet general-purpose.\nThen orchestrator opens PR + merges.\n\n\n\nResearch for #14 found GEBAEUDETYPOGD has 438k buildings (vs 58k for our current GEBAEUDEINFOOGD primary), but lacks BAUJAHR / GESCH_ANZ / BEZ — the rich attributes the dashboard depends on. Decision: keep GEBAEUDEINFOOGD primary, document the coverage limitation. Comment on #14: https://github.com/JohnGavin/acd_area_climate_design/issues/14#issuecomment-4361370443"
+  },
+  {
+    "objectID": "CURRENT_WORK.html#open-issues-github",
+    "href": "CURRENT_WORK.html#open-issues-github",
+    "title": "Current Work",
+    "section": "",
+    "text": "#\nTitle\nStatus\n\n\n\n\n2\n(closed in #11)\n—\n\n\n8\nCloseread scrollytelling vignette\nLater — needs full data\n\n\n12\nDark-theme all interactive maps\n✅ landed in PR #18\n\n\n14\nGEBAEUDEINFOOGD coverage (58k vs 220k)\nResearched (see comment); switch deferred\n\n\n15\nCross-validation deep dive\nStage 0 done (#19); Stages 1a+3 in progress; Stages 1b/2/4/5 open\n\n\n16\nPage 3 vertical spacing\nArchitecturally constrained (panel-tabset cap); commented\n\n\n17\nPhase 3: drill-downs + confidence categories\nIn progress (combined with Stage 1a)"
+  },
+  {
+    "objectID": "CURRENT_WORK.html#architecture-current-on-main",
+    "href": "CURRENT_WORK.html#architecture-current-on-main",
+    "title": "Current Work",
+    "section": "",
+    "text": "R/snapshot.R — constants (SNAPSHOT_DATE, layer names, CRS)\nR/fetch_acd_zones.R, R/fetch_buildings.R — paginated WFS fetch\nR/join_buildings_zones.R — spatial join + 6-state link_status + acd_agreement (BROKEN, being replaced)\nR/missing_data_cases.R — per-case helpers + dark-theme palette\nR/load_data.R — local/remote dispatcher (duckplyr remote)\nvignettes/articles/dashboard.qmd — 6 pages, 2.78 MB raw / 11.8 MB gzip on the wire (post-Phase 2)\ninst/extdata/{zones,buildings,joined}_2026-05-01.parquet — Vienna snapshots\ndocs/data/*.parquet — HTTP-serving copies\nanalysis/stage_0/ — Stage 0 investigation outputs\nanalysis/rationale/DECISIONS.md — forking-paths log"
+  },
+  {
+    "objectID": "CURRENT_WORK.html#what-worked-cumulative",
+    "href": "CURRENT_WORK.html#what-worked-cumulative",
+    "title": "Current Work",
+    "section": "",
+    "text": "Two-agent parallelism via git worktree add — independent worktrees, clean merges\nWFS pagination via startIndex + count = 5000 (12 pages for full buildings)\ndplyr::any_of() rename guards survive WFS schema variations\nBurn-rate-aware delegation: every code-execution agent has been sonnet, not opus\n“List all asks before fixing” discipline catches a lot of redundant work\nStage 0 hypothesis-experiment-conclusion structure pinpointed the broken cross-validation premise quickly"
+  },
+  {
+    "objectID": "CURRENT_WORK.html#what-failed-lessons",
+    "href": "CURRENT_WORK.html#what-failed-lessons",
+    "title": "Current Work",
+    "section": "",
+    "text": "Initial layer name guesses (ENERGIEPLANERPOGD, GEBAEUDEOGD) — corrected via GetCapabilities\nInitial column assumptions (ERPTYP, ERPRECHTSTAT, HOEHE, ADRESSE) — none exist\nFirst Page 3 vertical spacing fix — claimed done but architecturally constrained by panel-tabset cap\n“220,000 buildings” estimate — actual GEBAEUDEINFOOGD layer is 58,255 (curated subset)\nSubagent suggesting dplyr::tbl(con, sql(\"SELECT...\")) — flagged by user as raw-SQL violation (rule duckdplyr-not-sql.md line 38-40)\nbldg_geom[[i]] (sfg, no CRS) → bug, fixed to bldg_geom[i] (sfc retains CRS)\nSynthetic placeholder fallback hid real issues until full data exposed them\nThe cross-validation acd_agreement factor was conceptually broken from the start — built on the assumption that ACD references zone membership, when it’s actually a building registry ID. Stage 0 caught this. Lesson: validate the SEMANTICS of every field before building logic on it. Schema verification (DescribeFeatureType) tells you what columns exist; it doesn’t tell you what they MEAN.\nStage 0 agent hit rate limit before completing buffer sweep + REPORT synthesis — orchestrator finished both directly. Lesson: split long agent runs into smaller checkpointed phases."
+  },
+  {
+    "objectID": "CURRENT_WORK.html#decisions-logged-in-analysisrationaledecisions.md",
+    "href": "CURRENT_WORK.html#decisions-logged-in-analysisrationaledecisions.md",
+    "title": "Current Work",
+    "section": "",
+    "text": "Snapshot pinning by date (2026-05-01)\nCentroid-based spatial join (not area-weighted) for POC\nlink_status 6-state enum as diagnostic\nacd_agreement factor — broken, being replaced with confidence_tier (Stage 0 finding)\nStorage tier 1 = inst/extdata/, tier 2 = docs/data/ via duckplyr (no SQL)\nDistricts 20 (Brigittenau) + 21 (Floridsdorf) are the focus districts\n2026-05-02: Distance-based confidence_tier (A/B/C/D/E) replaces acd_agreement\n2026-05-02: Keep GEBAEUDEINFOOGD primary; defer GEBAEUDETYPOGD swap (lacks BAUJAHR/GESCH_ANZ/BEZ)"
+  },
+  {
+    "objectID": "CURRENT_WORK.html#how-a-new-claude-picks-up",
+    "href": "CURRENT_WORK.html#how-a-new-claude-picks-up",
+    "title": "Current Work",
+    "section": "",
+    "text": "Read this file + analysis/stage_0/REPORT.md + CHANGELOG.md + STUBS.md\nCheck open issues: gh issue list --repo JohnGavin/acd_area_climate_design --state open\nCheck open PRs: gh pr list --repo JohnGavin/acd_area_climate_design\nCheck active worktrees: git -C /Users/johngavin/docs_gh/proj/finance/data/acd_area_climate_design worktree list\nIf feat/stage-1a-and-3 worktree has uncommitted work, that’s where the in-progress R refactor + dashboard rework lives.\nThe cross-validation logic is being replaced — anything referring to acd_agreement is legacy. The new contract is confidence_tier (A/B/C/D/E) based on distance to nearest zone boundary."
+  },
+  {
+    "objectID": "CURRENT_WORK.html#burn-rate-awareness",
+    "href": "CURRENT_WORK.html#burn-rate-awareness",
+    "title": "Current Work",
+    "section": "",
+    "text": "CRITICAL at start of session ($380/$500). All execution agents are sonnet. Opus reserved for orchestration."
+  },
+  {
+    "objectID": "CURRENT_WORK.html#open-user-questions",
+    "href": "CURRENT_WORK.html#open-user-questions",
+    "title": "Current Work",
+    "section": "",
+    "text": "(none currently)"
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html",
+    "href": "analysis/stage_0/REPORT.html",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "Date: 2026-05-01\nBranch: investigation/cross-validation-stage-0\nDataset: 58,255 buildings, 416 zones, Vienna 2026-05-01 snapshot\n\n\n\nThe pre-computed joined dataset shows: - agree_in_zone: 16,246 (27.9%) - acd_only: 42,009 (72.1%) - spatial_only: 0 - agree_no_zone: 0\nThe 72.1% acd_only rate means the acd_agreement cross-validation classifies 42,009 buildings as “city says in-zone, spatial join says not”. This Stage 0 investigation tests whether this is a real divergence or a measurement error.\n\n\n\n\n\n\nHypothesis: Buildings and zones are in different CRS or have sub-meter offsets causing the centroid join to miss zone polygons.\nExperiment: Both parquet files store geometry as WKT with CRS=31287 (Austria Lambert). The join function enforces CRS parity before proceeding. Buffer sweep shows the number of outside_any_zone buildings drops from 42,009 at 0m to 36,077 at 25m and continues decreasing at 100m+. A pure CRS offset would manifest as a sharp cliff at a specific buffer distance.\nObserved result: The buffer-by-buffer pattern is:\n\n\n\nBuffer (m)\nn in zone\n% of all 58,255\nΔ vs prev\n\n\n\n\n0\n16,246\n27.9%\n—\n\n\n5\n16,430\n28.2%\n+184\n\n\n25\n22,178\n38.1%\n+5,748\n\n\n100\n35,277\n60.6%\n+13,099\n\n\n500\n51,220\n87.9%\n+15,943\n\n\n\nA 5 m buffer (well inside typical positional precision) adds only 184 buildings — 0.3 percentage points. A pure CRS / boundary precision artifact would manifest as a cliff at a specific buffer; instead we see smooth growth.\nConclusion: FALSIFIED. Boundary precision is not driving the gap. The buildings outside zones are genuinely outside, not edge-precision cases.\n\n\n\n\n\n\nQuantile\nDistance (m)\n\n\n\n\n25%\n45\n\n\n50%\n118\n\n\n75%\n319\n\n\n90%\n828\n\n\n99%\n2,425\n\n\n\n\n\n\nWithin\nCount\n% of 42,009\n\n\n\n\n50 m\n11,554\n27.5%\n\n\n100 m\n19,031\n45.3%\n\n\n250 m\n29,335\n69.8%\n\n\n500 m\n34,977\n83.3%\n\n\n2500 m\n41,649\n99.1%\n\n\n\nAbout a quarter of “outside” buildings are within 45 m of a zone — neighbouring buildings on the wrong side of a zone edge, not boundary-precision cases. Useful for a confidence_tier column based on distance.\n\n\n\n\nHypothesis: The buildings’ ACD field references a different spatial object (e.g., a different version of zone polygons) that we don’t have, explaining the mismatch.\nExperiment: Column overlap analysis between buildings$ACD and all zone identifier fields (PLANNR, ERPLABEL, ID, OBJECTID, GEBID):\n\n\n\n\n\n\n\n\n\nZone field\nString match\nZero-padded numeric match\nn_unique zone values\n\n\n\n\nPLANNR\n0\n0\n27\n\n\nERPLABEL\n0\n0\n416\n\n\nID\n0\n72\n75\n\n\nOBJECTID\n0\n355\n416\n\n\nGEBID\n0\n42\n44\n\n\n\nCritical finding: ACD values are 6-digit zero-padded integers ranging from 1 to 232,762, unique per building (58,255 unique values for 58,255 buildings). Zone OBJECTID range is 63,576–63,991 (only 416 values). The 355 apparent “matches” with zone OBJECTID are numerical coincidences in the zero-padded space, not semantic matches.\nACD is a building registry number (Adress-Code / Gebäudekennzahl), NOT a zone reference. This is confirmed by: 1. Every single building has a unique ACD value (0 duplicates) 2. ACD range (1–232,762) far exceeds the number of zones (416) 3. agree_in_zone buildings: acd_native NEVER matches zone_id (0 of 16,246)\nConclusion: SUPPORTED, but the implication is more fundamental. H2 is correct that ACD references a different object, but that object is not an alternative zone layer — it is the building’s own registry identifier. The acd_agreement logic is based on a category error: it interprets non-empty ACD as “city says this building is in a zone”, but ACD simply means “this building exists in the city registry”. Since all 58,255 buildings have ACD set, the code’s logic classifies ALL buildings as “city says in-zone”, then 42,009 of them as acd_only because our spatial join doesn’t find a zone.\n\n\n\n\nHypothesis: Vienna’s zone polygons are drawn with a deliberate buffer/tolerance, and buildings near-but-outside a zone are considered in-scope by the city.\nExperiment: Buffer sweep from 0m to 500m.\nObserved result (partial): At 5m buffer, acd_only drops by only 184 (from 42,009 to 41,825). At 25m, drops by ~6,000. This rate of change is consistent with genuine proximity effects (buildings near zone boundaries) but cannot account for 42,009 buildings at 0m. Even at 500m buffer (pending), we would not expect to recover all 42,009 since many appear to be in districts with very few zones.\nConclusion: INCONCLUSIVE (partial data). Buffer proximity explains some cases (estimate: 5-15%) but not the bulk. The 97.4% acd_only rate in district 13 strongly suggests the zone layer simply does not cover most of Vienna — many districts have sparse zone coverage. This is not a buffer tolerance issue but a coverage gap.\n\n\n\n\nHypothesis: The ACD field references legal planning document numbers (PLANNR), creating a non-spatial linkage that our geometric join cannot replicate.\nExperiment: PLANNR format is strings like “ERP_Bez03_B_Plan1_v1.0” (22-23 chars). Building ACD values are 6-digit zero-padded numbers. Zero overlap (0 string matches, 0 padded matches).\nConclusion: FALSIFIED. ACD does not reference PLANNR. The formats are completely incompatible.\n\n\n\n\n\nThe acd_agreement logic in join_buildings_zones.R contains a category error:\n# Current logic (WRONG):\nacd_says_yes &lt;- !is.na(acd_native_raw) & nzchar(trimws(as.character(acd_native_raw)))\nThis interprets any non-empty ACD value as “city says this building is in a zone”. But the ACD column in GEBAEUDEINFOOGD is a building registry identifier (Adress-Code), not a zone membership flag. All 58,255 buildings have this field populated. The result is that acd_says_yes = TRUE for every building, making acd_agreement = \"acd_only\" for every building that our spatial join classifies as outside_any_zone.\nThe correct interpretation: 72.1% of Vienna buildings are not covered by any ACD energy zone (spatial join result), which is the actual finding. The zone layer covers only specific development areas, not the whole city.\n\n\n\n\n\n\n\nDistrict\nn_buildings\nn_acd_only\npct_acd_only\n\n\n\n\n13\n4,265\n4,152\n97.4%\n\n\n23\n1,137\n1,090\n95.9%\n\n\n19\n5,935\n5,238\n88.3%\n\n\n18\n3,648\n3,168\n86.8%\n\n\n08\n1,100\n875\n79.5%\n\n\n03\n3,157\n2,453\n77.7%\n\n\n14\n3,020\n2,346\n77.7%\n\n\n…\n…\n…\n…\n\n\n20 (Brigittenau)\n1,617\n634\n39.2%\n\n\n21 (Floridsdorf)\n2,962\n1,728\n58.3%\n\n\n\nDistricts 20 and 21 have below-average acd_only rates, confirming they have better zone coverage. District 13 (Hietzing) at 97.4% is almost entirely outside zones.\n\n\n\n\n5 randomly-selected buildings (seed=42) from the acd_only pool:\n\n\n\n\n\n\n\n\n\n\nOBJECTID\nAddress\nDistrict\nACD\nLink status\n\n\n\n\n169414041\nPraterstraße 68\n02\n002830\noutside_any_zone\n\n\n169379043\nSchützengasse 1\n03\n005797\noutside_any_zone\n\n\n169389949\nBenedikt-Schellinger-Gasse 15\n15\n045582\noutside_any_zone\n\n\n169377507\nObere Donaustraße 97-99\n02\n001799\noutside_any_zone\n\n\n169417763\nSpittelberggasse 13\n07\n102621\noutside_any_zone\n\n\n\nAll 5 have link_status = outside_any_zone — their centroids fall outside every zone polygon. Their ACD values are 5-6 digit building registry codes. See sample_acd_only.md for Google Maps links.\n\n\n\n\n\nThe 72.1% “acd_only” rate is not a data quality problem — it is a real finding. The ACD zone layer covers only ~28% of Vienna buildings, and the other 72% genuinely have no ACD zone designation.\nThe acd_agreement metric name is misleading. The ACD field in GEBAEUDEINFOOGD is a building registry number (Adress-Code), not a zone membership indicator. The cross-validation as currently coded tests nothing meaningful.\nThe correct metric is simply link_status == \"outside_any_zone\" (42,009 buildings, 72.1%). These buildings are not in any ACD energy planning zone.\n\n\n\n\n\n\n\n\nRemove or redefine acd_agreement in join_buildings_zones.R\nThe meaningful metric is link_status alone\nIf a true city-vs-spatial cross-validation is desired, find the actual zone-membership field (not ACD)\n\n\n\n\n\nFetch the WFS metadata for ENERGIERAUMPLANDOGD to confirm all 416 zones are the complete dataset\nCheck if there are other zone layers (e.g., draft plans, superseded plans)\nConsult WEBLINK_VO URLs in zone records for official documentation\n\n\n\n\n\nThe ACD field (Adress-Code) links to the city’s address registry\nOther fields to investigate: L_NUTZUNG (land use), L_BAUTYP (building type), NS (unknown)\nIssue #14 notes 58k vs 220k building count discrepancy — this warrants investigation\n\n\n\n\n\nIf zone coverage verification confirms 416 zones is the full dataset, buffer analysis is complete\nThe 25m buffer resolves ~6,000 additional buildings — use this as a “near-zone” category in the dashboard\n\n\n\n\n\n\nDistance-to-zone-boundary tiers, computable from existing data via one sf::st_distance call:\n\n\n\n\n\n\n\n\n\nTier\nDefinition\nApprox n\nApprox %\n\n\n\n\nA — High (in zone)\nCentroid inside zone polygon AND &gt;5 m from boundary\n~15,000\n26%\n\n\nB — Boundary inside\nCentroid inside zone, ≤5 m from boundary\n~1,200\n2%\n\n\nC — Boundary outside\nCentroid outside, within 25 m of nearest zone\n~6,000\n10%\n\n\nD — Nearby outside\nCentroid outside, 25-500 m from nearest zone\n~29,000\n50%\n\n\nE — Clearly outside\nCentroid outside, &gt;500 m from any zone\n~7,000\n12%\n\n\n\nThis replaces the binary spatial-only-vs-acd-only scheme with a meaningful 5-level confidence axis. No new sources required.\n\n\n\n\n23 districts, sorted by % in zone (focus districts highlighted):\n\n\n\nBEZNR\nArea\nn\n% in zone\n\n\n\n\n01\nInnere Stadt\n1,514\n80.3%\n\n\n20\nBrigittenau (focus)\n1,617\n60.8%\n\n\n05\nMargareten\n2,071\n49.0%\n\n\n06\nMariahilf\n1,405\n43.8%\n\n\n21\nFloridsdorf (focus)\n2,962\n41.7%\n\n\n11\nSimmering\n911\n38.3%\n\n\n22\nDonaustadt\n1,389\n29.0%\n\n\n19\nDöbling\n5,935\n11.7%\n\n\n23\nLiesing\n1,137\n4.1%\n\n\n13\nHietzing\n4,265\n2.6%\n\n\n\nPattern: zones concentrated in the urban core (district 01: 80%) and fall off into the suburbs. Both focus districts (20, 21) are middle-rank with substantial coverage.\nFull table: analysis/stage_0/by_district.csv."
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html#background",
+    "href": "analysis/stage_0/REPORT.html#background",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "The pre-computed joined dataset shows: - agree_in_zone: 16,246 (27.9%) - acd_only: 42,009 (72.1%) - spatial_only: 0 - agree_no_zone: 0\nThe 72.1% acd_only rate means the acd_agreement cross-validation classifies 42,009 buildings as “city says in-zone, spatial join says not”. This Stage 0 investigation tests whether this is a real divergence or a measurement error."
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html#hypothesis-status",
+    "href": "analysis/stage_0/REPORT.html#hypothesis-status",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "Hypothesis: Buildings and zones are in different CRS or have sub-meter offsets causing the centroid join to miss zone polygons.\nExperiment: Both parquet files store geometry as WKT with CRS=31287 (Austria Lambert). The join function enforces CRS parity before proceeding. Buffer sweep shows the number of outside_any_zone buildings drops from 42,009 at 0m to 36,077 at 25m and continues decreasing at 100m+. A pure CRS offset would manifest as a sharp cliff at a specific buffer distance.\nObserved result: The buffer-by-buffer pattern is:\n\n\n\nBuffer (m)\nn in zone\n% of all 58,255\nΔ vs prev\n\n\n\n\n0\n16,246\n27.9%\n—\n\n\n5\n16,430\n28.2%\n+184\n\n\n25\n22,178\n38.1%\n+5,748\n\n\n100\n35,277\n60.6%\n+13,099\n\n\n500\n51,220\n87.9%\n+15,943\n\n\n\nA 5 m buffer (well inside typical positional precision) adds only 184 buildings — 0.3 percentage points. A pure CRS / boundary precision artifact would manifest as a cliff at a specific buffer; instead we see smooth growth.\nConclusion: FALSIFIED. Boundary precision is not driving the gap. The buildings outside zones are genuinely outside, not edge-precision cases.\n\n\n\n\n\n\nQuantile\nDistance (m)\n\n\n\n\n25%\n45\n\n\n50%\n118\n\n\n75%\n319\n\n\n90%\n828\n\n\n99%\n2,425\n\n\n\n\n\n\nWithin\nCount\n% of 42,009\n\n\n\n\n50 m\n11,554\n27.5%\n\n\n100 m\n19,031\n45.3%\n\n\n250 m\n29,335\n69.8%\n\n\n500 m\n34,977\n83.3%\n\n\n2500 m\n41,649\n99.1%\n\n\n\nAbout a quarter of “outside” buildings are within 45 m of a zone — neighbouring buildings on the wrong side of a zone edge, not boundary-precision cases. Useful for a confidence_tier column based on distance.\n\n\n\n\nHypothesis: The buildings’ ACD field references a different spatial object (e.g., a different version of zone polygons) that we don’t have, explaining the mismatch.\nExperiment: Column overlap analysis between buildings$ACD and all zone identifier fields (PLANNR, ERPLABEL, ID, OBJECTID, GEBID):\n\n\n\n\n\n\n\n\n\nZone field\nString match\nZero-padded numeric match\nn_unique zone values\n\n\n\n\nPLANNR\n0\n0\n27\n\n\nERPLABEL\n0\n0\n416\n\n\nID\n0\n72\n75\n\n\nOBJECTID\n0\n355\n416\n\n\nGEBID\n0\n42\n44\n\n\n\nCritical finding: ACD values are 6-digit zero-padded integers ranging from 1 to 232,762, unique per building (58,255 unique values for 58,255 buildings). Zone OBJECTID range is 63,576–63,991 (only 416 values). The 355 apparent “matches” with zone OBJECTID are numerical coincidences in the zero-padded space, not semantic matches.\nACD is a building registry number (Adress-Code / Gebäudekennzahl), NOT a zone reference. This is confirmed by: 1. Every single building has a unique ACD value (0 duplicates) 2. ACD range (1–232,762) far exceeds the number of zones (416) 3. agree_in_zone buildings: acd_native NEVER matches zone_id (0 of 16,246)\nConclusion: SUPPORTED, but the implication is more fundamental. H2 is correct that ACD references a different object, but that object is not an alternative zone layer — it is the building’s own registry identifier. The acd_agreement logic is based on a category error: it interprets non-empty ACD as “city says this building is in a zone”, but ACD simply means “this building exists in the city registry”. Since all 58,255 buildings have ACD set, the code’s logic classifies ALL buildings as “city says in-zone”, then 42,009 of them as acd_only because our spatial join doesn’t find a zone.\n\n\n\n\nHypothesis: Vienna’s zone polygons are drawn with a deliberate buffer/tolerance, and buildings near-but-outside a zone are considered in-scope by the city.\nExperiment: Buffer sweep from 0m to 500m.\nObserved result (partial): At 5m buffer, acd_only drops by only 184 (from 42,009 to 41,825). At 25m, drops by ~6,000. This rate of change is consistent with genuine proximity effects (buildings near zone boundaries) but cannot account for 42,009 buildings at 0m. Even at 500m buffer (pending), we would not expect to recover all 42,009 since many appear to be in districts with very few zones.\nConclusion: INCONCLUSIVE (partial data). Buffer proximity explains some cases (estimate: 5-15%) but not the bulk. The 97.4% acd_only rate in district 13 strongly suggests the zone layer simply does not cover most of Vienna — many districts have sparse zone coverage. This is not a buffer tolerance issue but a coverage gap.\n\n\n\n\nHypothesis: The ACD field references legal planning document numbers (PLANNR), creating a non-spatial linkage that our geometric join cannot replicate.\nExperiment: PLANNR format is strings like “ERP_Bez03_B_Plan1_v1.0” (22-23 chars). Building ACD values are 6-digit zero-padded numbers. Zero overlap (0 string matches, 0 padded matches).\nConclusion: FALSIFIED. ACD does not reference PLANNR. The formats are completely incompatible."
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html#root-cause-finding",
+    "href": "analysis/stage_0/REPORT.html#root-cause-finding",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "The acd_agreement logic in join_buildings_zones.R contains a category error:\n# Current logic (WRONG):\nacd_says_yes &lt;- !is.na(acd_native_raw) & nzchar(trimws(as.character(acd_native_raw)))\nThis interprets any non-empty ACD value as “city says this building is in a zone”. But the ACD column in GEBAEUDEINFOOGD is a building registry identifier (Adress-Code), not a zone membership flag. All 58,255 buildings have this field populated. The result is that acd_says_yes = TRUE for every building, making acd_agreement = \"acd_only\" for every building that our spatial join classifies as outside_any_zone.\nThe correct interpretation: 72.1% of Vienna buildings are not covered by any ACD energy zone (spatial join result), which is the actual finding. The zone layer covers only specific development areas, not the whole city."
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html#per-district-breakdown",
+    "href": "analysis/stage_0/REPORT.html#per-district-breakdown",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "District\nn_buildings\nn_acd_only\npct_acd_only\n\n\n\n\n13\n4,265\n4,152\n97.4%\n\n\n23\n1,137\n1,090\n95.9%\n\n\n19\n5,935\n5,238\n88.3%\n\n\n18\n3,648\n3,168\n86.8%\n\n\n08\n1,100\n875\n79.5%\n\n\n03\n3,157\n2,453\n77.7%\n\n\n14\n3,020\n2,346\n77.7%\n\n\n…\n…\n…\n…\n\n\n20 (Brigittenau)\n1,617\n634\n39.2%\n\n\n21 (Floridsdorf)\n2,962\n1,728\n58.3%\n\n\n\nDistricts 20 and 21 have below-average acd_only rates, confirming they have better zone coverage. District 13 (Hietzing) at 97.4% is almost entirely outside zones."
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html#sample-acd_only-buildings",
+    "href": "analysis/stage_0/REPORT.html#sample-acd_only-buildings",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "5 randomly-selected buildings (seed=42) from the acd_only pool:\n\n\n\n\n\n\n\n\n\n\nOBJECTID\nAddress\nDistrict\nACD\nLink status\n\n\n\n\n169414041\nPraterstraße 68\n02\n002830\noutside_any_zone\n\n\n169379043\nSchützengasse 1\n03\n005797\noutside_any_zone\n\n\n169389949\nBenedikt-Schellinger-Gasse 15\n15\n045582\noutside_any_zone\n\n\n169377507\nObere Donaustraße 97-99\n02\n001799\noutside_any_zone\n\n\n169417763\nSpittelberggasse 13\n07\n102621\noutside_any_zone\n\n\n\nAll 5 have link_status = outside_any_zone — their centroids fall outside every zone polygon. Their ACD values are 5-6 digit building registry codes. See sample_acd_only.md for Google Maps links."
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html#conclusions",
+    "href": "analysis/stage_0/REPORT.html#conclusions",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "The 72.1% “acd_only” rate is not a data quality problem — it is a real finding. The ACD zone layer covers only ~28% of Vienna buildings, and the other 72% genuinely have no ACD zone designation.\nThe acd_agreement metric name is misleading. The ACD field in GEBAEUDEINFOOGD is a building registry number (Adress-Code), not a zone membership indicator. The cross-validation as currently coded tests nothing meaningful.\nThe correct metric is simply link_status == \"outside_any_zone\" (42,009 buildings, 72.1%). These buildings are not in any ACD energy planning zone."
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html#recommendations-for-stage-1",
+    "href": "analysis/stage_0/REPORT.html#recommendations-for-stage-1",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "Remove or redefine acd_agreement in join_buildings_zones.R\nThe meaningful metric is link_status alone\nIf a true city-vs-spatial cross-validation is desired, find the actual zone-membership field (not ACD)\n\n\n\n\n\nFetch the WFS metadata for ENERGIERAUMPLANDOGD to confirm all 416 zones are the complete dataset\nCheck if there are other zone layers (e.g., draft plans, superseded plans)\nConsult WEBLINK_VO URLs in zone records for official documentation\n\n\n\n\n\nThe ACD field (Adress-Code) links to the city’s address registry\nOther fields to investigate: L_NUTZUNG (land use), L_BAUTYP (building type), NS (unknown)\nIssue #14 notes 58k vs 220k building count discrepancy — this warrants investigation\n\n\n\n\n\nIf zone coverage verification confirms 416 zones is the full dataset, buffer analysis is complete\nThe 25m buffer resolves ~6,000 additional buildings — use this as a “near-zone” category in the dashboard"
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html#proposed-confidence_tier-factor-replaces-broken-acd_agreement",
+    "href": "analysis/stage_0/REPORT.html#proposed-confidence_tier-factor-replaces-broken-acd_agreement",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "Distance-to-zone-boundary tiers, computable from existing data via one sf::st_distance call:\n\n\n\n\n\n\n\n\n\nTier\nDefinition\nApprox n\nApprox %\n\n\n\n\nA — High (in zone)\nCentroid inside zone polygon AND &gt;5 m from boundary\n~15,000\n26%\n\n\nB — Boundary inside\nCentroid inside zone, ≤5 m from boundary\n~1,200\n2%\n\n\nC — Boundary outside\nCentroid outside, within 25 m of nearest zone\n~6,000\n10%\n\n\nD — Nearby outside\nCentroid outside, 25-500 m from nearest zone\n~29,000\n50%\n\n\nE — Clearly outside\nCentroid outside, &gt;500 m from any zone\n~7,000\n12%\n\n\n\nThis replaces the binary spatial-only-vs-acd-only scheme with a meaningful 5-level confidence axis. No new sources required."
+  },
+  {
+    "objectID": "analysis/stage_0/REPORT.html#per-district-stratification-full-result",
+    "href": "analysis/stage_0/REPORT.html#per-district-stratification-full-result",
+    "title": "Stage 0 Cross-Validation Sanity Check — Investigation Report",
+    "section": "",
+    "text": "23 districts, sorted by % in zone (focus districts highlighted):\n\n\n\nBEZNR\nArea\nn\n% in zone\n\n\n\n\n01\nInnere Stadt\n1,514\n80.3%\n\n\n20\nBrigittenau (focus)\n1,617\n60.8%\n\n\n05\nMargareten\n2,071\n49.0%\n\n\n06\nMariahilf\n1,405\n43.8%\n\n\n21\nFloridsdorf (focus)\n2,962\n41.7%\n\n\n11\nSimmering\n911\n38.3%\n\n\n22\nDonaustadt\n1,389\n29.0%\n\n\n19\nDöbling\n5,935\n11.7%\n\n\n23\nLiesing\n1,137\n4.1%\n\n\n13\nHietzing\n4,265\n2.6%\n\n\n\nPattern: zones concentrated in the urban core (district 01: 80%) and fall off into the suburbs. Both focus districts (20, 21) are middle-rank with substantial coverage.\nFull table: analysis/stage_0/by_district.csv."
+  },
+  {
+    "objectID": "analysis/rationale/DECISIONS.html",
+    "href": "analysis/rationale/DECISIONS.html",
+    "title": "Decision Log",
+    "section": "",
+    "text": "Category: other (reproducibility) Decided: Pin all data fetches to a single SNAPSHOT_DATE constant in R/snapshot.R. Alternatives considered: 1. Live WFS pulls every render — rejected: not reproducible, breaks if WFS down 2. Date as targets parameter — rejected: overengineered for POC Rationale: Single source of truth. To refresh, bump constant + re-run fetch. Decided BEFORE seeing: any data Decided AFTER seeing: prompt.md description of WFS sources\n\n\n\nCategory: model (analytical method) Decided: Join buildings to zones via st_within(st_centroid(building), zone) Alternatives considered: 1. st_intersects on full footprint — rejected: ambiguous when straddling 2. Area-weighted overlap — deferred: more correct but slower, beyond POC scope 3. st_covers — rejected: too strict, excludes buildings touching zone edge Rationale: Centroid join is unambiguous (every building gets ≤1 primary zone) and ~10x faster than area-weighted. Straddle cases flagged via separate overlap_fraction column for the diagnostic tabset. Decided BEFORE seeing: any data Decided AFTER seeing: the documented edge cases (straddle, multi-zone)\n\n\n\nCategory: model (output schema) Decided: Add factor column link_status with 6 levels covering every missing-link case. Rationale: Drives the dashboard tabsets directly. Distinguishes “outside any zone” (legitimate) from data errors (invalid_geometry). One column, one source of truth. Decided BEFORE seeing: any data\n\n\n\nCategory: other (data source selection) Decided: Query OpenStreetMap via Overpass API (osmdata R package + httr2 fallback) to count Vienna buildings independently of OGD, then compare to GEBAEUDEINFOOGD totals. Alternatives considered: 1. BEV/GWR (Austrian building register) — deferred per Stage 0 recommendation; requires data agreement, not freely queryable. 2. GEBAEUDETYPOGD (438k features) — rejected for this analysis; lacks rich attributes (EY, HJ, GF) needed for energy-zone linkage. Using it as a cross-check would only answer “how many types” not “how many buildings with attributes”. 3. Vienna Stadtplan WMS — rejected; raster service, not suitable for counting features. 4. Scraping MA37/MA41 permit database — rejected; no public API, legal uncertainty. Rationale: OSM is free, no authentication, global coverage, and independently community-maintained. osmdata provides a clean R interface. City-wide count (307,715) answers issue #14 definitively without requiring data agreements. Decided BEFORE seeing: OSM totals Decided AFTER seeing: Stage 0 finding that OGD data is a curated subset\n\n\n\nCategory: model (analytical method) Decided: Use per-district bounding-box Overpass queries for district-level breakdown, not full geometry pull + polygon clip. Alternatives considered: 1. Full geometry pull (osmdata_sf) + st_intersects polygon clip — attempted but Overpass rate-limited on second attempt; first run took 302s for 307k features. Risk of hitting daily quotas. Also requires &gt;1GB RAM for sf operations on 307k polygons. 2. Overpass area-based queries (administrative boundary lookup) — tried; OSM area names for Vienna districts are inconsistent across the dataset, making string matching unreliable. 3. Four-quadrant bbox split + union — would avoid rate limiting but adds complexity. Rationale: Bbox queries are lightweight (count-only, no geometry returned), complete in &lt;90s per district, and don’t risk rate-limiting. The bbox-vs-polygon difference biases outer-district counts upward; this limitation is documented in the report and is acceptable for the purpose of confirming the hypothesis (undercount), not precise measurement. Decided BEFORE seeing: per-district results Decided AFTER seeing: Overpass rate-limit failure on second full-geometry pull"
+  },
+  {
+    "objectID": "analysis/rationale/DECISIONS.html#snapshot-pinning-by-date",
+    "href": "analysis/rationale/DECISIONS.html#snapshot-pinning-by-date",
+    "title": "Decision Log",
+    "section": "",
+    "text": "Category: other (reproducibility) Decided: Pin all data fetches to a single SNAPSHOT_DATE constant in R/snapshot.R. Alternatives considered: 1. Live WFS pulls every render — rejected: not reproducible, breaks if WFS down 2. Date as targets parameter — rejected: overengineered for POC Rationale: Single source of truth. To refresh, bump constant + re-run fetch. Decided BEFORE seeing: any data Decided AFTER seeing: prompt.md description of WFS sources"
+  },
+  {
+    "objectID": "analysis/rationale/DECISIONS.html#centroid-based-spatial-join-not-area-weighted",
+    "href": "analysis/rationale/DECISIONS.html#centroid-based-spatial-join-not-area-weighted",
+    "title": "Decision Log",
+    "section": "",
+    "text": "Category: model (analytical method) Decided: Join buildings to zones via st_within(st_centroid(building), zone) Alternatives considered: 1. st_intersects on full footprint — rejected: ambiguous when straddling 2. Area-weighted overlap — deferred: more correct but slower, beyond POC scope 3. st_covers — rejected: too strict, excludes buildings touching zone edge Rationale: Centroid join is unambiguous (every building gets ≤1 primary zone) and ~10x faster than area-weighted. Straddle cases flagged via separate overlap_fraction column for the diagnostic tabset. Decided BEFORE seeing: any data Decided AFTER seeing: the documented edge cases (straddle, multi-zone)"
+  },
+  {
+    "objectID": "analysis/rationale/DECISIONS.html#link_status-as-diagnostic-enum",
+    "href": "analysis/rationale/DECISIONS.html#link_status-as-diagnostic-enum",
+    "title": "Decision Log",
+    "section": "",
+    "text": "Category: model (output schema) Decided: Add factor column link_status with 6 levels covering every missing-link case. Rationale: Drives the dashboard tabsets directly. Distinguishes “outside any zone” (legitimate) from data errors (invalid_geometry). One column, one source of truth. Decided BEFORE seeing: any data"
+  },
+  {
+    "objectID": "analysis/rationale/DECISIONS.html#stage-2-use-osm-as-independent-coverage-baseline",
+    "href": "analysis/rationale/DECISIONS.html#stage-2-use-osm-as-independent-coverage-baseline",
+    "title": "Decision Log",
+    "section": "",
+    "text": "Category: other (data source selection) Decided: Query OpenStreetMap via Overpass API (osmdata R package + httr2 fallback) to count Vienna buildings independently of OGD, then compare to GEBAEUDEINFOOGD totals. Alternatives considered: 1. BEV/GWR (Austrian building register) — deferred per Stage 0 recommendation; requires data agreement, not freely queryable. 2. GEBAEUDETYPOGD (438k features) — rejected for this analysis; lacks rich attributes (EY, HJ, GF) needed for energy-zone linkage. Using it as a cross-check would only answer “how many types” not “how many buildings with attributes”. 3. Vienna Stadtplan WMS — rejected; raster service, not suitable for counting features. 4. Scraping MA37/MA41 permit database — rejected; no public API, legal uncertainty. Rationale: OSM is free, no authentication, global coverage, and independently community-maintained. osmdata provides a clean R interface. City-wide count (307,715) answers issue #14 definitively without requiring data agreements. Decided BEFORE seeing: OSM totals Decided AFTER seeing: Stage 0 finding that OGD data is a curated subset"
+  },
+  {
+    "objectID": "analysis/rationale/DECISIONS.html#stage-2-bbox-based-per-district-overpass-count-not-polygon-clip",
+    "href": "analysis/rationale/DECISIONS.html#stage-2-bbox-based-per-district-overpass-count-not-polygon-clip",
+    "title": "Decision Log",
+    "section": "",
+    "text": "Category: model (analytical method) Decided: Use per-district bounding-box Overpass queries for district-level breakdown, not full geometry pull + polygon clip. Alternatives considered: 1. Full geometry pull (osmdata_sf) + st_intersects polygon clip — attempted but Overpass rate-limited on second attempt; first run took 302s for 307k features. Risk of hitting daily quotas. Also requires &gt;1GB RAM for sf operations on 307k polygons. 2. Overpass area-based queries (administrative boundary lookup) — tried; OSM area names for Vienna districts are inconsistent across the dataset, making string matching unreliable. 3. Four-quadrant bbox split + union — would avoid rate limiting but adds complexity. Rationale: Bbox queries are lightweight (count-only, no geometry returned), complete in &lt;90s per district, and don’t risk rate-limiting. The bbox-vs-polygon difference biases outer-district counts upward; this limitation is documented in the report and is acceptable for the purpose of confirming the hypothesis (undercount), not precise measurement. Decided BEFORE seeing: per-district results Decided AFTER seeing: Overpass rate-limit failure on second full-geometry pull"
+  },
+  {
+    "objectID": "STUBS.html",
+    "href": "STUBS.html",
+    "title": "Shared Conventions (POC)",
+    "section": "",
+    "text": "Pin all parallel work to these constants so files compose without rework.\n\n\n\nPackage name: acd\nTitle: “Vienna Area Climate Design (ACD) Building-Zone Linkage”\nGitHub: JohnGavin/acd_area_climate_design (public)\nAuthor: John Gavin john.b.gavin@gmail.com\nLicense: MIT\nR version: 4.5.3\nSnapshot date: 2026-05-01 (constant in R/snapshot.R: SNAPSHOT_DATE &lt;- \"2026-05-01\")\n\n\n\n\n\nBase URL: https://data.wien.gv.at/daten/geo\nService: WFS 2.0\nLayer A — Zones: ogdwien:ENERGIERAUMPLANOGD (verified 2026-05-01 via GetCapabilities)\nLayer B — Buildings: ogdwien:GEBAEUDEINFOOGD (verified 2026-05-01 via GetCapabilities)\nNative CRS: EPSG:31256 (MGI / Austria GK East)\nWorking CRS: EPSG:31287 (MGI / Austria Lambert) for area/distance ops\nDisplay CRS: EPSG:4326 (WGS84) for leaflet\n\n\n\n\n\n\n\n\n\n\n\nPath\nContents\n\n\n\n\nR/snapshot.R\nSNAPSHOT_DATE, WFS_BASE_URL, layer names, CRS constants\n\n\nR/fetch_acd_zones.R\nfetch_acd_zones(snapshot_date, max_features = NULL) → sf\n\n\nR/fetch_buildings.R\nfetch_buildings(snapshot_date, max_features = NULL, bbox = NULL) → sf\n\n\nR/join_buildings_zones.R\njoin_buildings_zones(buildings, zones) → sf with link_status col\n\n\nR/missing_data_cases.R\nhelpers per missing-link case (see below)\n\n\ndata-raw/zones_&lt;date&gt;.geojson\nraw WFS download, gitignored\n\n\ndata-raw/buildings_&lt;date&gt;.geojson\nraw WFS download, gitignored\n\n\ninst/extdata/zones_&lt;date&gt;.parquet\ncommitted snapshot, ~5 MB\n\n\ninst/extdata/buildings_&lt;date&gt;.parquet\ncommitted snapshot, ~10-20 MB\n\n\ninst/extdata/joined_&lt;date&gt;.parquet\ncommitted snapshot, ~20-30 MB\n\n\nvignettes/articles/dashboard.qmd\n6-page Quarto dashboard\n\n\nanalysis/rationale/DECISIONS.md\nforking-paths log\n\n\ntests/testthat/test-join.R\njoin correctness tests\n\n\n\n\n\n\n\n\nOBJECTID, ID, ERPLABEL, BEZNR (district number), GEBID (building ID — pre-linked!), FL_ERP (zone area), PLANNR, VERSION, BEARB_DATUM (date last edited), WEBLINK_PD, WEBLINK_VO (legal document URL), SHAPE.\nNo native ERPTYP or ERPRECHTSTAT — zone type / legal status must be inferred from ERPLABEL parsing or by following WEBLINK_VO.\n\n\n\nOBJECTID, IDENT_1/2/3 (composite ID), ACD (already populated — possibly THE answer column), BAUJAHR (year built), BEZ (district), BEZNR is missing — district name in BEZ, GESCH_ANZ (number of stories), STRNAML+VONA+VONN / BISA+BISN (street + number range = address), STRCD (street code), HA_NAME (Hauptanschrift name), L_BAUJ / L_BAUTYP / L_NUTZUNG (use codes), ARCHITEKT, BASIS_INV, CONSCR_NR, ORIG_DACH/FASS/FENSTER/KERN/PARZ (originality flags), PR_MA19, STGA/STGN, NS, SHAPE.\nNo HOEHE (height) field — was assumed, not present. Using GESCH_ANZ (story count) as height proxy.\n\n\n\n\n\n\n\n\n\n\n\n\n\nColumn\nType\nSource\nNotes\n\n\n\n\nbuilding_id\nchr\nOBJECTID from GEBAEUDEINFOOGD\nunique key\n\n\nbuilding_geom\ngeom\nbuilding footprint (multipolygon)\nEPSG:31287\n\n\nacd_native\nchr\nACD from GEBAEUDEINFOOGD\npre-linked classification — ground truth\n\n\ndistrict\nchr\nBEZ from GEBAEUDEINFOOGD\nVienna 23 districts\n\n\nyear_built\nint\nBAUJAHR\n\n\n\nn_stories\nint\nGESCH_ANZ\nheight proxy (no native HOEHE)\n\n\naddress\nchr\nderived from STRNAML + VONA/VONN\ncomposed\n\n\nzone_id\nchr\nERPLABEL from ENERGIERAUMPLANOGD\nNA if spatial join misses\n\n\nzone_area_ha\ndbl\nFL_ERP / 10000\nfrom zones\n\n\nzone_district\nint\nBEZNR\nfrom zones\n\n\nzone_pre_linked_gebid\nchr\nGEBID from ENERGIERAUMPLANOGD\nzone’s claim about which building\n\n\nlink_status\nfactor\none of: in_zone / outside_any_zone / straddles_boundary / multiple_zones / orphan_zone / invalid_geometry\nthe diagnostic enum\n\n\nn_overlapping_zones\nint\n0 if outside, ≥1 inside\n\n\n\noverlap_fraction\ndbl\nproportion of footprint area inside zone (0..1)\nfor straddle detection\n\n\nacd_agreement\nfactor\n“spatial=acd_native” / “mismatch” / “spatial_only” / “acd_only” / “neither”\nNEW: cross-validation of pre-linked ACD vs spatial join\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nvalue\nmeaning\ndashboard tab\n\n\n\n\nin_zone\nbuilding entirely within one zone\n“Clean join”\n\n\noutside_any_zone\ncentroid outside all zones — legitimate, not error\n“Outside any zone”\n\n\nstraddles_boundary\noverlap fraction in (0.05, 0.95)\n“Straddles boundary”\n\n\nmultiple_zones\nn_overlapping_zones &gt; 1\n“Multiple zones”\n\n\norphan_zone\n(zones-side) zone with 0 buildings\n“Orphan zones”\n\n\ninvalid_geometry\nst_is_valid == FALSE\n“Invalid geometry”\n\n\n\n\n\n\n\nFirst fetch: max_features = 100 for zones, max_features = 500 for buildings (smoke test)\nFull fetch: max_features = NULL — all of Vienna (run only if smoke test passes)\nDistricts of focus (later, not POC): TBD — defer\n\n\n\n\n\nUse gert for git operations from R, gh CLI from bash\nUse git -C &lt;path&gt; — NEVER cd &lt;path&gt; && git ... (see global rule git-no-compound-cd)\nRun R via nix-shell &lt;path&gt;/default.nix --run \"Rscript -e ...\" (project-specific shell)\nAll prose values in vignette use embedded r expr (rule dynamic-prose-values)\nApply analysis-rationale-logging for any analytical choice"
+  },
+  {
+    "objectID": "STUBS.html#identity",
+    "href": "STUBS.html#identity",
+    "title": "Shared Conventions (POC)",
+    "section": "",
+    "text": "Package name: acd\nTitle: “Vienna Area Climate Design (ACD) Building-Zone Linkage”\nGitHub: JohnGavin/acd_area_climate_design (public)\nAuthor: John Gavin john.b.gavin@gmail.com\nLicense: MIT\nR version: 4.5.3\nSnapshot date: 2026-05-01 (constant in R/snapshot.R: SNAPSHOT_DATE &lt;- \"2026-05-01\")"
+  },
+  {
+    "objectID": "STUBS.html#data-sources-wfs",
+    "href": "STUBS.html#data-sources-wfs",
+    "title": "Shared Conventions (POC)",
+    "section": "",
+    "text": "Base URL: https://data.wien.gv.at/daten/geo\nService: WFS 2.0\nLayer A — Zones: ogdwien:ENERGIERAUMPLANOGD (verified 2026-05-01 via GetCapabilities)\nLayer B — Buildings: ogdwien:GEBAEUDEINFOOGD (verified 2026-05-01 via GetCapabilities)\nNative CRS: EPSG:31256 (MGI / Austria GK East)\nWorking CRS: EPSG:31287 (MGI / Austria Lambert) for area/distance ops\nDisplay CRS: EPSG:4326 (WGS84) for leaflet"
+  },
+  {
+    "objectID": "STUBS.html#file-paths",
+    "href": "STUBS.html#file-paths",
+    "title": "Shared Conventions (POC)",
+    "section": "",
+    "text": "Path\nContents\n\n\n\n\nR/snapshot.R\nSNAPSHOT_DATE, WFS_BASE_URL, layer names, CRS constants\n\n\nR/fetch_acd_zones.R\nfetch_acd_zones(snapshot_date, max_features = NULL) → sf\n\n\nR/fetch_buildings.R\nfetch_buildings(snapshot_date, max_features = NULL, bbox = NULL) → sf\n\n\nR/join_buildings_zones.R\njoin_buildings_zones(buildings, zones) → sf with link_status col\n\n\nR/missing_data_cases.R\nhelpers per missing-link case (see below)\n\n\ndata-raw/zones_&lt;date&gt;.geojson\nraw WFS download, gitignored\n\n\ndata-raw/buildings_&lt;date&gt;.geojson\nraw WFS download, gitignored\n\n\ninst/extdata/zones_&lt;date&gt;.parquet\ncommitted snapshot, ~5 MB\n\n\ninst/extdata/buildings_&lt;date&gt;.parquet\ncommitted snapshot, ~10-20 MB\n\n\ninst/extdata/joined_&lt;date&gt;.parquet\ncommitted snapshot, ~20-30 MB\n\n\nvignettes/articles/dashboard.qmd\n6-page Quarto dashboard\n\n\nanalysis/rationale/DECISIONS.md\nforking-paths log\n\n\ntests/testthat/test-join.R\njoin correctness tests"
+  },
+  {
+    "objectID": "STUBS.html#real-wfs-schemas-verified-2026-05-01-via-describefeaturetype",
+    "href": "STUBS.html#real-wfs-schemas-verified-2026-05-01-via-describefeaturetype",
+    "title": "Shared Conventions (POC)",
+    "section": "",
+    "text": "OBJECTID, ID, ERPLABEL, BEZNR (district number), GEBID (building ID — pre-linked!), FL_ERP (zone area), PLANNR, VERSION, BEARB_DATUM (date last edited), WEBLINK_PD, WEBLINK_VO (legal document URL), SHAPE.\nNo native ERPTYP or ERPRECHTSTAT — zone type / legal status must be inferred from ERPLABEL parsing or by following WEBLINK_VO.\n\n\n\nOBJECTID, IDENT_1/2/3 (composite ID), ACD (already populated — possibly THE answer column), BAUJAHR (year built), BEZ (district), BEZNR is missing — district name in BEZ, GESCH_ANZ (number of stories), STRNAML+VONA+VONN / BISA+BISN (street + number range = address), STRCD (street code), HA_NAME (Hauptanschrift name), L_BAUJ / L_BAUTYP / L_NUTZUNG (use codes), ARCHITEKT, BASIS_INV, CONSCR_NR, ORIG_DACH/FASS/FENSTER/KERN/PARZ (originality flags), PR_MA19, STGA/STGN, NS, SHAPE.\nNo HOEHE (height) field — was assumed, not present. Using GESCH_ANZ (story count) as height proxy."
+  },
+  {
+    "objectID": "STUBS.html#joined-schema-rjoin_buildings_zones.r-output",
+    "href": "STUBS.html#joined-schema-rjoin_buildings_zones.r-output",
+    "title": "Shared Conventions (POC)",
+    "section": "",
+    "text": "Column\nType\nSource\nNotes\n\n\n\n\nbuilding_id\nchr\nOBJECTID from GEBAEUDEINFOOGD\nunique key\n\n\nbuilding_geom\ngeom\nbuilding footprint (multipolygon)\nEPSG:31287\n\n\nacd_native\nchr\nACD from GEBAEUDEINFOOGD\npre-linked classification — ground truth\n\n\ndistrict\nchr\nBEZ from GEBAEUDEINFOOGD\nVienna 23 districts\n\n\nyear_built\nint\nBAUJAHR\n\n\n\nn_stories\nint\nGESCH_ANZ\nheight proxy (no native HOEHE)\n\n\naddress\nchr\nderived from STRNAML + VONA/VONN\ncomposed\n\n\nzone_id\nchr\nERPLABEL from ENERGIERAUMPLANOGD\nNA if spatial join misses\n\n\nzone_area_ha\ndbl\nFL_ERP / 10000\nfrom zones\n\n\nzone_district\nint\nBEZNR\nfrom zones\n\n\nzone_pre_linked_gebid\nchr\nGEBID from ENERGIERAUMPLANOGD\nzone’s claim about which building\n\n\nlink_status\nfactor\none of: in_zone / outside_any_zone / straddles_boundary / multiple_zones / orphan_zone / invalid_geometry\nthe diagnostic enum\n\n\nn_overlapping_zones\nint\n0 if outside, ≥1 inside\n\n\n\noverlap_fraction\ndbl\nproportion of footprint area inside zone (0..1)\nfor straddle detection\n\n\nacd_agreement\nfactor\n“spatial=acd_native” / “mismatch” / “spatial_only” / “acd_only” / “neither”\nNEW: cross-validation of pre-linked ACD vs spatial join"
+  },
+  {
+    "objectID": "STUBS.html#link_status-enum-drives-the-dashboard-tabsets",
+    "href": "STUBS.html#link_status-enum-drives-the-dashboard-tabsets",
+    "title": "Shared Conventions (POC)",
+    "section": "",
+    "text": "value\nmeaning\ndashboard tab\n\n\n\n\nin_zone\nbuilding entirely within one zone\n“Clean join”\n\n\noutside_any_zone\ncentroid outside all zones — legitimate, not error\n“Outside any zone”\n\n\nstraddles_boundary\noverlap fraction in (0.05, 0.95)\n“Straddles boundary”\n\n\nmultiple_zones\nn_overlapping_zones &gt; 1\n“Multiple zones”\n\n\norphan_zone\n(zones-side) zone with 0 buildings\n“Orphan zones”\n\n\ninvalid_geometry\nst_is_valid == FALSE\n“Invalid geometry”"
+  },
+  {
+    "objectID": "STUBS.html#poc-sample-strategy",
+    "href": "STUBS.html#poc-sample-strategy",
+    "title": "Shared Conventions (POC)",
+    "section": "",
+    "text": "First fetch: max_features = 100 for zones, max_features = 500 for buildings (smoke test)\nFull fetch: max_features = NULL — all of Vienna (run only if smoke test passes)\nDistricts of focus (later, not POC): TBD — defer"
+  },
+  {
+    "objectID": "STUBS.html#conventions",
+    "href": "STUBS.html#conventions",
+    "title": "Shared Conventions (POC)",
+    "section": "",
+    "text": "Use gert for git operations from R, gh CLI from bash\nUse git -C &lt;path&gt; — NEVER cd &lt;path&gt; && git ... (see global rule git-no-compound-cd)\nRun R via nix-shell &lt;path&gt;/default.nix --run \"Rscript -e ...\" (project-specific shell)\nAll prose values in vignette use embedded r expr (rule dynamic-prose-values)\nApply analysis-rationale-logging for any analytical choice"
+  },
+  {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "acd: Vienna Area Climate Design",
+    "section": "",
+    "text": "The acd R package implements a reproducible spatial linkage of Vienna’s building inventory to its Area Climate Design (ACD) energy planning zones.\nData snapshot: 2026-05-01\n\n\nVienna’s Energieraumplanung (Energy Area Planning) designates zones where specific heating and energy rules apply:\n\n\n\n\n\n\n\nZone type\nRule example\n\n\n\n\nDistrict heating mandatory\nBuildings must connect to the municipal heat network\n\n\nHeat-pump required\nNo fossil-fuel heating installations permitted\n\n\nFossil fuel banned\nExisting fossil-fuel systems must be retired\n\n\n\n\n\n\nWith approximately 220,000 buildings and dozens of ACD zones, the spatial join is not trivial. Buildings may:\n\nFall cleanly inside a single zone (the ideal case)\nLie entirely outside any zone (legitimate — no ACD rule applies)\nStraddle a zone boundary (ambiguous legal applicability)\nFall under multiple overlapping zones simultaneously\nRepresent zones with no buildings inside (orphan polygons)\nHave invalid geometry from upstream data errors\n\nSee the Dashboard for interactive exploration of all six linkage cases."
+  },
+  {
+    "objectID": "index.html#overview",
+    "href": "index.html#overview",
+    "title": "acd: Vienna Area Climate Design",
+    "section": "",
+    "text": "The acd R package implements a reproducible spatial linkage of Vienna’s building inventory to its Area Climate Design (ACD) energy planning zones.\nData snapshot: 2026-05-01\n\n\nVienna’s Energieraumplanung (Energy Area Planning) designates zones where specific heating and energy rules apply:\n\n\n\n\n\n\n\nZone type\nRule example\n\n\n\n\nDistrict heating mandatory\nBuildings must connect to the municipal heat network\n\n\nHeat-pump required\nNo fossil-fuel heating installations permitted\n\n\nFossil fuel banned\nExisting fossil-fuel systems must be retired\n\n\n\n\n\n\nWith approximately 220,000 buildings and dozens of ACD zones, the spatial join is not trivial. Buildings may:\n\nFall cleanly inside a single zone (the ideal case)\nLie entirely outside any zone (legitimate — no ACD rule applies)\nStraddle a zone boundary (ambiguous legal applicability)\nFall under multiple overlapping zones simultaneously\nRepresent zones with no buildings inside (orphan polygons)\nHave invalid geometry from upstream data errors\n\nSee the Dashboard for interactive exploration of all six linkage cases."
+  },
+  {
+    "objectID": "index.html#data-sources",
+    "href": "index.html#data-sources",
+    "title": "acd: Vienna Area Climate Design",
+    "section": "Data Sources",
+    "text": "Data Sources\n\n\n\nSource\nLayer\nProvider\n\n\n\n\nACD Zones\nogdwien:ENERGIEPLANERPOGD\nVienna OGD WFS\n\n\nBuildings\nogdwien:GEBAEUDEOGD\nVienna OGD WFS\n\n\n\nBoth layers are fetched at the pinned snapshot date 2026-05-01 and committed as Parquet files under inst/extdata/ for reproducibility."
+  },
+  {
+    "objectID": "index.html#installation",
+    "href": "index.html#installation",
+    "title": "acd: Vienna Area Climate Design",
+    "section": "Installation",
+    "text": "Installation\n\nRNix\n\n\n# install.packages(\"pak\")\npak::pak(\"JohnGavin/acd_area_climate_design\")\n\n\n# Clone and enter the reproducible nix shell\ngit clone https://github.com/JohnGavin/acd_area_climate_design.git\nnix-shell /path/to/acd_area_climate_design/default.nix\nThe default.nix provides R 4.5.3 with all dependencies (sf, arrow, leaflet, DT, gt, etc.) pinned to a specific nixpkgs snapshot for full reproducibility."
+  },
+  {
+    "objectID": "index.html#links",
+    "href": "index.html#links",
+    "title": "acd: Vienna Area Climate Design",
+    "section": "Links",
+    "text": "Links\n\nGitHub\nDashboard\nVienna Open Government Data\nACD Energy Planning (Stadt Wien)"
+  }
+]
