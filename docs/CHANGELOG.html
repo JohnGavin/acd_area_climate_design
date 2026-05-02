@@ -102,6 +102,10 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link" href="./vignettes/articles/methodology.html"> 
 <span class="menu-text">Methodology</span></a>
   </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./vignettes/articles/lookup.html"> 
+<span class="menu-text">Lookup</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -120,9 +124,15 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#changelog" id="toc-changelog" class="nav-link active" data-scroll-target="#changelog">Changelog</a>
   <ul class="collapse">
-  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">2026-05-01</a>
+  <li><a href="#section" id="toc-section" class="nav-link" data-scroll-target="#section">2026-05-02</a>
   <ul class="collapse">
   <li><a href="#completed" id="toc-completed" class="nav-link" data-scroll-target="#completed">Completed</a></li>
+  <li><a href="#major-findings-logged" id="toc-major-findings-logged" class="nav-link" data-scroll-target="#major-findings-logged">Major findings logged</a></li>
+  <li><a href="#failed-approaches-lessons" id="toc-failed-approaches-lessons" class="nav-link" data-scroll-target="#failed-approaches-lessons">Failed approaches / lessons</a></li>
+  </ul></li>
+  <li><a href="#section-1" id="toc-section-1" class="nav-link" data-scroll-target="#section-1">2026-05-01</a>
+  <ul class="collapse">
+  <li><a href="#completed-1" id="toc-completed-1" class="nav-link" data-scroll-target="#completed-1">Completed</a></li>
   <li><a href="#in-progress" id="toc-in-progress" class="nav-link" data-scroll-target="#in-progress">In Progress</a></li>
   <li><a href="#pending" id="toc-pending" class="nav-link" data-scroll-target="#pending">Pending</a></li>
   <li><a href="#major-findings-live-wfs-schema-verification-2026-05-01" id="toc-major-findings-live-wfs-schema-verification-2026-05-01" class="nav-link" data-scroll-target="#major-findings-live-wfs-schema-verification-2026-05-01">Major findings (live WFS schema verification, 2026-05-01)</a></li>
@@ -145,9 +155,46 @@ ul.task-list li input[type="checkbox"] {
 <section id="changelog" class="level1">
 <h1>Changelog</h1>
 <section id="section" class="level2">
-<h2 class="anchored" data-anchor-id="section">2026-05-01</h2>
+<h2 class="anchored" data-anchor-id="section">2026-05-02</h2>
 <section id="completed" class="level3">
 <h3 class="anchored" data-anchor-id="completed">Completed</h3>
+<ul>
+<li><strong>Phase 4 fully closed.</strong> Stage 0 falsified the cross-validation premise (ACD is a building registry ID, not a zone reference). Stage 1a + 3 + Phase 3 (#21) replaced the broken <code>acd_agreement</code> factor with a distance-based <code>confidence_tier</code> (A/B/C/D/E). Stage 4 (#22) added a per-zone drilldown card with WUKSEA-GIS verification links. Stage 2 (#24) confirmed via OSM that GEBAEUDEINFOOGD covers ~19% of Vienna’s actual building stock (5.3× undercount). Stage 5 (#25) shipped a methodology vignette synthesising the project.</li>
+<li><strong>HTML validation script</strong> (#30, PR #31): <code>acd::validate_deploy()</code> using rvest + httr2 fetches every gh-pages URL and verifies HTTP status, error markers, broken assets, empty leaflets, empty tables, broken hash links. Found and fixed three of its own false-positive bugs during baselining (gregexpr -1 sentinel, relative-URL resolution, prose-pattern overlap). Caught a real fourth bug (case-sensitive marker regex) on first production use.</li>
+<li><strong>ACD ↔︎ address lookup page</strong> (#28, PR #32): standalone Quarto page with crosstalk-wired DT + Leaflet, 4 filters (district, tier, year-built slider, zone), virtual-rendered 58k rows via DT Scroller, CSV download. Site-wide live URL at /vignettes/articles/lookup.html.</li>
+<li><strong>Dashboard fixes (PR #29):</strong> building popups always showing district info (cause: district overlay added LAST, intercepting clicks; fix: pathOptions(interactive=FALSE)). Page 4 tabs with empty leaflets (cause: full Vienna has 0 in some link_status categories; fix: empty-state guards). Hex-code labels showing as cell text (cause: color column carried hex strings as data; fix: blank Color cells, drop the column on Page 6 link-status table).</li>
+<li><strong>Methodology vignette CSS 404 fix:</strong> library(readr) bug (not in nix shell), hardcoded /private/tmp/… path, single-file render hash mismatch. Resolved by full-site <code>quarto render</code> and replacing readr with utils::read.csv. Side effect: full render strips docs/data/*.parquet — restored from HEAD.</li>
+<li><strong>3 global-rule amendments</strong> in <code>~/docs_gh/llm/.claude/rules/</code>:
+<ul>
+<li><code>orchestrator-protocol.md</code> — mandatory background-agent activity-timeout rule (15-min idle → intervene; 30-min hard cap; combined process+filesystem signal). Tightened from earlier 20-min draft after observing actual completion times of 12-13 min.</li>
+<li><code>nix-agent-shell-protocol.md</code> — worktree-isolated rix regenerations must use <code>(cd &lt;worktree&gt; &amp;&amp; ...)</code> subshell or <code>setwd()</code> to avoid overwriting orchestrator’s default.nix (root cause of #23, recurred once during Stage 2).</li>
+</ul></li>
+<li><strong>Live URL set:</strong> index, dashboard, methodology, lookup — all PASS validator.</li>
+</ul>
+</section>
+<section id="major-findings-logged" class="level3">
+<h3 class="anchored" data-anchor-id="major-findings-logged">Major findings logged</h3>
+<ul>
+<li>ACD field is the building’s own Adress-Code / Gebäudekennzahl (<code>analysis/stage_0/REPORT.md</code>), 6-digit zero-padded, range 1–232,762, unique per building.</li>
+<li>27.9% of Vienna buildings (16,246 of 58,255) fall within an Energieraumplan zone.</li>
+<li>GEBAEUDEINFOOGD covers ~19% of OSM’s 307,715 buildings — disclosed via dashboard card and methodology.</li>
+</ul>
+</section>
+<section id="failed-approaches-lessons" class="level3">
+<h3 class="anchored" data-anchor-id="failed-approaches-lessons">Failed approaches / lessons</h3>
+<ul>
+<li>First attempt at Page 3 vertical spacing (PR #21) — claimed done but architecturally constrained by panel-tabset cap. Closed #16 as wontfix.</li>
+<li>Stage 1a+3 dashboard agent (Agent B) stalled mid-task at ~20 min. Orchestrator took over and finished render + commit; agent’s late completion notification arrived after merge with an orphaned commit on a deleted branch. No data loss; rule amended to mandate intervention earlier.</li>
+<li>Stage 2 OSM agent regenerated default.nix in the wrong checkout (rix <code>project_path = "."</code> resolved to orchestrator’s main, not its worktree). Stripped udunits + shellHook patches. Restored from HEAD; rule amended to mandate <code>(cd &lt;worktree&gt; &amp;&amp; ...)</code> subshell pattern.</li>
+<li>Validator’s own initial bugs (gregexpr -1 sentinel, asset URL resolution against site root, prose-pattern overlap) were caught when baselining flagged “all FAIL” with implausibly uniform marker counts. Fixed before any deploy regressed.</li>
+<li>Quarto full-site render strips docs/data/*.parquet — open as #26.</li>
+</ul>
+</section>
+</section>
+<section id="section-1" class="level2">
+<h2 class="anchored" data-anchor-id="section-1">2026-05-01</h2>
+<section id="completed-1" class="level3">
+<h3 class="anchored" data-anchor-id="completed-1">Completed</h3>
 <ul>
 <li>Initialized R package skeleton: DESCRIPTION, LICENSE, .gitignore, .Rprofile, default.R, default.nix</li>
 <li>Templated from <code>/Users/johngavin/docs_gh/proj/data/maps/</code> (preserves udunits overlay + R_LIBS_SITE shellHook)</li>

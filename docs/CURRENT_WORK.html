@@ -102,6 +102,10 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link" href="./vignettes/articles/methodology.html"> 
 <span class="menu-text">Methodology</span></a>
   </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="./vignettes/articles/lookup.html"> 
+<span class="menu-text">Lookup</span></a>
+  </li>  
 </ul>
           </div> <!-- /navcollapse -->
             <div class="quarto-navbar-tools">
@@ -121,21 +125,13 @@ ul.task-list li input[type="checkbox"] {
   <li><a href="#current-work" id="toc-current-work" class="nav-link active" data-scroll-target="#current-work">Current Work</a>
   <ul class="collapse">
   <li><a href="#status-2026-05-02" id="toc-status-2026-05-02" class="nav-link" data-scroll-target="#status-2026-05-02">Status (2026-05-02)</a></li>
-  <li><a href="#live-urls" id="toc-live-urls" class="nav-link" data-scroll-target="#live-urls">Live URLs</a></li>
-  <li><a href="#critical-finding-stage-0-2026-05-02" id="toc-critical-finding-stage-0-2026-05-02" class="nav-link" data-scroll-target="#critical-finding-stage-0-2026-05-02">CRITICAL FINDING (Stage 0, 2026-05-02)</a></li>
-  <li><a href="#active-workstream" id="toc-active-workstream" class="nav-link" data-scroll-target="#active-workstream">Active workstream</a>
-  <ul class="collapse">
-  <li><a href="#stage-1a-stage-3-phase-3-combined-pr" id="toc-stage-1a-stage-3-phase-3-combined-pr" class="nav-link" data-scroll-target="#stage-1a-stage-3-phase-3-combined-pr">Stage 1a + Stage 3 + Phase 3 (combined PR)</a></li>
-  <li><a href="#gebaeudetypogd-swap-deferred" id="toc-gebaeudetypogd-swap-deferred" class="nav-link" data-scroll-target="#gebaeudetypogd-swap-deferred">GEBAEUDETYPOGD swap — DEFERRED</a></li>
-  </ul></li>
-  <li><a href="#open-issues-github" id="toc-open-issues-github" class="nav-link" data-scroll-target="#open-issues-github">Open issues (GitHub)</a></li>
-  <li><a href="#architecture-current-on-main" id="toc-architecture-current-on-main" class="nav-link" data-scroll-target="#architecture-current-on-main">Architecture (current on main)</a></li>
-  <li><a href="#what-worked-cumulative" id="toc-what-worked-cumulative" class="nav-link" data-scroll-target="#what-worked-cumulative">What worked (cumulative)</a></li>
-  <li><a href="#what-failed-lessons" id="toc-what-failed-lessons" class="nav-link" data-scroll-target="#what-failed-lessons">What failed (lessons)</a></li>
-  <li><a href="#decisions-logged-in-analysisrationaledecisions.md" id="toc-decisions-logged-in-analysisrationaledecisions.md" class="nav-link" data-scroll-target="#decisions-logged-in-analysisrationaledecisions.md">Decisions (logged in analysis/rationale/DECISIONS.md)</a></li>
+  <li><a href="#live-urls-all-pass-as-of-2026-05-02" id="toc-live-urls-all-pass-as-of-2026-05-02" class="nav-link" data-scroll-target="#live-urls-all-pass-as-of-2026-05-02">Live URLs (all PASS as of 2026-05-02)</a></li>
+  <li><a href="#what-works" id="toc-what-works" class="nav-link" data-scroll-target="#what-works">What works</a></li>
+  <li><a href="#open-issues" id="toc-open-issues" class="nav-link" data-scroll-target="#open-issues">Open issues</a></li>
+  <li><a href="#architecture-current" id="toc-architecture-current" class="nav-link" data-scroll-target="#architecture-current">Architecture (current)</a></li>
+  <li><a href="#decisions-log-analysisrationaledecisions.md" id="toc-decisions-log-analysisrationaledecisions.md" class="nav-link" data-scroll-target="#decisions-log-analysisrationaledecisions.md">Decisions log (<code>analysis/rationale/DECISIONS.md</code>)</a></li>
   <li><a href="#how-a-new-claude-picks-up" id="toc-how-a-new-claude-picks-up" class="nav-link" data-scroll-target="#how-a-new-claude-picks-up">How a new Claude picks up</a></li>
   <li><a href="#burn-rate-awareness" id="toc-burn-rate-awareness" class="nav-link" data-scroll-target="#burn-rate-awareness">Burn-rate awareness</a></li>
-  <li><a href="#open-user-questions" id="toc-open-user-questions" class="nav-link" data-scroll-target="#open-user-questions">Open user questions</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -150,39 +146,34 @@ ul.task-list li input[type="checkbox"] {
 <h1>Current Work</h1>
 <section id="status-2026-05-02" class="level2">
 <h2 class="anchored" data-anchor-id="status-2026-05-02">Status (2026-05-02)</h2>
-<p><strong>Phase 2 visual rework merged + live.</strong> Stage 0 investigation <strong>falsified the cross-validation premise</strong> — the ACD field is the building’s own registry ID, not a zone reference. Currently combining Stage 1a (districts layer) + Stage 3 (confidence_tier) + Phase 3 (dashboard rework) into a single PR.</p>
+<p><strong>Phase 4 closed.</strong> Dashboard, methodology, lookup pages live and PASS the validator. Open issues: post-render hook (#26) and the Page 3 joined-map empty-rendering investigation (#27).</p>
 </section>
-<section id="live-urls" class="level2">
-<h2 class="anchored" data-anchor-id="live-urls">Live URLs</h2>
+<section id="live-urls-all-pass-as-of-2026-05-02" class="level2">
+<h2 class="anchored" data-anchor-id="live-urls-all-pass-as-of-2026-05-02">Live URLs (all PASS as of 2026-05-02)</h2>
 <ul>
 <li>Site: https://johngavin.github.io/acd_area_climate_design/</li>
 <li>Dashboard: https://johngavin.github.io/acd_area_climate_design/vignettes/articles/dashboard.html</li>
+<li>Methodology: https://johngavin.github.io/acd_area_climate_design/vignettes/articles/methodology.html</li>
+<li><strong>Lookup (new):</strong> https://johngavin.github.io/acd_area_climate_design/vignettes/articles/lookup.html</li>
 <li>Repo: https://github.com/JohnGavin/acd_area_climate_design</li>
 </ul>
 </section>
-<section id="critical-finding-stage-0-2026-05-02" class="level2">
-<h2 class="anchored" data-anchor-id="critical-finding-stage-0-2026-05-02">CRITICAL FINDING (Stage 0, 2026-05-02)</h2>
-<p>The <code>ACD</code> column on buildings is the building’s own registry number (Adress-Code / Gebäudekennzahl), NOT a zone reference. Every building has a unique 6-digit ACD value (range 1 to 232,762). 0 string matches across PLANNR / ERPLABEL / OBJECTID / ID / GEBID.</p>
-<p><strong>The <code>acd_agreement</code> factor we built is a category error.</strong> Levels <code>agree_in_zone</code> (27.9%) and <code>acd_only</code> (72.1%) compare “is in spatial zone” vs “has a registry ID” (universal). The legitimate result is simpler: 27.9% of Vienna buildings fall within an Energieraumplan zone.</p>
-<p><strong>Buffer sweep falsified CRS / boundary precision (H1):</strong> 5m buffer adds only 184 buildings (0.3pp). Buildings outside zones are genuinely outside, not edge cases.</p>
-<p><strong>Replacement design:</strong> distance-based <code>confidence_tier</code> (A/B/C/D/E): - A: inside zone, &gt;5m from boundary (~26%) - B: inside zone, ≤5m from boundary (~2%) - C: outside, ≤25m from zone (~10%) - D: outside, 25-500m from zone (~50%) - E: outside, &gt;500m from zone (~12%)</p>
-<p>Full report: <code>analysis/stage_0/REPORT.md</code> on <code>main</code>.</p>
+<section id="what-works" class="level2">
+<h2 class="anchored" data-anchor-id="what-works">What works</h2>
+<ul>
+<li>Spatial join via <code>acd::join_buildings_zones()</code> with 6-state <code>link_status</code> enum</li>
+<li>Distance-based <code>confidence_tier</code> (A/B/C/D/E) replacing the broken <code>acd_agreement</code> premise</li>
+<li>Districts layer (<code>BEZIRKSGRENZEOGD</code>, 23 polygons) overlaid on every leaflet, focus 20 + 21 in bright yellow</li>
+<li>OSM coverage card on Page 2 (5.3× undercount disclosed)</li>
+<li>Per-zone drilldown card on Page 6 with WUKSEA-GIS verification links</li>
+<li>ACD↔︎address lookup page with crosstalk-wired DT + Leaflet, 58k rows, CSV download</li>
+<li>Dark theme on every leaflet (CartoDB.DarkMatter, link_status palette tuned)</li>
+<li>Stage-2 storage: docs/data/*.parquet served by Pages, accessible via <code>acd::load_acd_data(source = "remote")</code> using <code>duckplyr::read_parquet_duckdb()</code> (no raw SQL)</li>
+<li>Validator: <code>acd::validate_deploy()</code> checks every page on the gh-pages site</li>
+</ul>
 </section>
-<section id="active-workstream" class="level2">
-<h2 class="anchored" data-anchor-id="active-workstream">Active workstream</h2>
-<section id="stage-1a-stage-3-phase-3-combined-pr" class="level3">
-<h3 class="anchored" data-anchor-id="stage-1a-stage-3-phase-3-combined-pr">Stage 1a + Stage 3 + Phase 3 (combined PR)</h3>
-<p>Branch: <code>feat/stage-1a-and-3</code> (worktree at <code>/private/tmp/acd_stage1a_3</code>)</p>
-<p>Two sequential agents on the same branch: 1. <strong>Agent A (in progress):</strong> R-code only — fetch BEZIRKSGRENZEOGD (23 districts), drop acd_agreement, build confidence_tier, refresh joined Parquet, update tests. Sonnet general-purpose. 2. <strong>Agent B (next):</strong> Dashboard rework — replace acd_agreement cards with confidence tier visualizations, drill-downs, district 20+21 highlighting via the new districts layer. Sonnet general-purpose.</p>
-<p>Then orchestrator opens PR + merges.</p>
-</section>
-<section id="gebaeudetypogd-swap-deferred" class="level3">
-<h3 class="anchored" data-anchor-id="gebaeudetypogd-swap-deferred">GEBAEUDETYPOGD swap — DEFERRED</h3>
-<p>Research for #14 found GEBAEUDETYPOGD has 438k buildings (vs 58k for our current GEBAEUDEINFOOGD primary), but lacks BAUJAHR / GESCH_ANZ / BEZ — the rich attributes the dashboard depends on. Decision: keep GEBAEUDEINFOOGD primary, document the coverage limitation. Comment on #14: https://github.com/JohnGavin/acd_area_climate_design/issues/14#issuecomment-4361370443</p>
-</section>
-</section>
-<section id="open-issues-github" class="level2">
-<h2 class="anchored" data-anchor-id="open-issues-github">Open issues (GitHub)</h2>
+<section id="open-issues" class="level2">
+<h2 class="anchored" data-anchor-id="open-issues">Open issues</h2>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 33%">
@@ -198,114 +189,75 @@ ul.task-list li input[type="checkbox"] {
 </thead>
 <tbody>
 <tr class="odd">
-<td>2</td>
-<td>(closed in #11)</td>
-<td>—</td>
-</tr>
-<tr class="even">
 <td>8</td>
-<td>Closeread scrollytelling vignette</td>
-<td>Later — needs full data</td>
-</tr>
-<tr class="odd">
-<td>12</td>
-<td>Dark-theme all interactive maps</td>
-<td>✅ landed in PR #18</td>
+<td>Closeread English vignette</td>
+<td>Open — narrative artifact</td>
 </tr>
 <tr class="even">
-<td>14</td>
-<td>GEBAEUDEINFOOGD coverage (58k vs 220k)</td>
-<td>Researched (see comment); switch deferred</td>
+<td>20</td>
+<td>German scrollytelling</td>
+<td>Open — narrative artifact</td>
 </tr>
 <tr class="odd">
-<td>15</td>
-<td>Cross-validation deep dive</td>
-<td>Stage 0 done (#19); Stages 1a+3 in progress; Stages 1b/2/4/5 open</td>
+<td>26</td>
+<td>Post-render hook for docs/data/</td>
+<td><strong>Next</strong></td>
 </tr>
 <tr class="even">
-<td>16</td>
-<td>Page 3 vertical spacing</td>
-<td>Architecturally constrained (panel-tabset cap); commented</td>
-</tr>
-<tr class="odd">
-<td>17</td>
-<td>Phase 3: drill-downs + confidence categories</td>
-<td>In progress (combined with Stage 1a)</td>
+<td>27</td>
+<td>Empty Page 3 joined map (validator passes — likely a runtime/JS issue)</td>
+<td><strong>Next</strong></td>
 </tr>
 </tbody>
 </table>
 </section>
-<section id="architecture-current-on-main" class="level2">
-<h2 class="anchored" data-anchor-id="architecture-current-on-main">Architecture (current on main)</h2>
+<section id="architecture-current" class="level2">
+<h2 class="anchored" data-anchor-id="architecture-current">Architecture (current)</h2>
 <ul>
-<li><code>R/snapshot.R</code> — constants (SNAPSHOT_DATE, layer names, CRS)</li>
-<li><code>R/fetch_acd_zones.R</code>, <code>R/fetch_buildings.R</code> — paginated WFS fetch</li>
-<li><code>R/join_buildings_zones.R</code> — spatial join + 6-state link_status + acd_agreement (BROKEN, being replaced)</li>
-<li><code>R/missing_data_cases.R</code> — per-case helpers + dark-theme palette</li>
+<li><code>R/snapshot.R</code> — constants</li>
+<li><code>R/fetch_acd_zones.R</code>, <code>R/fetch_buildings.R</code>, <code>R/fetch_districts.R</code> — paginated WFS fetch</li>
+<li><code>R/join_buildings_zones.R</code> — spatial join + link_status + nearest_zone_dist_m + confidence_tier</li>
+<li><code>R/missing_data_cases.R</code> — per-case helpers + dark-theme palette + tier helpers</li>
 <li><code>R/load_data.R</code> — local/remote dispatcher (duckplyr remote)</li>
-<li><code>vignettes/articles/dashboard.qmd</code> — 6 pages, 2.78 MB raw / 11.8 MB gzip on the wire (post-Phase 2)</li>
-<li><code>inst/extdata/{zones,buildings,joined}_2026-05-01.parquet</code> — Vienna snapshots</li>
-<li><code>docs/data/*.parquet</code> — HTTP-serving copies</li>
-<li><code>analysis/stage_0/</code> — Stage 0 investigation outputs</li>
-<li><code>analysis/rationale/DECISIONS.md</code> — forking-paths log</li>
+<li><code>R/validate_deploy.R</code> — gh-pages HTML structural validator</li>
+<li><code>vignettes/articles/dashboard.qmd</code> — 6-page dashboard (~57 MB rendered)</li>
+<li><code>vignettes/articles/methodology.qmd</code> — technical writeup</li>
+<li><code>vignettes/articles/lookup.qmd</code> — DT + crosstalk + Leaflet search page</li>
+<li><code>inst/extdata/{zones,buildings,districts,joined,osm_coverage_by_district,osm_total_summary}.{parquet,csv}</code> — committed snapshots</li>
+<li><code>docs/</code> — full Quarto website (gh-pages root)</li>
+<li><code>analysis/{stage_0,stage_2,qa,rationale}</code> — investigation outputs</li>
 </ul>
 </section>
-<section id="what-worked-cumulative" class="level2">
-<h2 class="anchored" data-anchor-id="what-worked-cumulative">What worked (cumulative)</h2>
-<ul>
-<li>Two-agent parallelism via <code>git worktree add</code> — independent worktrees, clean merges</li>
-<li>WFS pagination via <code>startIndex</code> + <code>count = 5000</code> (12 pages for full buildings)</li>
-<li><code>dplyr::any_of()</code> rename guards survive WFS schema variations</li>
-<li>Burn-rate-aware delegation: every code-execution agent has been sonnet, not opus</li>
-<li>“List all asks before fixing” discipline catches a lot of redundant work</li>
-<li>Stage 0 hypothesis-experiment-conclusion structure pinpointed the broken cross-validation premise quickly</li>
-</ul>
-</section>
-<section id="what-failed-lessons" class="level2">
-<h2 class="anchored" data-anchor-id="what-failed-lessons">What failed (lessons)</h2>
-<ul>
-<li>Initial layer name guesses (<code>ENERGIEPLANERPOGD</code>, <code>GEBAEUDEOGD</code>) — corrected via GetCapabilities</li>
-<li>Initial column assumptions (<code>ERPTYP</code>, <code>ERPRECHTSTAT</code>, <code>HOEHE</code>, <code>ADRESSE</code>) — none exist</li>
-<li>First Page 3 vertical spacing fix — claimed done but architecturally constrained by panel-tabset cap</li>
-<li>“220,000 buildings” estimate — actual GEBAEUDEINFOOGD layer is 58,255 (curated subset)</li>
-<li>Subagent suggesting <code>dplyr::tbl(con, sql("SELECT..."))</code> — flagged by user as raw-SQL violation (rule <code>duckdplyr-not-sql.md</code> line 38-40)</li>
-<li><code>bldg_geom[[i]]</code> (sfg, no CRS) → bug, fixed to <code>bldg_geom[i]</code> (sfc retains CRS)</li>
-<li>Synthetic placeholder fallback hid real issues until full data exposed them</li>
-<li><strong>The cross-validation <code>acd_agreement</code> factor was conceptually broken from the start</strong> — built on the assumption that ACD references zone membership, when it’s actually a building registry ID. Stage 0 caught this. Lesson: validate the SEMANTICS of every field before building logic on it. Schema verification (<code>DescribeFeatureType</code>) tells you what columns exist; it doesn’t tell you what they MEAN.</li>
-<li>Stage 0 agent hit rate limit before completing buffer sweep + REPORT synthesis — orchestrator finished both directly. Lesson: split long agent runs into smaller checkpointed phases.</li>
-</ul>
-</section>
-<section id="decisions-logged-in-analysisrationaledecisions.md" class="level2">
-<h2 class="anchored" data-anchor-id="decisions-logged-in-analysisrationaledecisions.md">Decisions (logged in analysis/rationale/DECISIONS.md)</h2>
+<section id="decisions-log-analysisrationaledecisions.md" class="level2">
+<h2 class="anchored" data-anchor-id="decisions-log-analysisrationaledecisions.md">Decisions log (<code>analysis/rationale/DECISIONS.md</code>)</h2>
 <ol type="1">
 <li>Snapshot pinning by date (2026-05-01)</li>
-<li>Centroid-based spatial join (not area-weighted) for POC</li>
-<li><code>link_status</code> 6-state enum as diagnostic</li>
-<li><del><code>acd_agreement</code> factor</del> — <strong>broken, being replaced with <code>confidence_tier</code></strong> (Stage 0 finding)</li>
-<li>Storage tier 1 = <code>inst/extdata/</code>, tier 2 = <code>docs/data/</code> via duckplyr (no SQL)</li>
-<li>Districts 20 (Brigittenau) + 21 (Floridsdorf) are the focus districts</li>
-<li><strong>2026-05-02:</strong> Distance-based <code>confidence_tier</code> (A/B/C/D/E) replaces <code>acd_agreement</code></li>
-<li><strong>2026-05-02:</strong> Keep GEBAEUDEINFOOGD primary; defer GEBAEUDETYPOGD swap (lacks BAUJAHR/GESCH_ANZ/BEZ)</li>
+<li>Centroid-based spatial join (POC)</li>
+<li><code>link_status</code> 6-state enum</li>
+<li><del><code>acd_agreement</code></del> → <code>confidence_tier</code> (A/B/C/D/E based on distance)</li>
+<li>Storage tier 1 = inst/extdata; tier 2 = docs/data (duckplyr remote)</li>
+<li>Focus districts: 20 (Brigittenau), 21 (Floridsdorf)</li>
+<li>Distance-based tiers replace cross-validation premise (Stage 0 finding)</li>
+<li>Keep GEBAEUDEINFOOGD primary; defer GEBAEUDETYPOGD swap (lacks BAUJAHR/GESCH_ANZ/BEZ); supplement with OSM for coverage stats</li>
+<li>Empty Page 4 tabs render as info messages, not blank tiles</li>
+<li>District overlays are non-interactive (clicks pass through to buildings/zones)</li>
+<li>Color columns in gt tables: blank cell text or dropped (cell_fill provides the visual)</li>
+<li>Validator pattern set: <code>MISSING EVIDENCE</code>, <code>not found in targets</code>, <code>Error in \``,</code>#&gt; NULL<code>(specific shapes; dropped overly-generic</code>Error in<code>and</code>not available`)</li>
 </ol>
 </section>
 <section id="how-a-new-claude-picks-up" class="level2">
 <h2 class="anchored" data-anchor-id="how-a-new-claude-picks-up">How a new Claude picks up</h2>
 <ol type="1">
 <li>Read this file + <code>analysis/stage_0/REPORT.md</code> + CHANGELOG.md + STUBS.md</li>
-<li>Check open issues: <code>gh issue list --repo JohnGavin/acd_area_climate_design --state open</code></li>
-<li>Check open PRs: <code>gh pr list --repo JohnGavin/acd_area_climate_design</code></li>
-<li>Check active worktrees: <code>git -C /Users/johngavin/docs_gh/proj/finance/data/acd_area_climate_design worktree list</code></li>
-<li>If <code>feat/stage-1a-and-3</code> worktree has uncommitted work, that’s where the in-progress R refactor + dashboard rework lives.</li>
-<li>The cross-validation logic is being replaced — anything referring to <code>acd_agreement</code> is legacy. The new contract is <code>confidence_tier</code> (A/B/C/D/E) based on distance to nearest zone boundary.</li>
+<li><code>gh issue list --state open</code> and <code>gh pr list</code></li>
+<li><code>acd::validate_deploy()</code> for current health check</li>
+<li>Branch off main; commit incrementally; PR/merge per usual</li>
+<li>Per the orchestrator-protocol: agents that regenerate default.nix MUST use <code>(cd &lt;worktree&gt; &amp;&amp; ...)</code> subshell — DO NOT clobber the main checkout’s nix file. The udunits + shellHook patches are critical.</li>
 </ol>
 </section>
 <section id="burn-rate-awareness" class="level2">
 <h2 class="anchored" data-anchor-id="burn-rate-awareness">Burn-rate awareness</h2>
-<p>CRITICAL at start of session ($380/$500). All execution agents are sonnet. Opus reserved for orchestration.</p>
-</section>
-<section id="open-user-questions" class="level2">
-<h2 class="anchored" data-anchor-id="open-user-questions">Open user questions</h2>
-<p>(none currently)</p>
+<p>CRITICAL at session start ($380/$500). All execution agents this session were sonnet. Rule amendments captured for the next session.</p>
 
 
 </section>
