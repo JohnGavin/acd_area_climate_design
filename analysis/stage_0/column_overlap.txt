@@ -1,0 +1,27 @@
+ACD vs Zone column overlap analysis
+===================================
+
+Date: 2026-05-01
+Buildings n: 58255
+Zones n: 416
+
+Unique ACD values in buildings: 58255 (all 6-digit zero-padded)
+Sample ACD values: 002375, 035914, 027800, 011446, 011085, 008537, 010818, 006634
+ACD numeric range: NA to NA
+
+Column overlap (how many ACD values appear in each zone field):
+  PLANNR      string_match=    0  zero_padded_match=    0  (n_unique_zone_vals=27)
+  ERPLABEL    string_match=    0  zero_padded_match=    0  (n_unique_zone_vals=416)
+  ID          string_match=    0  zero_padded_match=   72  (n_unique_zone_vals=75)
+  OBJECTID    string_match=    0  zero_padded_match=  355  (n_unique_zone_vals=416)
+  GEBID       string_match=    0  zero_padded_match=   42  (n_unique_zone_vals=44)
+
+Key insight:
+  ACD values are 6-digit zero-padded integers ranging 1 to 232762.
+  Zone OBJECTID range: 63576 to 63991 (no overlap with ACD range).
+  Zone GEBID range: 1 to ~99 (2-digit max, no overlap with ACD pattern).
+  ERPLABEL format is district/seq/version (e.g. 3/004/1) - no numerical overlap.
+  ACD appears to be a building registry number (Adress-Code / Gebaeudekennzahl),
+  NOT a zone reference field. Each building has a unique ACD value.
+  This means the acd_agreement logic is WRONG: interpreting non-empty ACD as
+  city saying the building is in a zone is a category error.

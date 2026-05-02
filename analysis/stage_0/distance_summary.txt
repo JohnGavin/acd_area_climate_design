@@ -1,0 +1,3 @@
+n_outside=42009
+median_dist_m=118
+p90_dist_m=828
