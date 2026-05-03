@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 
-<title>sample_acd_only – acd: Vienna ACD</title>
+<title>upload_match_rate_analysis – acd: Vienna ACD</title>
 <style>
 code{white-space: pre-wrap;}
 span.smallcaps{font-variant: small-caps;}
@@ -130,13 +130,27 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">On this page</h2>
    
   <ul>
-  <li><a href="#sample-acd_only-buildings" id="toc-sample-acd_only-buildings" class="nav-link active" data-scroll-target="#sample-acd_only-buildings">Sample acd_only Buildings</a>
+  <li><a href="#upload-page-match-rate-analysis-2026-05-03" id="toc-upload-page-match-rate-analysis-2026-05-03" class="nav-link active" data-scroll-target="#upload-page-match-rate-analysis-2026-05-03">Upload page match-rate analysis (2026-05-03)</a>
   <ul class="collapse">
-  <li><a href="#building-1" id="toc-building-1" class="nav-link" data-scroll-target="#building-1">Building 1</a></li>
-  <li><a href="#building-2" id="toc-building-2" class="nav-link" data-scroll-target="#building-2">Building 2</a></li>
-  <li><a href="#building-3" id="toc-building-3" class="nav-link" data-scroll-target="#building-3">Building 3</a></li>
-  <li><a href="#building-4" id="toc-building-4" class="nav-link" data-scroll-target="#building-4">Building 4</a></li>
-  <li><a href="#building-5" id="toc-building-5" class="nav-link" data-scroll-target="#building-5">Building 5</a></li>
+  <li><a href="#headline" id="toc-headline" class="nav-link" data-scroll-target="#headline">Headline</a></li>
+  <li><a href="#the-19-gap-378-unmatched-rows" id="toc-the-19-gap-378-unmatched-rows" class="nav-link" data-scroll-target="#the-19-gap-378-unmatched-rows">The 19% gap (378 unmatched rows)</a></li>
+  <li><a href="#the-hidden-correctness-concern-multi-unit-dedup-ambiguity" id="toc-the-hidden-correctness-concern-multi-unit-dedup-ambiguity" class="nav-link" data-scroll-target="#the-hidden-correctness-concern-multi-unit-dedup-ambiguity">The hidden correctness concern: multi-unit dedup ambiguity</a></li>
+  <li><a href="#path-to-94-match-rate" id="toc-path-to-94-match-rate" class="nav-link" data-scroll-target="#path-to-94-match-rate">Path to ~94% match rate</a>
+  <ul class="collapse">
+  <li><a href="#fix-a-fuzzy-house-number-issue-37-part-1" id="toc-fix-a-fuzzy-house-number-issue-37-part-1" class="nav-link" data-scroll-target="#fix-a-fuzzy-house-number-issue-37-part-1">Fix A — Fuzzy house number (Issue #37 part 1)</a></li>
+  <li><a href="#fix-b-composite-street-splitter-issue-37-part-2" id="toc-fix-b-composite-street-splitter-issue-37-part-2" class="nav-link" data-scroll-target="#fix-b-composite-street-splitter-issue-37-part-2">Fix B — Composite-street splitter (Issue #37 part 2)</a></li>
+  <li><a href="#fix-c-rest-api-fallback-issue-tbd" id="toc-fix-c-rest-api-fallback-issue-tbd" class="nav-link" data-scroll-target="#fix-c-rest-api-fallback-issue-tbd">Fix C — REST API fallback (Issue TBD)</a></li>
+  <li><a href="#fix-d-multi-unit-dedup-fix-issue-tbd" id="toc-fix-d-multi-unit-dedup-fix-issue-tbd" class="nav-link" data-scroll-target="#fix-d-multi-unit-dedup-fix-issue-tbd">Fix D — Multi-unit dedup fix (Issue TBD)</a></li>
+  </ul></li>
+  <li><a href="#lessons-learnt" id="toc-lessons-learnt" class="nav-link" data-scroll-target="#lessons-learnt">Lessons learnt</a>
+  <ul class="collapse">
+  <li><a href="#self-consistency-tests-must-respect-duplication" id="toc-self-consistency-tests-must-respect-duplication" class="nav-link" data-scroll-target="#self-consistency-tests-must-respect-duplication">Self-consistency tests must respect duplication</a></li>
+  <li><a href="#match-rate-alone-hides-the-multi-unit-problem" id="toc-match-rate-alone-hides-the-multi-unit-problem" class="nav-link" data-scroll-target="#match-rate-alone-hides-the-multi-unit-problem">“Match rate” alone hides the multi-unit problem</a></li>
+  <li><a href="#the-rest-api-claim-of-94.5-may-include-silent-multi-unit-picks-too" id="toc-the-rest-api-claim-of-94.5-may-include-silent-multi-unit-picks-too" class="nav-link" data-scroll-target="#the-rest-api-claim-of-94.5-may-include-silent-multi-unit-picks-too">The REST API claim of 94.5% may include silent multi-unit picks too</a></li>
+  <li><a href="#a-working-algorithm-hits-the-predicted-floor-exactly" id="toc-a-working-algorithm-hits-the-predicted-floor-exactly" class="nav-link" data-scroll-target="#a-working-algorithm-hits-the-predicted-floor-exactly">A working algorithm hits the predicted floor exactly</a></li>
+  <li><a href="#validator-coverage-is-structural-not-functional" id="toc-validator-coverage-is-structural-not-functional" class="nav-link" data-scroll-target="#validator-coverage-is-structural-not-functional">Validator coverage is structural, not functional</a></li>
+  </ul></li>
+  <li><a href="#files" id="toc-files" class="nav-link" data-scroll-target="#files">Files</a></li>
   </ul></li>
   </ul>
 </nav>
@@ -147,82 +161,285 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<section id="sample-acd_only-buildings" class="level1">
-<h1>Sample acd_only Buildings</h1>
-<p>5 randomly-selected buildings where city ACD field is set but spatial join finds no zone. Selection seed: 42. Total acd_only pool: 42009</p>
-<section id="building-1" class="level2">
-<h2 class="anchored" data-anchor-id="building-1">Building 1</h2>
-<ul>
-<li>building_id (OBJECTID): 169414041</li>
-<li>address: Praterstraße 68</li>
-<li>district: 02</li>
-<li>acd_native (city ACD field): 002830</li>
-<li>year_built: NA</li>
-<li>n_stories: 4</li>
-<li>link_status: outside_any_zone</li>
-<li>zone_id (spatial join result): NA - no zone found</li>
-<li>centroid lon: 16.389132 lat: 48.216576</li>
-<li>Google Maps: https://maps.google.com/?q=48.216576,16.389132</li>
-</ul>
+<section id="upload-page-match-rate-analysis-2026-05-03" class="level1">
+<h1>Upload page match-rate analysis (2026-05-03)</h1>
+<p>Source dataset: user’s <code>ACD TEST V2.xlsx</code>, 2,039 rows (mostly Bezirke 21 Floridsdorf and 22 Donaustadt). Algorithm under test: <code>vignettes/articles/upload.qmd</code> post-#47 (DuckDB-WASM JOIN against <code>ogdwien:ADRESSENOGD</code> 291,823-row Parquet, exact match on (PLZ, street_norm, house_norm)).</p>
+<section id="headline" class="level2">
+<h2 class="anchored" data-anchor-id="headline">Headline</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 42%">
+<col style="width: 57%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Approach</th>
+<th style="text-align: right;">Match rate</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Old spatial join (pre-#28)</td>
+<td style="text-align: right;">7.3% (148/2,039)</td>
+</tr>
+<tr class="even">
+<td><strong>Current upload page (#28 + #47)</strong></td>
+<td style="text-align: right;"><strong>81.5% (1,661/2,039)</strong></td>
+</tr>
+<tr class="odd">
+<td>OGDAddressService REST API (the advice that prompted #28)</td>
+<td style="text-align: right;">~94.5% (claimed externally; not yet replicated)</td>
+</tr>
+</tbody>
+</table>
+<p>The 81.5% reproduces the baseline I measured before the agent implemented #28; the implementation hit the predicted floor exactly. Improvement vs the old spatial pipeline is ~11×.</p>
+<p>The 13-percentage-point gap to the REST API number is closeable in two passes (A+B below) without any external API call.</p>
 </section>
-<section id="building-2" class="level2">
-<h2 class="anchored" data-anchor-id="building-2">Building 2</h2>
-<ul>
-<li>building_id (OBJECTID): 169379043</li>
-<li>address: Schützengasse 1</li>
-<li>district: 03</li>
-<li>acd_native (city ACD field): 005797</li>
-<li>year_built: NA</li>
-<li>n_stories: 4</li>
-<li>link_status: outside_any_zone</li>
-<li>zone_id (spatial join result): NA - no zone found</li>
-<li>centroid lon: 16.386855 lat: 48.194991</li>
-<li>Google Maps: https://maps.google.com/?q=48.194991,16.386855</li>
-</ul>
+<section id="the-19-gap-378-unmatched-rows" class="level2">
+<h2 class="anchored" data-anchor-id="the-19-gap-378-unmatched-rows">The 19% gap (378 unmatched rows)</h2>
+<p>Failure-mode breakdown:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 26%">
+<col style="width: 26%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Failure category</th>
+<th style="text-align: right;">Count</th>
+<th style="text-align: right;">% of unmatched</th>
+<th style="text-align: right;">% of total file</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Street in ADRESSENOGD with same PLZ, but the user’s specific HausNr isn’t a registered address</td>
+<td style="text-align: right;"><strong>246</strong></td>
+<td style="text-align: right;"><strong>65%</strong></td>
+<td style="text-align: right;">12.1%</td>
+</tr>
+<tr class="even">
+<td>Street truly not in ADRESSENOGD at all</td>
+<td style="text-align: right;">131</td>
+<td style="text-align: right;">35%</td>
+<td style="text-align: right;">6.4%</td>
+</tr>
+<tr class="odd">
+<td>‒ of which composite “X/Y” Schrebergarten address</td>
+<td style="text-align: right;">52</td>
+<td style="text-align: right;">14%</td>
+<td style="text-align: right;">2.5%</td>
+</tr>
+<tr class="even">
+<td>‒ of which has “Parz” in HausNr/Stiege</td>
+<td style="text-align: right;">72</td>
+<td style="text-align: right;">19%</td>
+<td style="text-align: right;">3.5%</td>
+</tr>
+<tr class="odd">
+<td>Empty HausNr</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">2%</td>
+<td style="text-align: right;">0.4%</td>
+</tr>
+</tbody>
+</table>
+<p>The 246-row cohort is the dominant problem and is <strong>fuzzy-recoverable</strong>: typically a parcel number, range like “21-25”, or a number we don’t have in ADRESSENOGD even though the street exists. Returning the nearest existing house number with <code>match_quality = "fuzzy"</code> would recover most of these.</p>
+<p>The 131 truly-absent rows are mostly Schrebergärten (garden plots): composite addresses like <code>Achengasse 4/Lavantgasse 1a</code> with <code>Parz 38</code> qualifiers. Composite-street splitting would recover the non-parcel cases (~50 rows). True parcels (~50 rows) genuinely have no ACD because they’re not regular buildings — they should remain <code>unmatched</code> cleanly.</p>
 </section>
-<section id="building-3" class="level2">
-<h2 class="anchored" data-anchor-id="building-3">Building 3</h2>
-<ul>
-<li>building_id (OBJECTID): 169389949</li>
-<li>address: Benedikt-Schellinger-Gasse 15</li>
-<li>district: 15</li>
-<li>acd_native (city ACD field): 045582</li>
-<li>year_built: NA</li>
-<li>n_stories: 4</li>
-<li>link_status: outside_any_zone</li>
-<li>zone_id (spatial join result): NA - no zone found</li>
-<li>centroid lon: 16.329416 lat: 48.197827</li>
-<li>Google Maps: https://maps.google.com/?q=48.197827,16.329416</li>
-</ul>
+<section id="the-hidden-correctness-concern-multi-unit-dedup-ambiguity" class="level2">
+<h2 class="anchored" data-anchor-id="the-hidden-correctness-concern-multi-unit-dedup-ambiguity">The hidden correctness concern: multi-unit dedup ambiguity</h2>
+<p>ADRESSENOGD has 291,823 rows but only <strong>148,444 unique <code>(PLZ, street, house)</code> tuples</strong>. <strong>19,319 of those tuples (13%) have MORE THAN ONE ACD</strong> — multi-unit buildings, staircases, sub-addresses.</p>
+<p>The current upload page’s lookup table is deduplicated on <code>(PLZ, street, house)</code> keeping whichever row sorted first. So when a user looks up “Achengasse 4, 1210” they get <strong>one of the 82 valid ACDs arbitrarily</strong>, possibly not the ACD for their specific unit. This is invisible in the 81.5% match-rate number (no ground truth) but is real and affects ~13% of matched rows.</p>
+<p>The fix (Issue D below) is to return ALL valid ACDs for an ambiguous address with <code>match_quality = "ambiguous_multi"</code> and let the user disambiguate by Stiege/RH or by selecting a specific row.</p>
 </section>
-<section id="building-4" class="level2">
-<h2 class="anchored" data-anchor-id="building-4">Building 4</h2>
-<ul>
-<li>building_id (OBJECTID): 169377507</li>
-<li>address: Obere Donaustraße 97 -99</li>
-<li>district: 02</li>
-<li>acd_native (city ACD field): 001799</li>
-<li>year_built: NA</li>
-<li>n_stories: 8</li>
-<li>link_status: outside_any_zone</li>
-<li>zone_id (spatial join result): NA - no zone found</li>
-<li>centroid lon: 16.377978 lat: 48.213285</li>
-<li>Google Maps: https://maps.google.com/?q=48.213285,16.377978</li>
-</ul>
+<section id="path-to-94-match-rate" class="level2">
+<h2 class="anchored" data-anchor-id="path-to-94-match-rate">Path to ~94% match rate</h2>
+<p>Two fixes, both fit the project’s static / no-server architecture:</p>
+<section id="fix-a-fuzzy-house-number-issue-37-part-1" class="level3">
+<h3 class="anchored" data-anchor-id="fix-a-fuzzy-house-number-issue-37-part-1">Fix A — Fuzzy house number (Issue #37 part 1)</h3>
+<p>When <code>(PLZ, street_norm)</code> matches but <code>house_norm</code> doesn’t, return the address with the <strong>nearest existing house number</strong> on that street. Annotate <code>match_quality = "fuzzy_nearest_house"</code> with the numeric distance.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Assumption</td>
+<td>Nearest house number on the same street is a reasonable proxy for the user’s unfound number</td>
+</tr>
+<tr class="even">
+<td>Benefit</td>
+<td>Recovers ~10 percentage points (≈205 of the 246-row cohort)</td>
+</tr>
+<tr class="odd">
+<td>Cost</td>
+<td>Sometimes returns a neighbour’s ACD, not the user’s. Distance score lets the user filter.</td>
+</tr>
+<tr class="even">
+<td>Works on</td>
+<td>“Achengasse 21” missing → nearest “Achengasse 19” or “23” found</td>
+</tr>
+<tr class="odd">
+<td>Doesn’t work on</td>
+<td>Brand-new buildings, parcels-as-house-numbers (“Parz 38”)</td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="building-5" class="level2">
-<h2 class="anchored" data-anchor-id="building-5">Building 5</h2>
+<section id="fix-b-composite-street-splitter-issue-37-part-2" class="level3">
+<h3 class="anchored" data-anchor-id="fix-b-composite-street-splitter-issue-37-part-2">Fix B — Composite-street splitter (Issue #37 part 2)</h3>
+<p>Strings like <code>Achengasse 4/Lavantgasse 1a</code> contain TWO addresses. Split on <code>/</code> and try each side independently. Return BOTH ACDs (<code>acd_a</code>, <code>acd_b</code>) with <code>match_quality = "split_both"</code>, or one with <code>match_quality = "split_partial"</code> if only one side matches.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Assumption</td>
+<td>Composite addresses identify corner parcels at the intersection of two streets; both addresses are valid for the same physical building</td>
+</tr>
+<tr class="even">
+<td>Benefit</td>
+<td>Recovers ~3 percentage points (50 of the 131 truly-absent rows)</td>
+</tr>
+<tr class="odd">
+<td>Cost</td>
+<td>Returning two ACDs requires UI handling for the ambiguity</td>
+</tr>
+<tr class="even">
+<td>Works on</td>
+<td>“Achengasse 4/Lavantgasse 1a” → <code>acd_a = 070238</code> (Achengasse 4), <code>acd_b = ...</code> (Lavantgasse 1a)</td>
+</tr>
+<tr class="odd">
+<td>Doesn’t work on</td>
+<td>Pure Schrebergarten parcels with no street component</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="fix-c-rest-api-fallback-issue-tbd" class="level3">
+<h3 class="anchored" data-anchor-id="fix-c-rest-api-fallback-issue-tbd">Fix C — REST API fallback (Issue TBD)</h3>
+<p>For rows still unmatched after A+B, optionally call the city’s <a href="https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo"><code>OGDAddressService.svc/GetAddressInfo</code></a> per row with rate-limit budget (concurrency cap 8, max ~250 calls). The REST API does its own fuzzy matching and returns the canonical ACD.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Assumption</td>
+<td>The REST API is more permissive than our static Parquet for Schrebergärten and edge-case spellings</td>
+</tr>
+<tr class="even">
+<td>Benefit</td>
+<td>~1-2 additional percentage points + canonicalises multi-unit ambiguity for those rows</td>
+</tr>
+<tr class="odd">
+<td>Cost</td>
+<td>Network calls (each ~200 ms), not offline-capable, may drift if the city changes the API</td>
+</tr>
+<tr class="even">
+<td>Works on</td>
+<td>Schrebergarten parcels that the API resolves to a base address</td>
+</tr>
+<tr class="odd">
+<td>Doesn’t work on</td>
+<td>Truly nonexistent addresses</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="fix-d-multi-unit-dedup-fix-issue-tbd" class="level3">
+<h3 class="anchored" data-anchor-id="fix-d-multi-unit-dedup-fix-issue-tbd">Fix D — Multi-unit dedup fix (Issue TBD)</h3>
+<p>Replace <code>drop_duplicates(keep="first")</code> with <code>GROUP BY</code> + <code>array_agg(acd)</code> so a matched row returns ALL ACDs for an ambiguous address. UI shows the count and lets the user accept all or pick.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>Detail</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Assumption</td>
+<td>The user knows their own building’s unit / Stiege; we shouldn’t pick for them</td>
+</tr>
+<tr class="even">
+<td>Benefit</td>
+<td>Eliminates a hidden correctness bug affecting ~13% of matched rows</td>
+</tr>
+<tr class="odd">
+<td>Cost</td>
+<td>Requires UI work to render multi-ACD cells</td>
+</tr>
+<tr class="even">
+<td>Works on</td>
+<td>“Achengasse 4” with 82 ACDs → returns all 82</td>
+</tr>
+<tr class="odd">
+<td>Doesn’t work on</td>
+<td>(no failure mode — strict improvement)</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="lessons-learnt" class="level2">
+<h2 class="anchored" data-anchor-id="lessons-learnt">Lessons learnt</h2>
+<section id="self-consistency-tests-must-respect-duplication" class="level3">
+<h3 class="anchored" data-anchor-id="self-consistency-tests-must-respect-duplication">Self-consistency tests must respect duplication</h3>
+<p>My first attempt at a 10k self-consistency test sampled rows from ADRESSENOGD itself and asked “did the dedup return the row I sampled?” The result (99.7% matched, 56.5% correct) was a test artifact, not a real bug — I had guaranteed failure on the 13% of multi-unit tuples by sampling random rows from groups while the dedup kept only one. <strong>A correct self-consistency test samples one row PER unique key and accepts any of the valid ACDs as correct.</strong></p>
+</section>
+<section id="match-rate-alone-hides-the-multi-unit-problem" class="level3">
+<h3 class="anchored" data-anchor-id="match-rate-alone-hides-the-multi-unit-problem">“Match rate” alone hides the multi-unit problem</h3>
+<p>The 81.5% headline number says how many rows got SOME ACD back. It does not say whether the ACD returned is the right one for the user’s unit. With 13% of tuples being multi-ACD, up to 13% of the matched rows could be subtly wrong. This is an honest caveat the methodology should disclose.</p>
+</section>
+<section id="the-rest-api-claim-of-94.5-may-include-silent-multi-unit-picks-too" class="level3">
+<h3 class="anchored" data-anchor-id="the-rest-api-claim-of-94.5-may-include-silent-multi-unit-picks-too">The REST API claim of 94.5% may include silent multi-unit picks too</h3>
+<p>The REST API returns one ACD per query. Its 94.5% match rate doesn’t say which of multiple valid ACDs it returns for a multi-unit building either. Comparing our match rate to the REST API’s number assumes both are picking the same canonicalisation — they might not be. <strong>Direct comparison should ground-truth at least 100 multi-unit cases by hand to see whose pick aligns with the user’s intent.</strong></p>
+</section>
+<section id="a-working-algorithm-hits-the-predicted-floor-exactly" class="level3">
+<h3 class="anchored" data-anchor-id="a-working-algorithm-hits-the-predicted-floor-exactly">A working algorithm hits the predicted floor exactly</h3>
+<p>I forecast 81.5% before the agent built #28. The agent shipped 81.5%. The “disappointment” was vs an aspirational 94.5% (REST API), not vs the floor. Lesson: communicate <strong>two numbers</strong> when forecasting algorithm performance — the floor (what we know works on this static-deploy architecture) and the ceiling (what the external comparison reaches with extra capabilities). Don’t let the ceiling become the implicit target without flagging the gap.</p>
+</section>
+<section id="validator-coverage-is-structural-not-functional" class="level3">
+<h3 class="anchored" data-anchor-id="validator-coverage-is-structural-not-functional">Validator coverage is structural, not functional</h3>
+<p><code>acd::validate_deploy()</code> confirms the upload page renders without errors and the assets resolve. It says nothing about whether the algorithm gives correct ACDs. <strong>Functional validation needs a separate test harness (#46) that asserts per-row gold-standard ACDs against a curated test corpus.</strong></p>
+</section>
+</section>
+<section id="files" class="level2">
+<h2 class="anchored" data-anchor-id="files">Files</h2>
 <ul>
-<li>building_id (OBJECTID): 169417763</li>
-<li>address: Spittelberggasse 13</li>
-<li>district: 07</li>
-<li>acd_native (city ACD field): 102621</li>
-<li>year_built: NA</li>
-<li>n_stories: 2</li>
-<li>link_status: outside_any_zone</li>
-<li>zone_id (spatial join result): NA - no zone found</li>
-<li>centroid lon: 16.354999 lat: 48.203677</li>
-<li>Google Maps: https://maps.google.com/?q=48.203677,16.354999</li>
+<li>This analysis: <code>analysis/qa/upload_match_rate_analysis.md</code></li>
+<li>Source measurement scripts: ad-hoc Python in 2026-05-03 session — not committed; rerun-ready by querying the user’s xlsx + the ADRESSENOGD Parquet</li>
+<li>Related issues: #37 (fuzzy + composite — A+B), TBD (REST fallback — C), TBD (multi-unit dedup — D), #46 (graded test corpus, separate)</li>
 </ul>
 
 
