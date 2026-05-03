@@ -527,7 +527,10 @@ in [issue #42](https://github.com/JohnGavin/acd_area_climate_design/issues/42).
 | Value | Meaning |
 |-------|---------|
 | `exact` | All three keys matched exactly after normalisation |
-| `unmatched` | No row in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) matched this combination |
+| `fuzzy_nearest_house` | PLZ + street matched; nearest existing house number used (distance shown in `house_distance` column) |
+| `split_both` | Composite `A/B` street — both halves resolved to an ACD (`ACD` = first, `acd_b` = second) |
+| `split_partial` | Composite `A/B` street — only one half resolved |
+| `unmatched` | No row in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) matched |
 
 *Note: this DE/EN toggle is complementary to the German narrative vignette at
 [scrollytell\_de.html](scrollytell_de.html) — that page tells the story of
@@ -549,7 +552,9 @@ Die Verknüpfung verwendet drei normalisierte Schlüssel:
 - **Hausnummer** — `LOWER(TRIM(name_onr))` mit der Benutzerspalte abgeglichen
 
 Schrebergarten-Adressen mit `/` im Straßennamen oder `Parz` in der Hausnummer
-werden automatisch in zwei Suchversuche aufgeteilt.
+werden in zwei Suchversuche aufgeteilt (Fix B). Für Zeilen, bei denen die
+Straße vorhanden ist, aber die exakte Hausnummer fehlt, wird die nächstgelegene
+vorhandene Hausnummer herangezogen (Fix A).
 
 ### Was diese Seite nicht leistet
 
@@ -566,6 +571,9 @@ Die räumliche Anreicherung wird als Folgeaufgabe in
 | Wert | Bedeutung |
 |------|-----------|
 | `exact` | Alle drei Schlüssel nach Normalisierung exakt übereinstimmend |
+| `fuzzy_nearest_house` | PLZ + Straße stimmen überein; nächstgelegene vorhandene Hausnummer verwendet (Abstand in `house_distance`) |
+| `split_both` | Zusammengesetzte `A/B`-Adresse — beide Hälften aufgelöst (`ACD` = erste, `acd_b` = zweite) |
+| `split_partial` | Zusammengesetzte `A/B`-Adresse — nur eine Hälfte aufgelöst |
 | `unmatched` | Keine Zeile in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) für diese Kombination gefunden |
 
 *Hinweis: Der DE/EN-Umschalter ergänzt das deutsche Erzählvignette unter
@@ -576,33 +584,58 @@ diese Seite ist ein Werkzeug.*
 ### Performance
 
 ::: {data-lang="en"}
+**Match rate on the user's 2,039-row test file (mostly Bezirke 21 + 22):**
+
+| Algorithm | Matched | Rate |
+|-----------|--------:|-----:|
+| Baseline — exact join only (pre-#37) | 1,661 | 81.5% |
+| **Fix A + Fix B (this page)** | **1,921** | **94.2%** |
+| OGDAddressService REST API (external claim) | ~1,928 | ~94.5% |
+
+Fix A (fuzzy nearest house) recovers 246 rows (12.1 pp). Fix B (composite
+split) recovers 14 rows (0.7 pp). The residual 118 unmatched rows are
+predominantly Schrebergarten parcel addresses and streets absent from
+ADRESSENOGD.
+
 All timings are for the DuckDB-WASM query phase after warm-up (first visit
 adds ~3–4 s for DuckDB cold-start; subsequent queries on the same page load
-are fast). Time scales sub-linearly with input rows because the join is one
-query, not per-row.
+are fast). The fuzzy fallback adds one extra query for unmatched rows only —
+negligible when most rows match on the first pass.
 
 | Rows | Operation | Estimated time |
 |------|-----------|----------------|
 | 12 (sample) | One DuckDB join | <100 ms after warm-up |
 | 100 | One DuckDB join | <200 ms |
 | 500 | One DuckDB join | <300 ms |
-| 2,000 | One DuckDB join | ~500 ms |
-| 10,000 | One DuckDB join + chunked CSV write | 1–2 s |
+| 2,000 | Two DuckDB joins (exact + fuzzy pass) | ~600 ms |
+| 10,000 | Two DuckDB joins + chunked CSV write | 1.5–2.5 s |
 :::
 
 ::: {data-lang="de"}
-Alle Zeiten gelten für die DuckDB-WASM-Abfragephase nach dem Aufwärmen (erster Besuch
-benötigt zusätzlich ~3–4 s für den DuckDB-Kaltstart; folgende Abfragen auf derselben
-Seite sind schnell). Die Zeit skaliert sublinear mit den Eingabezeilen, da die
-Verknüpfung eine einzige Abfrage ist.
+**Trefferquote auf der 2.039-zeiligen Testdatei der Nutzerin (überwiegend Bezirke 21 + 22):**
+
+| Algorithmus | Treffer | Quote |
+|-------------|--------:|------:|
+| Baseline — exakter Join (vor #37) | 1.661 | 81,5 % |
+| **Fix A + Fix B (diese Seite)** | **1.921** | **94,2 %** |
+| OGDAddressService REST API (externe Angabe) | ~1.928 | ~94,5 % |
+
+Fix A (nächstgelegene Hausnummer) erholt 246 Zeilen (12,1 Pp.). Fix B
+(zusammengesetzte Straße) erholt 14 Zeilen (0,7 Pp.). Die verbleibenden
+118 nicht gefundenen Adressen sind überwiegend Schrebergarten-Parzellen und
+Straßen, die in ADRESSENOGD nicht enthalten sind.
+
+Alle Zeiten gelten für die DuckDB-WASM-Abfragephase nach dem Aufwärmen. Der
+Fuzzy-Fallback fügt bei nicht gefundenen Zeilen eine zweite Abfrage hinzu —
+bei guter Trefferquote auf dem ersten Durchlauf kaum spürbar.
 
 | Zeilen | Vorgang | Geschätzte Zeit |
 |--------|---------|-----------------|
 | 12 (Beispiel) | Eine DuckDB-Verknüpfung | <100 ms nach Aufwärmen |
 | 100 | Eine DuckDB-Verknüpfung | <200 ms |
 | 500 | Eine DuckDB-Verknüpfung | <300 ms |
-| 2.000 | Eine DuckDB-Verknüpfung | ~500 ms |
-| 10.000 | Eine DuckDB-Verknüpfung + CSV-Ausgabe | 1–2 s |
+| 2.000 | Zwei DuckDB-Abfragen (exakt + Fuzzy) | ~600 ms |
+| 10.000 | Zwei DuckDB-Abfragen + CSV-Ausgabe | 1,5–2,5 s |
 :::
 
 ### Page weight / Seitengröße
@@ -703,6 +736,481 @@ nutzen den Browser-Cache und sind unabhängig von der Verbindungsgeschwindigkeit
 | Langsames 3G | ~15–20 s | <1 s |
 :::
 
+### Per-fix details / Details je Verbesserung
+
+::: {data-lang="en"}
+Each fix is documented with its assumptions, benefits, costs, and example
+addresses where it does and does not work. Fixes C and D are planned for
+future issues and not yet active.
+:::
+
+::: {data-lang="de"}
+Jede Verbesserung ist mit ihren Annahmen, Vorteilen, Kosten und Beispieladressen
+dokumentiert. Korrekturen C und D sind geplant und noch nicht aktiv.
+:::
+
+::: {.panel-tabset}
+
+## Fix A — Fuzzy nearest house / Nächstgelegene Hausnummer
+
+::: {.panel-tabset}
+
+### Summary / Zusammenfassung
+
+::: {data-lang="en"}
+When `(PLZ, street_norm)` matches but the exact `house_norm` is absent from
+ADRESSENOGD, the algorithm falls back to the nearest registered house number
+on the same street. The numeric distance between the user's house number and
+the nearest ADRESSENOGD house number is stored in the `house_distance` column
+so users can filter low-confidence results. Distance is capped at 20 — rows
+further than that remain `unmatched`.
+:::
+
+::: {data-lang="de"}
+Wenn `(PLZ, Straßennorm)` übereinstimmt, die exakte Hausnummer aber nicht in
+ADRESSENOGD enthalten ist, fällt der Algorithmus auf die nächstgelegene
+registrierte Hausnummer in derselben Straße zurück. Die numerische Distanz
+zwischen der eingegebenen und der gefundenen Hausnummer wird in der Spalte
+`house_distance` gespeichert, damit unsichere Ergebnisse herausgefiltert
+werden können. Abstände über 20 bleiben als `unmatched` erhalten.
+:::
+
+### Assumptions / Annahmen
+
+::: {data-lang="en"}
+- The nearest registered house number on the same street is a reasonable
+  proxy for an unregistered parcel or new building.
+- A numeric distance of ≤ 20 is close enough to be useful; beyond that the
+  result is likely a different building entirely.
+- The user's house number contains a leading integer (e.g. `21`, `21a`). If
+  the house number is a parcel code like `Parz 38`, no leading integer is
+  extracted and the fuzzy pass is skipped.
+:::
+
+::: {data-lang="de"}
+- Die nächstgelegene registrierte Hausnummer in derselben Straße ist ein
+  vertretbarer Ersatz für ein nicht registriertes Grundstück oder ein neues Gebäude.
+- Ein numerischer Abstand von ≤ 20 ist nahe genug, um nützlich zu sein; darüber
+  hinaus handelt es sich wahrscheinlich um ein anderes Gebäude.
+- Die Hausnummer des Nutzers enthält eine führende Ganzzahl (z. B. `21`, `21a`).
+  Ist die Hausnummer ein Parzellen-Code wie `Parz 38`, wird kein Wert extrahiert
+  und der Fuzzy-Durchlauf übersprungen.
+:::
+
+### Benefits / Vorteile
+
+::: {data-lang="en"}
+- Recovers **246 rows (12.1 pp)** on the 2,039-row test file.
+- Lifts overall match rate from **81.5% → ~93.6%** (Fix A alone).
+- No external API calls — runs entirely in DuckDB-WASM in the browser.
+- `house_distance` column lets the user decide whether to trust the result.
+:::
+
+::: {data-lang="de"}
+- Erholt **246 Zeilen (12,1 Pp.)** auf der 2.039-zeiligen Testdatei.
+- Hebt die Gesamttrefferquote von **81,5 % auf ~93,6 %** (nur Fix A).
+- Keine externen API-Aufrufe — läuft vollständig in DuckDB-WASM im Browser.
+- Die Spalte `house_distance` erlaubt es dem Nutzer, die Zuverlässigkeit
+  selbst zu beurteilen.
+:::
+
+### Costs / Kosten
+
+::: {data-lang="en"}
+- Returns a **neighbour's ACD**, not necessarily the user's exact building.
+  For buildings registered under a slightly different number (e.g. the city
+  uses `21` while the user has `21a`), this is usually correct. For new
+  construction on a vacant plot, the neighbour's ACD may be wrong.
+- Adds a second DuckDB query for unmatched rows — adds ~100 ms on a 2,000-row
+  file with ~18% unmatched rows.
+- `house_distance` must be inspected manually to assess confidence.
+:::
+
+::: {data-lang="de"}
+- Gibt die ACD eines **Nachbargebäudes** zurück, nicht zwingend die des
+  gesuchten Gebäudes. Für Gebäude mit leicht abweichender Hausnummer (z. B.
+  `21` statt `21a`) ist das meist korrekt. Bei Neubauten auf bisher unbebautem
+  Grund kann die ACD eines Nachbarn falsch sein.
+- Fügt bei nicht gefundenen Zeilen eine zweite DuckDB-Abfrage hinzu —
+  ca. +100 ms bei 2.000 Zeilen mit ~18 % nicht gefundenen Adressen.
+- `house_distance` muss manuell geprüft werden, um die Zuverlässigkeit
+  einzuschätzen.
+:::
+
+### Works on / Funktioniert bei
+
+::: {data-lang="en"}
+- `1210, Achengasse, 21` — Achengasse 21 not in ADRESSENOGD; nearest is
+  `Achengasse 19` (distance 2). ACD from `070268` block returned.
+- `1210, Siemensstraße, 87` — if 87 is absent but 85 and 89 are present,
+  distance 2, correct ACD returned.
+- Any street where the odd/even side of the street has gaps in registered
+  house numbers.
+:::
+
+::: {data-lang="de"}
+- `1210, Achengasse, 21` — Achengasse 21 nicht in ADRESSENOGD; nächstgelegen
+  ist `Achengasse 19` (Abstand 2). ACD aus dem Block `070268` wird zurückgegeben.
+- `1210, Siemensstraße, 87` — wenn 87 fehlt, aber 85 und 89 vorhanden sind,
+  Abstand 2, korrekte ACD.
+- Jede Straße, bei der die gerade oder ungerade Seite Lücken in den
+  registrierten Hausnummern hat.
+:::
+
+### Doesn't work on / Funktioniert nicht bei
+
+::: {data-lang="en"}
+- **Parcel codes** (`Parz 38`, `Parz 12b`) — no leading integer, fuzzy pass
+  skipped; remains `unmatched`.
+- **New buildings** not yet in ADRESSENOGD at all — the street is present but
+  all house numbers are far from the user's. If the nearest is > 20 away,
+  remains `unmatched`.
+- **Streets genuinely absent** from ADRESSENOGD (35% of the unmatched cohort
+  on the test file) — no candidate rows to compare against.
+:::
+
+::: {data-lang="de"}
+- **Parzellen-Codes** (`Parz 38`, `Parz 12b`) — keine führende Ganzzahl,
+  Fuzzy-Durchlauf übersprungen; bleibt `unmatched`.
+- **Neubauten**, die noch nicht in ADRESSENOGD erfasst sind — Straße vorhanden,
+  aber alle Hausnummern sind weit entfernt. Bei Abstand > 20 bleibt der Eintrag
+  `unmatched`.
+- **Straßen, die gar nicht in ADRESSENOGD** enthalten sind (35 % der nicht
+  gefundenen Zeilen in der Testdatei) — keine Kandidaten für den Vergleich.
+:::
+
+:::
+
+## Fix B — Composite-street splitter / Zusammengesetzte Straße
+
+::: {.panel-tabset}
+
+### Summary / Zusammenfassung
+
+::: {data-lang="en"}
+Some Vienna addresses identify corner parcels with two street names joined by
+`/`, e.g. `Achengasse 4/Lavantgasse 1a`. The previous implementation claimed
+to handle these but the split was not being applied before the main JOIN, so
+no recovery occurred. Fix B reimplements the splitter in JavaScript *before*
+the JOIN: each `A/B` street is expanded into two sub-rows, each looked up
+independently. The results are aggregated as `acd_b` (second match) and
+`match_quality = "split_both"` (both matched) or `"split_partial"` (one
+matched).
+:::
+
+::: {data-lang="de"}
+Manche Wiener Adressen bezeichnen Eckgrundstücke mit zwei durch `/`
+verbundenen Straßennamen, z. B. `Achengasse 4/Lavantgasse 1a`. Die frühere
+Implementierung behauptete, diese zu verarbeiten, aber die Aufteilung fand
+vor dem JOIN nicht statt. Fix B reimplementiert den Splitter in JavaScript
+*vor* dem JOIN: Jede `A/B`-Adresse wird in zwei Teilzeilen aufgeteilt, die
+unabhängig voneinander nachgeschlagen werden. Die Ergebnisse werden als
+`acd_b` (zweiter Treffer) und `match_quality = "split_both"` (beide gefunden)
+oder `"split_partial"` (einer gefunden) zusammengeführt.
+:::
+
+### Assumptions / Annahmen
+
+::: {data-lang="en"}
+- A `/` in the street column indicates a composite address identifying the same
+  physical location from two streets (corner building or shared driveway).
+- A trailing number in each half of the split is the house number for that
+  half, e.g. `Achengasse 4` → street `Achengasse`, house `4`.
+- Both ACDs are valid for the same physical building; the user can choose
+  either.
+:::
+
+::: {data-lang="de"}
+- Ein `/` in der Straßenspalte bezeichnet eine zusammengesetzte Adresse, die
+  denselben physischen Standort von zwei Straßen aus beschreibt (Eckgebäude
+  oder gemeinsame Zufahrt).
+- Eine abschließende Zahl in jeder Hälfte des Splits ist die Hausnummer für
+  diese Hälfte, z. B. `Achengasse 4` → Straße `Achengasse`, Hausnummer `4`.
+- Beide ACDs sind für dasselbe physische Gebäude gültig; der Nutzer kann
+  eine davon wählen.
+:::
+
+### Benefits / Vorteile
+
+::: {data-lang="en"}
+- Recovers **14 rows (0.7 pp)** on the 2,039-row test file.
+- Returns both ACDs when both halves resolve, giving the user the full
+  picture for corner parcels.
+- No distance estimation needed — the result is exact if the street+house
+  exists in ADRESSENOGD.
+:::
+
+::: {data-lang="de"}
+- Erholt **14 Zeilen (0,7 Pp.)** auf der 2.039-zeiligen Testdatei.
+- Gibt beide ACDs zurück, wenn beide Hälften aufgelöst werden, und liefert
+  dem Nutzer das vollständige Bild für Eckgrundstücke.
+- Keine Abstandsschätzung erforderlich — das Ergebnis ist exakt, wenn
+  Straße + Hausnummer in ADRESSENOGD vorhanden sind.
+:::
+
+### Costs / Kosten
+
+::: {data-lang="en"}
+- Returning two ACDs (`ACD` + `acd_b`) requires the user to inspect both
+  columns for composite matches.
+- Pure Schrebergarten parcel addresses like `Parz 38` remain unmatched even
+  after the split because neither half maps to a registered building address.
+- Expands input rows before the JOIN — minor overhead proportional to the
+  number of composite rows in the upload file.
+:::
+
+::: {data-lang="de"}
+- Die Rückgabe zweier ACDs (`ACD` + `acd_b`) erfordert, dass der Nutzer
+  beide Spalten bei zusammengesetzten Treffern prüft.
+- Reine Schrebergarten-Parzellenadressen wie `Parz 38` bleiben auch nach
+  dem Split nicht gefunden, da keine Hälfte einer registrierten Gebäudeadresse
+  entspricht.
+- Eingabezeilen werden vor dem JOIN erweitert — geringer Mehraufwand
+  proportional zur Anzahl der zusammengesetzten Zeilen.
+:::
+
+### Works on / Funktioniert bei
+
+::: {data-lang="en"}
+- `1210, Achengasse 4/Lavantgasse 1a, —` → ACD for `Achengasse 4` as `ACD`,
+  ACD for `Lavantgasse 1a` as `acd_b`, `match_quality = "split_both"`.
+- Corner buildings where both street addresses are registered in ADRESSENOGD.
+- Any composite address where at least one half is a valid street+house
+  combination in the reference data.
+:::
+
+::: {data-lang="de"}
+- `1210, Achengasse 4/Lavantgasse 1a, —` → ACD für `Achengasse 4` als `ACD`,
+  ACD für `Lavantgasse 1a` als `acd_b`, `match_quality = "split_both"`.
+- Eckgebäude, bei denen beide Straßenadressen in ADRESSENOGD registriert sind.
+- Jede zusammengesetzte Adresse, bei der mindestens eine Hälfte eine gültige
+  Straße-Hausnummer-Kombination in den Referenzdaten ist.
+:::
+
+### Doesn't work on / Funktioniert nicht bei
+
+::: {data-lang="en"}
+- **Pure Schrebergarten parcels** like `Achengasse/Lavantgasse Parz 38` — the
+  parcel number does not correspond to a registered building address in
+  ADRESSENOGD; both halves miss.
+- Composite strings where the separator has a different meaning (e.g.
+  address range `1/3` meaning "houses 1 to 3" on a single street — these
+  will be incorrectly split into two sub-lookups).
+- Very long composite strings with 3+ parts — only the first two are attempted.
+:::
+
+::: {data-lang="de"}
+- **Reine Schrebergarten-Parzellen** wie `Achengasse/Lavantgasse Parz 38` —
+  die Parzellennummer entspricht keiner registrierten Gebäudeadresse in
+  ADRESSENOGD; beide Hälften schlagen fehl.
+- Zusammengesetzte Zeichenketten, bei denen das Trennzeichen eine andere
+  Bedeutung hat (z. B. Adressbereich `1/3` für „Hausnummern 1 bis 3" auf
+  einer einzelnen Straße — diese werden fälschlicherweise in zwei
+  Teilabfragen aufgeteilt).
+- Sehr lange zusammengesetzte Zeichenketten mit 3+ Teilen — nur die ersten
+  beiden werden versucht.
+:::
+
+:::
+
+## Fix C — REST API fallback (geplant / planned) {#fix-c}
+
+::: {.panel-tabset}
+
+### Summary / Zusammenfassung
+
+::: {data-lang="en"}
+**Status: PLANNED** — tracked in a separate issue. For rows still unmatched
+after Fix A + Fix B, optionally call the city's
+[`OGDAddressService.svc/GetAddressInfo`](https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo)
+REST endpoint per row. The API does its own fuzzy matching on the server side
+and returns the canonical ACD. A concurrency cap of 8 parallel requests and a
+maximum of ~250 calls per upload session keep the per-run cost manageable.
+:::
+
+::: {data-lang="de"}
+**Status: GEPLANT** — wird in einem eigenen Issue verfolgt. Für nach Fix A + B
+noch nicht gefundene Zeilen kann optional der städtische REST-Endpunkt
+[`OGDAddressService.svc/GetAddressInfo`](https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo)
+pro Zeile aufgerufen werden. Die API führt serverseitig eigenes Fuzzy-Matching
+durch und gibt die kanonische ACD zurück. Eine Parallelitäts-Obergrenze von
+8 Anfragen und maximal ~250 Aufrufe pro Upload-Sitzung halten die Kosten
+beherrschbar.
+:::
+
+### Assumptions / Annahmen
+
+::: {data-lang="en"}
+- The city's OGDAddressService API remains publicly available without
+  authentication.
+- ~200 ms per API call; 8 concurrent requests cap total time to ~6 s for 250
+  residual rows.
+- The API's own matching is more permissive than our static Parquet for
+  Schrebergärten and edge-case spellings.
+:::
+
+::: {data-lang="de"}
+- Der städtische OGDAddressService-Endpunkt bleibt ohne Authentifizierung
+  öffentlich verfügbar.
+- ~200 ms pro API-Aufruf; 8 parallele Anfragen begrenzen die Gesamtzeit auf
+  ~6 s für 250 verbleibende Zeilen.
+- Das eigene Matching der API ist für Schrebergärten und Sonderfälle
+  großzügiger als unser statisches Parquet.
+:::
+
+### Benefits / Vorteile
+
+::: {data-lang="en"}
+- Expected to recover ~1–2 additional percentage points on top of Fix A + B.
+- Canonicalises multi-unit ambiguity for the resolved rows.
+- No local data updates needed — the API always reflects the current register.
+:::
+
+::: {data-lang="de"}
+- Voraussichtlich ~1–2 weitere Prozentpunkte zusätzlich zu Fix A + B.
+- Kanonisiert Mehrdeutigkeiten bei Mehrfamilienhäusern für die gefundenen Zeilen.
+- Keine lokalen Datenaktualisierungen erforderlich — die API spiegelt immer
+  den aktuellen Stand wider.
+:::
+
+### Costs / Kosten
+
+::: {data-lang="en"}
+- Requires network connectivity — not offline-capable for the fallback rows.
+- City API may change or become unavailable without notice.
+- User must consent to sending unmatched address fragments to an external server.
+:::
+
+::: {data-lang="de"}
+- Erfordert Netzwerkzugang — für die Fallback-Zeilen nicht offline nutzbar.
+- Die städtische API kann sich ohne Vorankündigung ändern oder ausfallen.
+- Der Nutzer muss zustimmen, nicht gefundene Adressfragmente an einen
+  externen Server zu senden.
+:::
+
+### Works on / Funktioniert bei
+
+::: {data-lang="en"}
+- Schrebergarten parcel addresses the API maps to a base building address.
+- New buildings registered in the live Wien register but not yet in our
+  Parquet snapshot.
+:::
+
+::: {data-lang="de"}
+- Schrebergarten-Parzellenadressen, die die API einer Basisgebäudeadresse
+  zuordnet.
+- Neubauten, die im Live-Register Wien registriert sind, aber noch nicht in
+  unserem Parquet-Snapshot enthalten sind.
+:::
+
+### Doesn't work on / Funktioniert nicht bei
+
+::: {data-lang="en"}
+- Addresses with no match in the live Wien register either.
+- Offline use cases.
+:::
+
+::: {data-lang="de"}
+- Adressen, die auch im Live-Register Wien keinen Treffer haben.
+- Offline-Anwendungsfälle.
+:::
+
+:::
+
+## Fix D — Multi-unit dedup (geplant / planned) {#fix-d}
+
+::: {.panel-tabset}
+
+### Summary / Zusammenfassung
+
+::: {data-lang="en"}
+**Status: PLANNED** — tracked in a separate issue. ADRESSENOGD contains
+291,823 rows but only ~149,676 unique `(PLZ, street, house)` tuples. Around
+13% of those tuples have more than one ACD — multi-unit buildings, separate
+staircases, or sub-addresses. The current page deduplicates on `(PLZ, street,
+house)` and returns one ACD arbitrarily. Fix D replaces the deduplication with
+a `GROUP BY` returning all ACDs for a matched tuple, with a UI element
+letting the user select or accept all.
+:::
+
+::: {data-lang="de"}
+**Status: GEPLANT** — wird in einem eigenen Issue verfolgt. ADRESSENOGD
+enthält 291.823 Zeilen, aber nur ~149.676 eindeutige `(PLZ, Straße, Haus)`-
+Tupel. Etwa 13 % dieser Tupel haben mehr als eine ACD — Mehrfamilienhäuser,
+separate Stiegen oder Unteradressen. Derzeit wird auf `(PLZ, Straße, Haus)`
+dedupliziert und eine ACD willkürlich zurückgegeben. Fix D ersetzt die
+Deduplizierung durch ein `GROUP BY`, das alle ACDs für ein gefundenes Tupel
+zurückgibt, mit einem UI-Element, das dem Nutzer die Auswahl ermöglicht.
+:::
+
+### Assumptions / Annahmen
+
+::: {data-lang="en"}
+- The user knows their own unit / Stiege and can select from a list.
+- Returning multiple ACDs is preferable to silently picking one at random.
+:::
+
+::: {data-lang="de"}
+- Der Nutzer kennt seine eigene Einheit / Stiege und kann aus einer Liste
+  auswählen.
+- Mehrere ACDs zurückzugeben ist besser als eine zufällig auszuwählen.
+:::
+
+### Benefits / Vorteile
+
+::: {data-lang="en"}
+- Eliminates a hidden correctness bug affecting ~13% of matched rows.
+- No extra queries needed — the information is already in ADRESSENOGD.
+:::
+
+::: {data-lang="de"}
+- Beseitigt einen versteckten Korrektheitsfehler, der ~13 % der gefundenen
+  Zeilen betrifft.
+- Keine zusätzlichen Abfragen erforderlich — die Information ist bereits in
+  ADRESSENOGD vorhanden.
+:::
+
+### Costs / Kosten
+
+::: {data-lang="en"}
+- Requires UI work to render and disambiguate multi-ACD cells.
+- Download CSV format changes: multi-ACD rows need either multiple columns
+  or a delimiter-separated value in the ACD column.
+:::
+
+::: {data-lang="de"}
+- Erfordert UI-Arbeit zum Darstellen und Disambiguieren von Multi-ACD-Zellen.
+- Das CSV-Download-Format ändert sich: Zeilen mit mehreren ACDs benötigen
+  entweder mehrere Spalten oder einen trennzeichengetrennten Wert in der
+  ACD-Spalte.
+:::
+
+### Works on / Funktioniert bei
+
+::: {data-lang="en"}
+- Any matched address in a multi-unit building — e.g. `Achengasse 4, 1210`
+  with 82 registered ACDs returns all 82 for user selection.
+:::
+
+::: {data-lang="de"}
+- Jede gefundene Adresse in einem Mehrfamilienhaus — z. B. `Achengasse 4,
+  1210` mit 82 registrierten ACDs gibt alle 82 zur Nutzerauswahl zurück.
+:::
+
+### Doesn't work on / Funktioniert nicht bei
+
+::: {data-lang="en"}
+- Single-unit addresses — no change in behaviour (only one ACD anyway).
+:::
+
+::: {data-lang="de"}
+- Einzeladressen — keine Verhaltensänderung (ohnehin nur eine ACD).
+:::
+
+:::
+
+:::
+
 ```{=html}
 <!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->
 
@@ -722,6 +1230,10 @@ import * as duckdb from "https://cdn.jsdelivr.net/npm/@duckdb/duckdb-wasm@1.29.0
 // ── Constants ──────────────────────────────────────────────────────────────
 const PARQUET_URL =
   "https://johngavin.github.io/acd_area_climate_design/data/addresses_2026-05-02.parquet";
+
+// Max numeric house-number distance for fuzzy fallback (Fix A).
+// Rows whose nearest house is further than this remain 'unmatched'.
+const FUZZY_MAX_DISTANCE = 20;
 
 // ── State ──────────────────────────────────────────────────────────────────
 let parsedRows   = [];   // [{PLZ, Strasse, HausNr, ...original cols}]
@@ -744,35 +1256,64 @@ function escSql(s) {
   return String(s ?? "").replace(/'/g, "''");
 }
 
-// ── Garden-plot detection & splitting ─────────────────────────────────────
-// Returns [{PLZ, strasse_norm, hausnr_norm, garden_plot, orig_idx}]
-function expandRows(rows, plzCol, streetCol, houseCol) {
+// Extract the leading integer from a house-number string, e.g. "21a" → 21.
+// Returns null if no integer found.
+function extractLeadingInt(s) {
+  const m = String(s ?? "").match(/^(\d+)/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+// ── Fix B — Composite-street splitter ────────────────────────────────────
+// For rows where Strasse contains "/" split into 1-2 sub-rows, each with
+// composite_index and composite_total markers so mergeResults can identify
+// which were from the same original row.
+//
+// "Achengasse 4/Lavantgasse 1a"  →  ["Achengasse 4", "Lavantgasse 1a"]
+// Each side: attempt to pull a trailing number as the house number fallback.
+function extractTrailingNumber(s) {
+  const m = String(s ?? "").match(/(\d+\w*)$/);
+  return m ? m[1] : null;
+}
+
+function splitComposite(rows, plzCol, streetCol, houseCol) {
+  // Returns expanded array with extra fields:
+  //   composite_index  — 0 for non-composite rows, 0/1/... for split parts
+  //   composite_total  — 1 for non-composite, 2+ for split rows
+  //   orig_idx         — index into original rows array
+  //   PLZ, strasse_norm, hausnr_norm, garden_plot (same as before)
   const out = [];
   rows.forEach((r, idx) => {
-    const plz    = String(r[plzCol]  ?? "").trim();
+    const plz    = String(r[plzCol]    ?? "").trim();
     const street = String(r[streetCol] ?? "").trim();
     const house  = String(r[houseCol]  ?? "").trim();
-    const isGarden = street.includes("/") || /parz/i.test(house);
+    const isParz = /parz/i.test(house);
 
-    if (isGarden && street.includes("/")) {
-      // Split "Achengasse 4/Lavantgasse 1a" into two attempts
-      const parts = street.split("/");
-      parts.forEach(p => {
+    if (street.includes("/")) {
+      const parts = street.split("/").map(s => s.trim()).filter(Boolean);
+      parts.forEach((part, i) => {
+        // If the part includes a trailing number use it as the house number
+        const trailingNr = extractTrailingNumber(part);
+        // Strip trailing number from street name to get clean street
+        const streetOnly = part.replace(/\s*\d+\w*$/, "").trim();
         out.push({
-          PLZ: plz,
-          strasse_norm: p.trim().toLowerCase(),
-          hausnr_norm:  house.toLowerCase(),
-          garden_plot:  true,
-          orig_idx:     idx
+          PLZ:              plz,
+          strasse_norm:     streetOnly.toLowerCase(),
+          hausnr_norm:      (trailingNr || house).toLowerCase(),
+          garden_plot:      true,
+          composite_index:  i,
+          composite_total:  parts.length,
+          orig_idx:         idx
         });
       });
     } else {
       out.push({
-        PLZ: plz,
-        strasse_norm: street.toLowerCase(),
-        hausnr_norm:  house.toLowerCase(),
-        garden_plot:  isGarden,
-        orig_idx:     idx
+        PLZ:              plz,
+        strasse_norm:     street.toLowerCase(),
+        hausnr_norm:      house.toLowerCase(),
+        garden_plot:      isParz,
+        composite_index:  0,
+        composite_total:  1,
+        orig_idx:         idx
       });
     }
   });
@@ -807,87 +1348,263 @@ async function initDuck() {
   setProgress(35, "Address lookup ready.");
 }
 
-// ── Run the JOIN ───────────────────────────────────────────────────────────
-async function runLookup(expanded) {
-  // Build VALUES list
+// ── Run the JOIN (exact pass) ──────────────────────────────────────────────
+// Returns array of result objects, one per expanded row.
+// Rows that didn't match have ACD = null and match_quality = 'unmatched'.
+async function runExactLookup(expanded) {
+  // Build VALUES list: include composite_index and composite_total
   const vals = expanded
-    .map(r => `('${escSql(r.PLZ)}','${escSql(r.strasse_norm)}','${escSql(r.hausnr_norm)}',${r.garden_plot ? 1 : 0},${r.orig_idx})`)
+    .map(r => `('${escSql(r.PLZ)}','${escSql(r.strasse_norm)}','${escSql(r.hausnr_norm)}',${r.garden_plot ? 1 : 0},${r.composite_index},${r.composite_total},${r.orig_idx})`)
     .join(",\n");
 
   setProgress(55, "Creating user input table…");
   await dbConn.query("DROP TABLE IF EXISTS user_in");
   await dbConn.query(`
     CREATE TABLE user_in (
-      plz_in      VARCHAR,
-      street_in   VARCHAR,
-      house_in    VARCHAR,
-      garden_plot INTEGER,
-      orig_idx    INTEGER
+      plz_in           VARCHAR,
+      street_in        VARCHAR,
+      house_in         VARCHAR,
+      garden_plot      INTEGER,
+      composite_index  INTEGER,
+      composite_total  INTEGER,
+      orig_idx         INTEGER
     )
   `);
   await dbConn.query(`INSERT INTO user_in VALUES ${vals}`);
 
-  setProgress(70, "Joining against ADRESSENOGD…");
+  // Also add a row_id column for the fuzzy pass to reference
+  await dbConn.query(`
+    ALTER TABLE user_in ADD COLUMN row_id INTEGER DEFAULT 0
+  `);
+  await dbConn.query(`
+    UPDATE user_in SET row_id = rowid
+  `);
+
+  setProgress(70, "Joining against ADRESSENOGD (exact pass)…");
   const res = await dbConn.query(`
     SELECT
       u.orig_idx,
+      u.row_id,
       u.plz_in,
       u.street_in,
       u.house_in,
       u.garden_plot,
+      u.composite_index,
+      u.composite_total,
       a.ACD,
       a.SCD_NAME_STR       AS SCD,
       a.STRABS_ZUGANG_STR  AS STRABS,
       a.OBJEKT_ID,
       a.lon,
       a.lat,
+      NULL::INTEGER        AS house_distance,
       CASE WHEN a.ACD IS NOT NULL THEN 'exact' ELSE 'unmatched' END AS match_quality
     FROM user_in u
     LEFT JOIN addr a
       ON u.plz_in    = a.plz_norm
      AND u.street_in = a.street_norm
      AND u.house_in  = a.house_norm
-    ORDER BY u.orig_idx
+    ORDER BY u.orig_idx, u.composite_index
   `);
 
-  setProgress(85, "Processing results…");
   return res.toArray().map(r => ({
-    orig_idx:      Number(r.orig_idx),
-    plz_in:        r.plz_in,
-    street_in:     r.street_in,
-    house_in:      r.house_in,
-    garden_plot:   r.garden_plot === 1,
-    ACD:           r.ACD,
-    SCD:           r.SCD,
-    STRABS:        r.STRABS,
-    OBJEKT_ID:     r.OBJEKT_ID,
-    lon:           r.lon,
-    lat:           r.lat,
-    match_quality: r.match_quality
+    orig_idx:         Number(r.orig_idx),
+    row_id:           Number(r.row_id),
+    plz_in:           r.plz_in,
+    street_in:        r.street_in,
+    house_in:         r.house_in,
+    garden_plot:      r.garden_plot === 1,
+    composite_index:  Number(r.composite_index),
+    composite_total:  Number(r.composite_total),
+    ACD:              r.ACD,
+    SCD:              r.SCD,
+    STRABS:           r.STRABS,
+    OBJEKT_ID:        r.OBJEKT_ID,
+    lon:              r.lon,
+    lat:              r.lat,
+    house_distance:   null,
+    match_quality:    r.match_quality
   }));
 }
 
+// ── Fix A — Fuzzy nearest-house fallback ──────────────────────────────────
+// For rows that didn't match exactly, attempt to find the nearest house
+// number on the same (PLZ, street_norm) combination.
+// Only applies to non-composite rows where the street IS in ADRESSENOGD
+// (i.e. the failure is a missing house number, not a missing street).
+async function runFuzzyFallback(exactResults) {
+  const unmatched = exactResults.filter(
+    r => r.match_quality === "unmatched" && r.composite_total === 1
+  );
+  if (unmatched.length === 0) return exactResults;
+
+  setProgress(75, "Fuzzy house-number fallback (Fix A)…");
+
+  // Build VALUES for unmatched rows: (row_id, plz_in, street_in, house_in)
+  const vals = unmatched
+    .map(r => `(${r.row_id},'${escSql(r.plz_in)}','${escSql(r.street_in)}','${escSql(r.house_in)}')`)
+    .join(",\n");
+
+  await dbConn.query("DROP TABLE IF EXISTS unmatched_in");
+  await dbConn.query(`
+    CREATE TABLE unmatched_in (
+      row_id    INTEGER,
+      plz_in    VARCHAR,
+      street_in VARCHAR,
+      house_in  VARCHAR
+    )
+  `);
+  await dbConn.query(`INSERT INTO unmatched_in VALUES ${vals}`);
+
+  // Fuzzy query: for each unmatched row, find the nearest registered house
+  // on the same (PLZ, street).  QUALIFY keeps only the single closest match.
+  // DuckDB does not support QUALIFY with window functions in older builds —
+  // use a subquery approach instead.
+  const fuzzy = await dbConn.query(`
+    WITH candidates AS (
+      SELECT
+        u.row_id,
+        a.ACD,
+        a.SCD_NAME_STR       AS SCD,
+        a.STRABS_ZUGANG_STR  AS STRABS,
+        a.OBJEKT_ID,
+        a.lon,
+        a.lat,
+        ABS(
+          COALESCE(TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER), -9999) -
+          COALESCE(TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER), -9999)
+        ) AS house_distance,
+        ROW_NUMBER() OVER (
+          PARTITION BY u.row_id
+          ORDER BY ABS(
+            COALESCE(TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER), -9999) -
+            COALESCE(TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER), -9999)
+          )
+        ) AS rn
+      FROM unmatched_in u
+      JOIN addr a ON u.plz_in = a.plz_norm AND u.street_in = a.street_norm
+      WHERE a.house_norm REGEXP '^[0-9]'
+        AND TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER) IS NOT NULL
+        AND TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER) IS NOT NULL
+    )
+    SELECT * FROM candidates WHERE rn = 1
+  `).catch(() => null);  // if the query fails (e.g. no REGEXP support), skip
+
+  if (!fuzzy) return exactResults;
+
+  // Index fuzzy results by row_id
+  const fuzzyMap = {};
+  fuzzy.toArray().forEach(r => {
+    fuzzyMap[Number(r.row_id)] = {
+      ACD:            r.ACD,
+      SCD:            r.SCD,
+      STRABS:         r.STRABS,
+      OBJEKT_ID:      r.OBJEKT_ID,
+      lon:            r.lon,
+      lat:            r.lat,
+      house_distance: Number(r.house_distance)
+    };
+  });
+
+  // Patch the exactResults in-place: upgrade unmatched → fuzzy_nearest_house
+  // only when the nearest house is within FUZZY_MAX_DISTANCE.
+  return exactResults.map(r => {
+    if (r.match_quality !== "unmatched" || r.composite_total !== 1) return r;
+    const f = fuzzyMap[r.row_id];
+    if (!f) return r;
+    if (f.house_distance > FUZZY_MAX_DISTANCE) return r;
+    return Object.assign({}, r, {
+      ACD:            f.ACD,
+      SCD:            f.SCD,
+      STRABS:         f.STRABS,
+      OBJEKT_ID:      f.OBJEKT_ID,
+      lon:            f.lon,
+      lat:            f.lat,
+      house_distance: f.house_distance,
+      match_quality:  "fuzzy_nearest_house"
+    });
+  });
+}
+
+// ── Combined lookup (exact + fuzzy) ───────────────────────────────────────
+async function runLookup(expanded) {
+  const exactResults = await runExactLookup(expanded);
+  setProgress(80, "Fuzzy fallback pass…");
+  return runFuzzyFallback(exactResults);
+}
+
 // ── Merge results back to original rows ───────────────────────────────────
-// For garden_plot rows with multiple lookup attempts, prefer the first match.
+// Quality rank (lower = better):  exact=0, fuzzy=1, split_both=2,
+// split_partial=3, unmatched=99
+const QUALITY_RANK = {
+  exact:               0,
+  fuzzy_nearest_house: 1,
+  split_both:          2,
+  split_partial:       3,
+  unmatched:           99
+};
+function qualityRank(q) { return QUALITY_RANK[q] ?? 98; }
+
 function mergeResults(origRows, expanded, joinedRows) {
-  // Build best result per orig_idx (prefer exact over unmatched)
-  const best = {};
+  // Group expanded results by orig_idx
+  const byOrig = {};
   joinedRows.forEach(r => {
     const k = r.orig_idx;
-    if (!best[k] || (best[k].match_quality !== "exact" && r.match_quality === "exact")) {
-      best[k] = r;
-    }
+    if (!byOrig[k]) byOrig[k] = [];
+    byOrig[k].push(r);
   });
+
   return origRows.map((row, idx) => {
-    const b = best[idx] || {};
+    const parts = byOrig[idx] || [];
+    if (parts.length === 0) {
+      return Object.assign({}, row, {
+        ACD: "", SCD: "", STRABS: "", OBJEKT_ID: "", lon: "", lat: "",
+        house_distance: "", acd_b: "", match_quality: "unmatched"
+      });
+    }
+
+    const compositeTotal = parts[0].composite_total;
+
+    if (compositeTotal <= 1) {
+      // Non-composite: just pick the best (should be one row)
+      const best = parts.reduce((a, b) =>
+        qualityRank(a.match_quality) <= qualityRank(b.match_quality) ? a : b
+      );
+      return Object.assign({}, row, {
+        ACD:            best.ACD           ?? "",
+        SCD:            best.SCD           ?? "",
+        STRABS:         best.STRABS        ?? "",
+        OBJEKT_ID:      best.OBJEKT_ID     ?? "",
+        lon:            best.lon           ?? "",
+        lat:            best.lat           ?? "",
+        house_distance: best.house_distance ?? "",
+        acd_b:          "",
+        match_quality:  best.match_quality ?? "unmatched"
+      });
+    }
+
+    // Composite row: parts[0] = first half, parts[1] = second half (if present)
+    const p0 = parts.find(p => p.composite_index === 0);
+    const p1 = parts.find(p => p.composite_index === 1);
+    const m0 = p0 && p0.ACD ? true : false;
+    const m1 = p1 && p1.ACD ? true : false;
+
+    let matchQuality;
+    if (m0 && m1)       matchQuality = "split_both";
+    else if (m0 || m1)  matchQuality = "split_partial";
+    else                matchQuality = "unmatched";
+
+    const primary = m0 ? p0 : (m1 ? p1 : p0 || {});
     return Object.assign({}, row, {
-      ACD:           b.ACD           ?? "",
-      SCD:           b.SCD           ?? "",
-      STRABS:        b.STRABS        ?? "",
-      OBJEKT_ID:     b.OBJEKT_ID     ?? "",
-      lon:           b.lon           ?? "",
-      lat:           b.lat           ?? "",
-      match_quality: b.match_quality ?? "unmatched"
+      ACD:            primary.ACD           ?? "",
+      SCD:            primary.SCD           ?? "",
+      STRABS:         primary.STRABS        ?? "",
+      OBJEKT_ID:      primary.OBJEKT_ID     ?? "",
+      lon:            primary.lon           ?? "",
+      lat:            primary.lat           ?? "",
+      house_distance: "",
+      acd_b:          (m1 && p1 ? p1.ACD : "") ?? "",
+      match_quality:  matchQuality
     });
   });
 }
@@ -902,7 +1619,7 @@ function renderChart(merged) {
     const key = r.__plz__ || "";
     if (!byDistrict[key]) byDistrict[key] = { total: 0, matched: 0 };
     byDistrict[key].total++;
-    if (r.match_quality === "exact") byDistrict[key].matched++;
+    if (r.match_quality !== "unmatched") byDistrict[key].matched++;
   });
   const labels = Object.keys(byDistrict).sort();
   const rates  = labels.map(k => {
@@ -952,10 +1669,12 @@ function renderTable(merged) {
   const body = `<tbody>${rows.map(r =>
     `<tr>${cols.map(c => {
       const v   = r[c] ?? "";
-      const ok  = c === "match_quality" && v === "exact";
-      const bad = c === "match_quality" && v === "unmatched";
-      const style = ok  ? "background:#d1e7dd;" :
-                    bad ? "background:#f8d7da;" : "";
+      const isQ = c === "match_quality";
+      const style = isQ && v === "exact"               ? "background:#d1e7dd;" :
+                    isQ && v === "fuzzy_nearest_house"  ? "background:#fff3cd;" :
+                    isQ && v === "split_both"           ? "background:#cff4fc;" :
+                    isQ && v === "split_partial"        ? "background:#e2e3e5;" :
+                    isQ && v === "unmatched"            ? "background:#f8d7da;" : "";
       return `<td style="border:1px solid #dee2e6; padding:4px 8px; ${style}">${v}</td>`;
     }).join("")}</tr>`
   ).join("")}</tbody>`;
@@ -1102,9 +1821,11 @@ document.getElementById("run-btn").addEventListener("click", async () => {
   try {
     await initDuck();
 
-    setProgress(40, "Expanding rows (garden-plot detection)…");
-    const expanded = expandRows(parsedRows, plzCol, streetCol, houseCol);
+    setProgress(40, "Expanding rows (composite split + garden-plot detection)…");
+    // Fix B: splitComposite replaces the old expandRows — handles "/" splits correctly
+    const expanded = splitComposite(parsedRows, plzCol, streetCol, houseCol);
 
+    // Fix A: runLookup now does exact pass + fuzzy fallback
     const joinedRows = await runLookup(expanded);
 
     // Tag each orig row with its PLZ for chart
@@ -1117,15 +1838,29 @@ document.getElementById("run-btn").addEventListener("click", async () => {
 
     resultRows = merged;
 
-    const nTotal   = merged.length;
-    const nMatched = merged.filter(r => r.match_quality === "exact").length;
-    const pct      = nTotal > 0 ? Math.round(100 * nMatched / nTotal) : 0;
+    const nTotal         = merged.length;
+    const nExact         = merged.filter(r => r.match_quality === "exact").length;
+    const nFuzzy         = merged.filter(r => r.match_quality === "fuzzy_nearest_house").length;
+    const nSplitBoth     = merged.filter(r => r.match_quality === "split_both").length;
+    const nSplitPartial  = merged.filter(r => r.match_quality === "split_partial").length;
+    const nAnyMatch      = nExact + nFuzzy + nSplitBoth + nSplitPartial;
+    const pct            = nTotal > 0 ? Math.round(100 * nAnyMatch / nTotal) : 0;
 
+    const lang = document.body.getAttribute("lang") || "en";
+    const isDE = lang === "de";
     document.getElementById("match-summary").innerHTML =
-      `<strong>${nMatched.toLocaleString()}</strong> of <strong>${nTotal.toLocaleString()}</strong> ` +
-      `addresses matched (${pct}% match rate). ` +
-      `<span style="color:#198754;">&#10003; exact</span> / ` +
-      `<span style="color:#dc3545;">&#10007; unmatched</span>`;
+      `<strong>${nAnyMatch.toLocaleString()}</strong> ` +
+      (isDE ? "von" : "of") +
+      ` <strong>${nTotal.toLocaleString()}</strong> ` +
+      (isDE ? "Adressen zugeordnet" : "addresses matched") +
+      ` (${pct}%). ` +
+      `<span style="color:#198754;">&#10003; exact: ${nExact.toLocaleString()}</span>` +
+      (nFuzzy        > 0 ? ` &nbsp; <span style="color:#fd7e14;">~ fuzzy: ${nFuzzy.toLocaleString()}</span>` : "") +
+      (nSplitBoth    > 0 ? ` &nbsp; <span style="color:#0dcaf0;">&#8679; split (both): ${nSplitBoth.toLocaleString()}</span>` : "") +
+      (nSplitPartial > 0 ? ` &nbsp; <span style="color:#6c757d;">&#8679; split (partial): ${nSplitPartial.toLocaleString()}</span>` : "") +
+      ` &nbsp; <span style="color:#dc3545;">&#10007; ` +
+      (isDE ? "keine Übereinstimmung" : "unmatched") +
+      `: ${(nTotal - nAnyMatch).toLocaleString()}</span>`;
 
     renderChart(merged);
     renderTable(merged);
