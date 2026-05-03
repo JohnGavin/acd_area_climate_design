@@ -23,13 +23,16 @@ fi
 
 mkdir -p "$DST_DIR"
 
-# Copy every parquet committed to inst/extdata/ to docs/data/.
+# Copy data files committed to inst/extdata/ to docs/data/.
+# Extensions covered: .parquet (Stage 2 storage), .xlsx (sample-upload demo files), .csv (lookup tables).
 # Use cp -p to preserve mtime so cache headers behave.
 n_copied=0
-for f in "$SRC_DIR"/*.parquet; do
-  [ -f "$f" ] || continue
-  cp -p "$f" "$DST_DIR/$(basename "$f")"
-  n_copied=$((n_copied + 1))
+for ext in parquet xlsx csv; do
+  for f in "$SRC_DIR"/*."$ext"; do
+    [ -f "$f" ] || continue
+    cp -p "$f" "$DST_DIR/$(basename "$f")"
+    n_copied=$((n_copied + 1))
+  done
 done
 
-echo "post-render: copied $n_copied parquet file(s) from inst/extdata/ to docs/data/"
+echo "post-render: copied $n_copied data file(s) from inst/extdata/ to docs/data/"
