@@ -479,6 +479,50 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
     data-en="Download filled CSV" data-de="CSV herunterladen">
     Download filled CSV
   </button>
+
+  <!-- Fix C — REST API fallback button (hidden until unmatched rows exist) -->
+  <div id="rest-fallback-section" style="display:none; margin-top:16px;
+    padding:12px 16px; background:#fff8dc; border:1px solid #ffe58a;
+    border-radius:6px; font-size:0.92em;">
+    <p style="margin:0 0 8px;">
+      <span data-lang="en">
+        <strong>
+          <span id="rest-unmatched-count">0</span> rows still unmatched
+        </strong> after Fix A + Fix B.
+        The city's
+        <a href="https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo"
+           target="_blank" rel="noopener">OGDAddressService REST API</a>
+        can attempt server-side fuzzy matching for these rows.
+        <em>Unmatched addresses will be sent to data.wien.gv.at.</em>
+      </span>
+      <span data-lang="de">
+        <strong>
+          <span id="rest-unmatched-count-de">0</span> Zeilen noch nicht gefunden
+        </strong> nach Fix A + Fix B.
+        Der städtische
+        <a href="https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo"
+           target="_blank" rel="noopener">OGDAddressService REST-Endpunkt</a>
+        kann für diese Zeilen serverseitiges Fuzzy-Matching versuchen.
+        <em>Nicht gefundene Adressen werden an data.wien.gv.at übertragen.</em>
+      </span>
+    </p>
+    <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+      <button id="rest-btn" style="
+        padding:7px 18px; background:#fd7e14; color:#fff;
+        border:none; border-radius:6px; cursor:pointer; font-size:0.95em; font-weight:600;"
+        data-en="🌐 Try REST API for residual unmatched"
+        data-de="🌐 REST API für verbleibende Adressen versuchen">
+        🌐 Try REST API for residual unmatched
+      </button>
+      <span id="rest-budget-display" style="color:#6c757d; font-size:0.88em;"></span>
+    </div>
+    <div id="rest-progress-wrap" style="display:none; margin-top:10px;">
+      <p id="rest-progress-msg" style="margin:0 0 4px; font-size:0.88em; color:#495057;"></p>
+      <div style="background:#dee2e6; border-radius:4px; height:6px; width:100%;">
+        <div id="rest-progress-bar" style="background:#fd7e14; border-radius:4px; height:6px; width:0%; transition:width 0.2s;"></div>
+      </div>
+    </div>
+  </div>
 </div>
 ```
 
@@ -1533,15 +1577,96 @@ async function runLookup(expanded) {
   return runFuzzyFallback(exactResults);
 }
 
+// ── Fix C — REST API fallback ──────────────────────────────────────────────
+// Chunks an array into sub-arrays of at most `size` elements.
+function chunks(arr, size) {
+  const out = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+// Session-level call budget (resets on page reload).
+let restCallsUsed = 0;
+
+async function restFallback(unmatchedRows, opts = {}) {
+  const concurrency = opts.concurrency || 8;
+  const maxCalls    = opts.maxCalls    || 250;
+  const timeout     = opts.timeout     || 5000;
+  const baseUrl     = "https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo";
+
+  const callsToMake = unmatchedRows.slice(0, maxCalls);
+  const results     = [];
+  const batches     = chunks(callsToMake, concurrency);
+  let   done        = 0;
+
+  for (const batch of batches) {
+    const settled = await Promise.allSettled(batch.map(row => {
+      const addr  = `${row.Strasse || row.__street__ || ""} ${row.HausNr || row.__house__ || ""}`.trim();
+      const url   = `${baseUrl}?Address=${encodeURIComponent(addr)}&CRS=EPSG:4326`;
+      const ctrl  = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), timeout);
+      return fetch(url, { signal: ctrl.signal })
+        .then(r => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .finally(() => clearTimeout(timer));
+    }));
+
+    settled.forEach((res, i) => {
+      const row = batch[i];
+      const f   = res.status === "fulfilled" && res.value?.features?.[0];
+      if (f?.properties?.ACD) {
+        results.push(Object.assign({}, row, {
+          ACD:            f.properties.ACD,
+          SCD:            f.properties.SCD       ?? "",
+          STRABS:         f.properties.STRABS    ?? "",
+          AdressID:       f.properties.AdressID  ?? "",
+          lon:            f.geometry?.coordinates?.[0] ?? "",
+          lat:            f.geometry?.coordinates?.[1] ?? "",
+          match_quality:  "rest_api_fallback",
+          rest_ranking:   f.properties.Ranking   ?? ""
+        }));
+      } else {
+        results.push(Object.assign({}, row, { match_quality: "unmatched_after_rest" }));
+      }
+    });
+
+    done += batch.length;
+    restCallsUsed += batch.length;
+
+    // Update progress UI
+    const pct = Math.round(100 * done / callsToMake.length);
+    const restMsg  = document.getElementById("rest-progress-msg");
+    const restBar  = document.getElementById("rest-progress-bar");
+    const restBudg = document.getElementById("rest-budget-display");
+    if (restMsg)  restMsg.textContent  = `${done} / ${callsToMake.length} calls done…`;
+    if (restBar)  restBar.style.width  = pct + "%";
+    if (restBudg) restBudg.textContent =
+      `${restCallsUsed} of ${maxCalls} max calls used this session`;
+  }
+
+  // Mark over-budget rows
+  for (let i = maxCalls; i < unmatchedRows.length; i++) {
+    results.push(Object.assign({}, unmatchedRows[i], { match_quality: "rest_skipped_over_budget" }));
+  }
+
+  return results;
+}
+
 // ── Merge results back to original rows ───────────────────────────────────
 // Quality rank (lower = better):  exact=0, fuzzy=1, split_both=2,
-// split_partial=3, unmatched=99
+// split_partial=3, rest_api_fallback=4, unmatched_after_rest=97,
+// rest_skipped_over_budget=98, unmatched=99
 const QUALITY_RANK = {
-  exact:               0,
-  fuzzy_nearest_house: 1,
-  split_both:          2,
-  split_partial:       3,
-  unmatched:           99
+  exact:                     0,
+  fuzzy_nearest_house:       1,
+  split_both:                2,
+  split_partial:             3,
+  rest_api_fallback:         4,
+  unmatched_after_rest:      97,
+  rest_skipped_over_budget:  98,
+  unmatched:                 99
 };
 function qualityRank(q) { return QUALITY_RANK[q] ?? 98; }
 
@@ -1670,11 +1795,14 @@ function renderTable(merged) {
     `<tr>${cols.map(c => {
       const v   = r[c] ?? "";
       const isQ = c === "match_quality";
-      const style = isQ && v === "exact"               ? "background:#d1e7dd;" :
-                    isQ && v === "fuzzy_nearest_house"  ? "background:#fff3cd;" :
-                    isQ && v === "split_both"           ? "background:#cff4fc;" :
-                    isQ && v === "split_partial"        ? "background:#e2e3e5;" :
-                    isQ && v === "unmatched"            ? "background:#f8d7da;" : "";
+      const style = isQ && v === "exact"                     ? "background:#d1e7dd;" :
+                    isQ && v === "fuzzy_nearest_house"      ? "background:#fff3cd;" :
+                    isQ && v === "split_both"               ? "background:#cff4fc;" :
+                    isQ && v === "split_partial"            ? "background:#e2e3e5;" :
+                    isQ && v === "rest_api_fallback"        ? "background:#ffd9b3;" :
+                    isQ && v === "unmatched_after_rest"     ? "background:#f8d7da;" :
+                    isQ && v === "rest_skipped_over_budget" ? "background:#f0f0f0;" :
+                    isQ && v === "unmatched"                ? "background:#f8d7da;" : "";
       return `<td style="border:1px solid #dee2e6; padding:4px 8px; ${style}">${v}</td>`;
     }).join("")}</tr>`
   ).join("")}</tbody>`;
@@ -1747,6 +1875,36 @@ async function parseFile(file) {
     const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
     return { rows, cols };
   }
+}
+
+// ── Match summary helper (used by both main run and REST update) ───────────
+function updateMatchSummary(merged) {
+  const nTotal        = merged.length;
+  const nExact        = merged.filter(r => r.match_quality === "exact").length;
+  const nFuzzy        = merged.filter(r => r.match_quality === "fuzzy_nearest_house").length;
+  const nSplitBoth    = merged.filter(r => r.match_quality === "split_both").length;
+  const nSplitPartial = merged.filter(r => r.match_quality === "split_partial").length;
+  const nRestApi      = merged.filter(r => r.match_quality === "rest_api_fallback").length;
+  const nAnyMatch     = nExact + nFuzzy + nSplitBoth + nSplitPartial + nRestApi;
+  const nUnmatched    = nTotal - nAnyMatch;
+  const pct           = nTotal > 0 ? Math.round(100 * nAnyMatch / nTotal) : 0;
+
+  const lang = document.body.getAttribute("lang") || "en";
+  const isDE = lang === "de";
+  document.getElementById("match-summary").innerHTML =
+    `<strong>${nAnyMatch.toLocaleString()}</strong> ` +
+    (isDE ? "von" : "of") +
+    ` <strong>${nTotal.toLocaleString()}</strong> ` +
+    (isDE ? "Adressen zugeordnet" : "addresses matched") +
+    ` (${pct}%). ` +
+    `<span style="color:#198754;">&#10003; exact: ${nExact.toLocaleString()}</span>` +
+    (nFuzzy        > 0 ? ` &nbsp; <span style="color:#fd7e14;">~ fuzzy: ${nFuzzy.toLocaleString()}</span>` : "") +
+    (nSplitBoth    > 0 ? ` &nbsp; <span style="color:#0dcaf0;">&#8679; split (both): ${nSplitBoth.toLocaleString()}</span>` : "") +
+    (nSplitPartial > 0 ? ` &nbsp; <span style="color:#6c757d;">&#8679; split (partial): ${nSplitPartial.toLocaleString()}</span>` : "") +
+    (nRestApi      > 0 ? ` &nbsp; <span style="color:#fd7e14; font-weight:600;">&#127760; REST API: ${nRestApi.toLocaleString()}</span>` : "") +
+    ` &nbsp; <span style="color:#dc3545;">&#10007; ` +
+    (isDE ? "keine Übereinstimmung" : "unmatched") +
+    `: ${nUnmatched.toLocaleString()}</span>`;
 }
 
 // ── Wire up UI ─────────────────────────────────────────────────────────────
@@ -1844,29 +2002,31 @@ document.getElementById("run-btn").addEventListener("click", async () => {
     const nSplitBoth     = merged.filter(r => r.match_quality === "split_both").length;
     const nSplitPartial  = merged.filter(r => r.match_quality === "split_partial").length;
     const nAnyMatch      = nExact + nFuzzy + nSplitBoth + nSplitPartial;
+    const nUnmatched     = nTotal - nAnyMatch;
     const pct            = nTotal > 0 ? Math.round(100 * nAnyMatch / nTotal) : 0;
 
-    const lang = document.body.getAttribute("lang") || "en";
-    const isDE = lang === "de";
-    document.getElementById("match-summary").innerHTML =
-      `<strong>${nAnyMatch.toLocaleString()}</strong> ` +
-      (isDE ? "von" : "of") +
-      ` <strong>${nTotal.toLocaleString()}</strong> ` +
-      (isDE ? "Adressen zugeordnet" : "addresses matched") +
-      ` (${pct}%). ` +
-      `<span style="color:#198754;">&#10003; exact: ${nExact.toLocaleString()}</span>` +
-      (nFuzzy        > 0 ? ` &nbsp; <span style="color:#fd7e14;">~ fuzzy: ${nFuzzy.toLocaleString()}</span>` : "") +
-      (nSplitBoth    > 0 ? ` &nbsp; <span style="color:#0dcaf0;">&#8679; split (both): ${nSplitBoth.toLocaleString()}</span>` : "") +
-      (nSplitPartial > 0 ? ` &nbsp; <span style="color:#6c757d;">&#8679; split (partial): ${nSplitPartial.toLocaleString()}</span>` : "") +
-      ` &nbsp; <span style="color:#dc3545;">&#10007; ` +
-      (isDE ? "keine Übereinstimmung" : "unmatched") +
-      `: ${(nTotal - nAnyMatch).toLocaleString()}</span>`;
+    updateMatchSummary(merged);
 
     renderChart(merged);
     renderTable(merged);
 
     document.getElementById("results-section").style.display = "block";
     setProgress(100, "");
+
+    // Show REST fallback button if there are unmatched rows
+    const restSec = document.getElementById("rest-fallback-section");
+    if (nUnmatched > 0) {
+      const el1 = document.getElementById("rest-unmatched-count");
+      const el2 = document.getElementById("rest-unmatched-count-de");
+      if (el1) el1.textContent = nUnmatched.toLocaleString();
+      if (el2) el2.textContent = nUnmatched.toLocaleString();
+      const restBudg = document.getElementById("rest-budget-display");
+      if (restBudg) restBudg.textContent =
+        `${restCallsUsed} of 250 max calls used this session`;
+      restSec.style.display = "block";
+    } else {
+      restSec.style.display = "none";
+    }
   } catch (err) {
     setProgress(100, "");
     console.error(err);
@@ -1877,6 +2037,97 @@ document.getElementById("run-btn").addEventListener("click", async () => {
 
 document.getElementById("download-btn").addEventListener("click", () => {
   if (resultRows.length > 0) downloadCsv(resultRows);
+});
+
+// ── Fix C — REST API fallback button ──────────────────────────────────────
+document.getElementById("rest-btn").addEventListener("click", async () => {
+  const btn = document.getElementById("rest-btn");
+  btn.disabled = true;
+
+  const lang = document.body.getAttribute("lang") || "en";
+  const isDE = lang === "de";
+
+  // Identify rows still unmatched (only true 'unmatched' rows; skip composites)
+  // We need to supply street/house from the original columns.
+  // resultRows carry the original user columns plus ACD/match_quality additions.
+  const plzCol    = document.getElementById("map-plz").value;
+  const streetCol = document.getElementById("map-street").value;
+  const houseCol  = document.getElementById("map-hausnr").value;
+
+  const unmatched = resultRows.filter(r =>
+    r.match_quality === "unmatched"
+  ).map(r => Object.assign({}, r, {
+    // Provide normalised aliases the restFallback function can read
+    Strasse: String(r[streetCol] ?? "").trim(),
+    HausNr:  String(r[houseCol]  ?? "").trim()
+  }));
+
+  if (unmatched.length === 0) {
+    btn.disabled = false;
+    return;
+  }
+
+  const progressWrap = document.getElementById("rest-progress-wrap");
+  const restBar      = document.getElementById("rest-progress-bar");
+  const restMsg      = document.getElementById("rest-progress-msg");
+  progressWrap.style.display = "block";
+  restBar.style.width        = "0%";
+  restMsg.textContent        =
+    isDE ? "REST API wird aufgerufen…" : "Calling REST API…";
+
+  try {
+    const apiResults = await restFallback(unmatched, {
+      concurrency: 8,
+      maxCalls:    250,
+      timeout:     5000
+    });
+
+    // Merge apiResults back into resultRows by object identity (ref comparison
+    // won't work after map), so use a positional index map via a WeakMap.
+    // Strategy: apiResults items carry the same PLZ/street/house keys; build
+    // a lookup keyed by the row's position in the unmatched list and splice
+    // back using the row index stored in __restIdx__.
+    const apiByIdx = {};
+    apiResults.forEach((r, i) => { apiByIdx[i] = r; });
+
+    // Rebuild resultRows: replace unmatched rows with their API results
+    let apiCursor = 0;
+    resultRows = resultRows.map(r => {
+      if (r.match_quality !== "unmatched") return r;
+      const updated = apiByIdx[apiCursor++];
+      return updated ?? r;
+    });
+
+    updateMatchSummary(resultRows);
+    renderChart(resultRows);
+    renderTable(resultRows);
+
+    // Update or hide the REST section
+    const nStillUnmatched = resultRows.filter(
+      r => r.match_quality === "unmatched" ||
+           r.match_quality === "unmatched_after_rest"
+    ).length;
+    const el1 = document.getElementById("rest-unmatched-count");
+    const el2 = document.getElementById("rest-unmatched-count-de");
+    if (el1) el1.textContent = nStillUnmatched.toLocaleString();
+    if (el2) el2.textContent = nStillUnmatched.toLocaleString();
+
+    const restBudg = document.getElementById("rest-budget-display");
+    if (restBudg) restBudg.textContent =
+      `${restCallsUsed} of 250 max calls used this session`;
+
+    restMsg.textContent = isDE
+      ? `Fertig — ${apiResults.filter(r => r.match_quality === "rest_api_fallback").length} zusätzliche Treffer via REST API`
+      : `Done — ${apiResults.filter(r => r.match_quality === "rest_api_fallback").length} additional matches via REST API`;
+
+    progressWrap.style.display = "block";
+    // Disable button to avoid double-calling
+    btn.textContent = isDE ? "✓ REST API abgeschlossen" : "✓ REST API done";
+
+  } catch (err) {
+    restMsg.textContent = (isDE ? "Fehler: " : "Error: ") + err.message;
+    btn.disabled = false;
+  }
 });
 </script>
 ```
