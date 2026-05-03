@@ -127,7 +127,7 @@ body.dark-mode #progress-msg { color: #ccc; }
 /* Drop zone hover in dark mode */
 body.dark-mode #drop-zone:hover,
 body.dark-mode #drop-zone.drag-over { background: #1e2a3e !important; }
-body.dark-mode p#file-name-display { color: #aaa; }
+body.dark-mode p#file-name-display { color: #fff; }
 body.dark-mode #match-summary span[style*="198754"] { color: #69d4a0 !important; }
 body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important; }
 </style>
@@ -388,10 +388,10 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
     </p>
     <input type="file" id="file-input" accept=".xlsx,.csv"
            style="display:none;" />
-    <p id="file-name-display" style="margin:8px 0 0; color:#6c757d; font-size:0.9em;"></p>
+    <p id="file-name-display" style="margin:8px 0 0; color:#0d6efd; font-size:1.3em; font-weight:bold;"></p>
   </div>
 
-  <!-- Column mapping -->
+  <!-- Column mapping (hidden until file is loaded) -->
   <div id="col-map-section" style="display:none; margin-bottom:16px;">
     <h4 style="margin-bottom:8px;">
       <span data-lang="en">Column mapping</span>
@@ -414,13 +414,16 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
         <select id="map-hausnr" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
       </label>
     </div>
-    <button id="run-btn" style="
-      margin-top:14px; padding:8px 20px; background:#0d6efd; color:#fff;
-      border:none; border-radius:6px; cursor:pointer; font-size:1em;"
-      data-en="Run lookup" data-de="Suche starten">
-      Run lookup
-    </button>
   </div>
+
+  <!-- Run lookup button — visible on load (disabled until file is parsed) -->
+  <button id="run-btn" disabled style="
+    margin-top:14px; padding:8px 20px; background:#0d6efd; color:#fff;
+    border:none; border-radius:6px; font-size:1em;
+    cursor:not-allowed; opacity:0.55;"
+    data-en="Run lookup" data-de="Suche starten">
+    Run lookup
+  </button>
 
   <!-- Progress bar -->
   <div id="progress-section" style="display:none; margin-bottom:12px;">
@@ -461,19 +464,8 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
             style="max-width:700px; width:100%;"></canvas>
   </div>
 
-  <!-- Results table (first 50 rows) -->
-  <h4>
-    <span data-lang="en">Preview (first 50 matched rows)</span>
-    <span data-lang="de">Vorschau (erste 50 Treffer)</span>
-  </h4>
-  <div style="overflow-x:auto;">
-    <table id="results-table" style="
-      border-collapse:collapse; width:100%; font-size:0.85em;">
-    </table>
-  </div>
-
-  <!-- Download section (button + Fix D: first-ACD vs all-ACDs toggle) -->
-  <div id="download-section" style="margin-top:14px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+  <!-- Download section (button + Fix D: first-ACD vs all-ACDs toggle) — ABOVE table -->
+  <div id="download-section" style="margin-bottom:14px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
     <button id="download-btn" style="
       padding:8px 20px; background:#198754; color:#fff;
       border:none; border-radius:6px; cursor:pointer; font-size:1em;"
@@ -493,6 +485,17 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
         <span data-lang="de">Alle ACDs (eine Zeile je ACD bei Mehrfamilienhaus)</span>
       </label>
     </div>
+  </div>
+
+  <!-- Results table (first 50 rows) -->
+  <h4>
+    <span data-lang="en">Preview (first 50 matched rows)</span>
+    <span data-lang="de">Vorschau (erste 50 Treffer)</span>
+  </h4>
+  <div style="overflow-x:auto;">
+    <table id="results-table" style="
+      border-collapse:collapse; width:100%; font-size:0.85em;">
+    </table>
   </div>
 
   <!-- Fix C — REST API fallback button (hidden until unmatched rows exist) -->
@@ -1748,42 +1751,61 @@ async function runFuzzyFallback(exactResults) {
   await dbConn.query(`INSERT INTO unmatched_in VALUES ${vals}`);
 
   // Fuzzy query: for each unmatched row, find the nearest registered house
-  // on the same (PLZ, street).  QUALIFY keeps only the single closest match.
-  // DuckDB does not support QUALIFY with window functions in older builds —
-  // use a subquery approach instead.
+  // on the same (PLZ, street).  Uses a portable CTE + WHERE rn = 1 subquery
+  // (avoids QUALIFY which is not supported in all duckdb-wasm builds).
+  // ROW_NUMBER() OVER (PARTITION BY … ORDER BY …) IS fully supported.
   // Fix D: addr view now exposes acd_list[1]/scd_list[1]/... instead of
   // individual ACD/SCD_NAME_STR/STRABS_ZUGANG_STR/OBJEKT_ID columns.
-  const fuzzy = await dbConn.query(`
-    WITH candidates AS (
-      SELECT
-        u.row_id,
-        a.acd_list[1]       AS ACD,
-        a.scd_list[1]       AS SCD,
-        a.strabs_list[1]    AS STRABS,
-        a.objekt_id_list[1] AS OBJEKT_ID,
-        a.lon,
-        a.lat,
-        a.acd_list          AS acd_list,
-        a.acd_count         AS acd_count,
-        ABS(
-          COALESCE(TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER), -9999) -
-          COALESCE(TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER), -9999)
-        ) AS house_distance,
-        ROW_NUMBER() OVER (
-          PARTITION BY u.row_id
-          ORDER BY ABS(
+  let fuzzy;
+  try {
+    fuzzy = await dbConn.query(`
+      WITH candidates AS (
+        SELECT
+          u.row_id,
+          a.acd_list[1]       AS ACD,
+          a.scd_list[1]       AS SCD,
+          a.strabs_list[1]    AS STRABS,
+          a.objekt_id_list[1] AS OBJEKT_ID,
+          a.lon,
+          a.lat,
+          a.acd_list          AS acd_list,
+          a.acd_count         AS acd_count,
+          ABS(
             COALESCE(TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER), -9999) -
             COALESCE(TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER), -9999)
-          )
-        ) AS rn
-      FROM unmatched_in u
-      JOIN addr a ON u.plz_in = a.plz_norm AND u.street_in = a.street_norm
-      WHERE a.house_norm REGEXP '^[0-9]'
-        AND TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER) IS NOT NULL
-        AND TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER) IS NOT NULL
-    )
-    SELECT * FROM candidates WHERE rn = 1
-  `).catch(() => null);  // if the query fails (e.g. no REGEXP support), skip
+          ) AS house_distance,
+          ROW_NUMBER() OVER (
+            PARTITION BY u.row_id
+            ORDER BY ABS(
+              COALESCE(TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER), -9999) -
+              COALESCE(TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER), -9999)
+            )
+          ) AS rn
+        FROM unmatched_in u
+        JOIN addr a ON u.plz_in = a.plz_norm AND u.street_in = a.street_norm
+        WHERE a.house_norm REGEXP '^[0-9]'
+          AND TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER) IS NOT NULL
+          AND TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER) IS NOT NULL
+      )
+      SELECT * FROM candidates WHERE rn = 1
+    `);
+  } catch (fuzzyErr) {
+    // Fuzzy fallback failed — surface a visible warning so this is not hidden
+    console.error("[Fix A] Fuzzy nearest-house query failed:", fuzzyErr);
+    const warn = document.createElement("div");
+    warn.id = "fuzzy-error-banner";
+    warn.style.cssText =
+      "background:#fff3cd; border:1px solid #ffc107; border-radius:6px; " +
+      "padding:10px 14px; margin-bottom:12px; font-size:0.92em; color:#664d03;";
+    warn.innerHTML =
+      "<strong>⚠ Fix A (fuzzy nearest-house) failed</strong> — " +
+      "some addresses may show as <em>unmatched</em> that could have been " +
+      "recovered. Error: <code>" + fuzzyErr.message + "</code>. " +
+      "Check the browser console for details.";
+    const res = document.getElementById("results-section");
+    if (res) res.prepend(warn);
+    return exactResults;
+  }
 
   if (!fuzzy) return exactResults;
 
@@ -2306,6 +2328,11 @@ async function handleFile(file) {
     const det   = autoDetect(cols);
     populateSelects(cols, det);
     document.getElementById("col-map-section").style.display = "block";
+    // Enable run button now that a file is loaded
+    const runBtn = document.getElementById("run-btn");
+    runBtn.disabled       = false;
+    runBtn.style.cursor   = "pointer";
+    runBtn.style.opacity  = "1";
     setProgress(100, "");
   } catch (err) {
     setProgress(100, "");
