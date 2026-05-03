@@ -817,14 +817,14 @@ nutzen den Browser-Cache und sind unabhängig von der Verbindungsgeschwindigkeit
 
 ::: {data-lang="en"}
 Each fix is documented with its assumptions, benefits, costs, and example
-addresses where it does and does not work. Fix C (REST API fallback) is now
-active. Fix D (multi-unit dedup) is planned for a future issue.
+addresses where it does and does not work. Fix C (REST API fallback) and Fix D
+(multi-unit dedup correctness) are both now active.
 :::
 
 ::: {data-lang="de"}
 Jede Verbesserung ist mit ihren Annahmen, Vorteilen, Kosten und Beispieladressen
-dokumentiert. Fix C (REST API Fallback) ist jetzt aktiv. Fix D (Mehrfacheinheit-Deduplizierung)
-ist für ein künftiges Issue geplant.
+dokumentiert. Fix C (REST API Fallback) und Fix D (Mehrfacheinheit-Deduplizierung,
+Korrektheit) sind jetzt beide aktiv.
 :::
 
 ::: {.panel-tabset}
@@ -1276,94 +1276,184 @@ Ziel: ≥ 98 % Trefferquote auf der 2.039-zeiligen Testdatei (gegenüber 94,2 % 
 
 :::
 
-## Fix D — Multi-unit dedup (geplant / planned) {#fix-d}
+## Fix D — Multi-unit dedup (aktiv / active) {#fix-d}
 
 ::: {.panel-tabset}
 
 ### Summary / Zusammenfassung
 
 ::: {data-lang="en"}
-**Status: PLANNED** — tracked in a separate issue. ADRESSENOGD contains
-291,823 rows but only ~149,676 unique `(PLZ, street, house)` tuples. Around
-13% of those tuples have more than one ACD — multi-unit buildings, separate
-staircases, or sub-addresses. The current page deduplicates on `(PLZ, street,
-house)` and returns one ACD arbitrarily. Fix D replaces the deduplication with
-a `GROUP BY` returning all ACDs for a matched tuple, with a UI element
-letting the user select or accept all.
+**Status: ACTIVE** — implemented in [issue #49](https://github.com/JohnGavin/acd_area_climate_design/issues/49).
+
+ADRESSENOGD contains 291,823 rows but only 148,444 unique `(PLZ, street, house)`
+tuples. **19,319 of those tuples (13.0%) have more than one ACD** — multi-unit
+buildings, separate staircases (`Stiegen`), or sub-addresses. For example,
+`Achengasse 4, 1210` has 82 registered ACDs.
+
+The previous page deduplicated on `(PLZ, street, house)` and returned one ACD
+arbitrarily — whichever sorted first. Fix D replaces that with a `GROUP BY +
+ARRAY_AGG` in the DuckDB-WASM `addr` VIEW. When multiple ACDs match an address:
+
+- `match_quality = "ambiguous_multi"` (shown in purple)
+- `acd_count` column shows how many ACDs exist
+- `acd_codes` column shows all ACDs comma-joined
+- The **⚠ N units** badge next to the ACD cell is clickable to reveal all codes
+- The CSV download offers a **"All ACDs (one row per ACD)"** mode that expands
+  ambiguous rows with `acd_unit_index = 0..N-1` for join-back
+
+Match rate is unchanged — the 13% ambiguous rows were previously counted as
+"matched" (just silently wrong). What changes is honesty: the user now sees the
+ambiguity instead of receiving an arbitrary result.
 :::
 
 ::: {data-lang="de"}
-**Status: GEPLANT** — wird in einem eigenen Issue verfolgt. ADRESSENOGD
-enthält 291.823 Zeilen, aber nur ~149.676 eindeutige `(PLZ, Straße, Haus)`-
-Tupel. Etwa 13 % dieser Tupel haben mehr als eine ACD — Mehrfamilienhäuser,
-separate Stiegen oder Unteradressen. Derzeit wird auf `(PLZ, Straße, Haus)`
-dedupliziert und eine ACD willkürlich zurückgegeben. Fix D ersetzt die
-Deduplizierung durch ein `GROUP BY`, das alle ACDs für ein gefundenes Tupel
-zurückgibt, mit einem UI-Element, das dem Nutzer die Auswahl ermöglicht.
+**Status: AKTIV** — umgesetzt in [Issue #49](https://github.com/JohnGavin/acd_area_climate_design/issues/49).
+
+ADRESSENOGD enthält 291.823 Zeilen, aber nur 148.444 eindeutige
+`(PLZ, Straße, Haus)`-Tupel. **19.319 dieser Tupel (13,0 %) haben mehr als
+eine ACD** — Mehrfamilienhäuser, separate Stiegen oder Unteradressen. Zum
+Beispiel hat `Achengasse 4, 1210` 82 registrierte ACDs.
+
+Die bisherige Seite deduplizierte auf `(PLZ, Straße, Haus)` und gab eine ACD
+willkürlich zurück — jeweils die, die nach Sortierung zuerst kam. Fix D ersetzt
+das durch ein `GROUP BY + ARRAY_AGG` in der DuckDB-WASM-View `addr`. Bei
+mehreren ACDs für eine Adresse:
+
+- `match_quality = "ambiguous_multi"` (lila hervorgehoben)
+- Spalte `acd_count`: Anzahl der übereinstimmenden ACDs
+- Spalte `acd_codes`: alle ACDs kommagetrennt
+- Das **⚠ N units**-Badge neben der ACD-Zelle ist klickbar und zeigt alle Codes
+- Der CSV-Download bietet den Modus **„Alle ACDs (eine Zeile je ACD)"**, der
+  mehrdeutige Zeilen mit `acd_unit_index = 0..N-1` für einen Rück-Join aufklappt
+
+Die Trefferquote bleibt gleich — die 13 % mehrdeutigen Zeilen wurden bisher als
+„gefunden" gezählt (aber still falsch). Was sich ändert, ist die Ehrlichkeit:
+Der Nutzer sieht jetzt die Mehrdeutigkeit statt ein willkürliches Ergebnis.
 :::
 
 ### Assumptions / Annahmen
 
 ::: {data-lang="en"}
-- The user knows their own unit / Stiege and can select from a list.
-- Returning multiple ACDs is preferable to silently picking one at random.
+- The user knows their own unit / `Stiege` and can use the `acd_codes` list
+  or the expanded CSV to identify their specific ACD.
+- Returning multiple ACDs is strictly preferable to silently picking one at
+  random. There is no failure mode — single-unit addresses are unaffected.
+- The 13.0% figure (19,319 / 148,444 unique tuples) is based on the
+  `addresses_2026-05-02.parquet` snapshot. The fraction is stable over time
+  because it reflects Vienna's physical building stock.
+- `ARRAY_AGG(ACD ORDER BY ACD)` is deterministic: the list is sorted
+  alphabetically, so `acd_list[1]` (the backward-compatible primary ACD) is
+  always the lexicographically smallest ACD — not random.
 :::
 
 ::: {data-lang="de"}
-- Der Nutzer kennt seine eigene Einheit / Stiege und kann aus einer Liste
-  auswählen.
-- Mehrere ACDs zurückzugeben ist besser als eine zufällig auszuwählen.
+- Der Nutzer kennt seine eigene Einheit / Stiege und kann die Liste in
+  `acd_codes` oder das aufgeklappte CSV nutzen, um seine spezifische ACD
+  zu identifizieren.
+- Mehrere ACDs zurückzugeben ist einer willkürlichen Einzelauswahl eindeutig
+  vorzuziehen. Es gibt keinen Fehlerfall — Einzeladressen sind unberührt.
+- Der Anteil von 13,0 % (19.319 / 148.444 eindeutige Tupel) basiert auf dem
+  Snapshot `addresses_2026-05-02.parquet`. Er ist über die Zeit stabil, da er
+  den physischen Gebäudebestand Wiens widerspiegelt.
+- `ARRAY_AGG(ACD ORDER BY ACD)` ist deterministisch: Die Liste ist
+  alphabetisch sortiert, `acd_list[1]` (die abwärtskompatible primäre ACD)
+  ist immer die lexikografisch kleinste ACD — nicht zufällig.
 :::
 
 ### Benefits / Vorteile
 
 ::: {data-lang="en"}
 - Eliminates a hidden correctness bug affecting ~13% of matched rows.
-- No extra queries needed — the information is already in ADRESSENOGD.
+- No extra queries — the information is already in ADRESSENOGD; `GROUP BY`
+  replaces `DISTINCT` at no additional cost.
+- Match rate is unchanged (≥ 96.9%); correctness improves for the 13% ambiguous
+  cohort.
+- `acd_codes` column gives the user the full picture to look up their unit.
+- CSV "All ACDs" mode preserves all valid options for downstream processing.
 :::
 
 ::: {data-lang="de"}
-- Beseitigt einen versteckten Korrektheitsfehler, der ~13 % der gefundenen
-  Zeilen betrifft.
-- Keine zusätzlichen Abfragen erforderlich — die Information ist bereits in
-  ADRESSENOGD vorhanden.
+- Beseitigt einen versteckten Korrektheitsfehler, der ~13 % der Treffer betrifft.
+- Keine zusätzlichen Abfragen — die Information ist schon in ADRESSENOGD;
+  `GROUP BY` ersetzt `DISTINCT` ohne Mehraufwand.
+- Trefferquote bleibt unverändert (≥ 96,9 %); Korrektheit verbessert sich für
+  die 13 % mehrdeutigen Adressen.
+- Spalte `acd_codes` gibt dem Nutzer alle Optionen für die Einheitensuche.
+- Der CSV-Modus „Alle ACDs" erhält alle gültigen Optionen für die
+  Weiterverarbeitung.
 :::
 
 ### Costs / Kosten
 
 ::: {data-lang="en"}
-- Requires UI work to render and disambiguate multi-ACD cells.
-- Download CSV format changes: multi-ACD rows need either multiple columns
-  or a delimiter-separated value in the ACD column.
+- CSV row-count exceeds input-row-count in "All ACDs" mode for multi-unit rows.
+  Users expecting a strict 1:1 output should use "First ACD only" (default).
+- The `acd_list` object from DuckDB-WASM requires array unpacking in JavaScript;
+  handled transparently, but adds a small deserialization step.
+- Column `acd_b` (Fix B composite-street second ACD) and `acd_codes` (Fix D
+  all-units list) are conceptually different and both present in the output.
+  Documentation makes the distinction clear.
 :::
 
 ::: {data-lang="de"}
-- Erfordert UI-Arbeit zum Darstellen und Disambiguieren von Multi-ACD-Zellen.
-- Das CSV-Download-Format ändert sich: Zeilen mit mehreren ACDs benötigen
-  entweder mehrere Spalten oder einen trennzeichengetrennten Wert in der
-  ACD-Spalte.
+- Im Modus „Alle ACDs" überschreitet die CSV-Zeilenanzahl die Eingabezeilenanzahl
+  bei Mehrfamilienhaus-Zeilen. Nutzer, die eine strikte 1:1-Ausgabe erwarten,
+  sollten „Nur erste ACD" (Standard) verwenden.
+- Das `acd_list`-Objekt aus DuckDB-WASM erfordert Array-Entpackung in JavaScript;
+  wird transparent verarbeitet, fügt aber einen kleinen Deserialisierungsschritt hinzu.
+- Die Spalten `acd_b` (Fix B: zweite ACD bei zusammengesetzter Adresse) und
+  `acd_codes` (Fix D: alle Einheiten-ACDs) sind konzeptuell verschieden, aber
+  beide in der Ausgabe vorhanden. Die Dokumentation macht den Unterschied klar.
 :::
 
 ### Works on / Funktioniert bei
 
 ::: {data-lang="en"}
-- Any matched address in a multi-unit building — e.g. `Achengasse 4, 1210`
-  with 82 registered ACDs returns all 82 for user selection.
+- **Any matched address in a multi-unit building.** Example: `Achengasse 4,
+  1210` has 82 registered ACDs — all 82 are returned in `acd_codes`; the
+  badge shows "⚠ 82 units".
+- **All match quality levels** that produce a match (`exact` → upgraded to
+  `ambiguous_multi` when `acd_count > 1`; similarly for `fuzzy_nearest_house`).
+- **Backward compatibility:** `ACD` column still contains the first (lowest
+  lexicographic) ACD, so existing downstream code reading only the `ACD`
+  column continues to work.
 :::
 
 ::: {data-lang="de"}
-- Jede gefundene Adresse in einem Mehrfamilienhaus — z. B. `Achengasse 4,
-  1210` mit 82 registrierten ACDs gibt alle 82 zur Nutzerauswahl zurück.
+- **Jede gefundene Adresse in einem Mehrfamilienhaus.** Beispiel:
+  `Achengasse 4, 1210` hat 82 registrierte ACDs — alle 82 werden in `acd_codes`
+  zurückgegeben; das Badge zeigt „⚠ 82 units".
+- **Alle Treffer-Qualitätsstufen**, die einen Treffer erzeugen (`exact` →
+  aufgewertet zu `ambiguous_multi` bei `acd_count > 1`; ebenso für
+  `fuzzy_nearest_house`).
+- **Abwärtskompatibilität:** Die Spalte `ACD` enthält weiterhin die erste
+  (lexikografisch kleinste) ACD, sodass bestehender Code, der nur die `ACD`-
+  Spalte liest, weiterhin funktioniert.
 :::
 
 ### Doesn't work on / Funktioniert nicht bei
 
 ::: {data-lang="en"}
-- Single-unit addresses — no change in behaviour (only one ACD anyway).
+- **Single-unit addresses** — no change in behaviour (`acd_count = 1`,
+  `match_quality = "exact"`, no badge shown).
+- **Unmatched addresses** — Fix D only affects rows that do match; unmatched
+  rows remain `match_quality = "unmatched"`.
+- **Unit-level disambiguation** — Fix D tells the user there are N ACDs for
+  their address, but does not know which unit is theirs. The user must look up
+  their `Stiege` / door number in the `acd_codes` list or use the city's
+  [Adressensuche Wien](https://www.wien.gv.at/adressensuche/) to confirm.
 :::
 
 ::: {data-lang="de"}
-- Einzeladressen — keine Verhaltensänderung (ohnehin nur eine ACD).
+- **Einzeladressen** — keine Verhaltensänderung (`acd_count = 1`,
+  `match_quality = "exact"`, kein Badge).
+- **Nicht gefundene Adressen** — Fix D betrifft nur Treffer; nicht gefundene
+  Adressen bleiben `match_quality = "unmatched"`.
+- **Einheiten-genaue Disambiguierung** — Fix D teilt dem Nutzer mit, dass N
+  ACDs für seine Adresse existieren, weiß aber nicht, welche Einheit gemeint ist.
+  Der Nutzer muss seine Stiege / Türnummer in der Liste `acd_codes` nachschlagen
+  oder die städtische
+  [Adressensuche Wien](https://www.wien.gv.at/adressensuche/) nutzen.
 :::
 
 :::
