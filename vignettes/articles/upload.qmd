@@ -122,6 +122,14 @@ body.dark-mode #empty-state-msg { color: #aaa; }
 body.dark-mode select {
   background: var(--card-bg); color: var(--text); border-color: var(--border);
 }
+body.dark-mode #progress-bar { background: #4ea8de; }
+body.dark-mode #progress-msg { color: #ccc; }
+/* Drop zone hover in dark mode */
+body.dark-mode #drop-zone:hover,
+body.dark-mode #drop-zone.drag-over { background: #1e2a3e !important; }
+body.dark-mode p#file-name-display { color: #aaa; }
+body.dark-mode #match-summary span[style*="198754"] { color: #69d4a0 !important; }
+body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important; }
 </style>
 
 <!-- ── Toolbar ─────────────────────────────────────────────────────────────── -->
