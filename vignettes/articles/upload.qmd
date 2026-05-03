@@ -151,8 +151,14 @@ body.dark-mode select {
   function applyLang(lang) {
     document.body.setAttribute("lang", lang);
     const btn = document.getElementById("lang-btn");
-    if (btn) btn.textContent = lang === "de" ? "🌐 EN" : "🌐 DE";
-    // Swap data-en / data-de textContent on interactive elements
+    if (btn) {
+      btn.textContent = lang === "de" ? "🌐 EN" : "🌐 DE";
+      btn.setAttribute("aria-label",
+        lang === "de" ? "Switch to English" : "Auf Deutsch wechseln");
+      btn.setAttribute("title",
+        lang === "de" ? "Switch to English" : "Auf Deutsch wechseln");
+    }
+    // Swap data-en / data-de textContent on interactive elements (buttons, th, labels)
     document.querySelectorAll("[data-en][data-de]").forEach(el => {
       el.textContent = el.getAttribute("data-" + lang);
     });
