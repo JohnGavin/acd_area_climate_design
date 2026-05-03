@@ -574,7 +574,10 @@ in [issue #42](https://github.com/JohnGavin/acd_area_climate_design/issues/42).
 | `fuzzy_nearest_house` | PLZ + street matched; nearest existing house number used (distance shown in `house_distance` column) |
 | `split_both` | Composite `A/B` street — both halves resolved to an ACD (`ACD` = first, `acd_b` = second) |
 | `split_partial` | Composite `A/B` street — only one half resolved |
-| `unmatched` | No row in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) matched |
+| `rest_api_fallback` | Fix C: matched via the city's OGDAddressService REST API; `rest_ranking` column shows API confidence |
+| `unmatched_after_rest` | REST API was tried but returned no match |
+| `rest_skipped_over_budget` | REST API skipped — session budget of 250 calls already consumed |
+| `unmatched` | No row in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) matched (REST API not yet tried) |
 
 *Note: this DE/EN toggle is complementary to the German narrative vignette at
 [scrollytell\_de.html](scrollytell_de.html) — that page tells the story of
@@ -618,7 +621,10 @@ Die räumliche Anreicherung wird als Folgeaufgabe in
 | `fuzzy_nearest_house` | PLZ + Straße stimmen überein; nächstgelegene vorhandene Hausnummer verwendet (Abstand in `house_distance`) |
 | `split_both` | Zusammengesetzte `A/B`-Adresse — beide Hälften aufgelöst (`ACD` = erste, `acd_b` = zweite) |
 | `split_partial` | Zusammengesetzte `A/B`-Adresse — nur eine Hälfte aufgelöst |
-| `unmatched` | Keine Zeile in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) für diese Kombination gefunden |
+| `rest_api_fallback` | Fix C: Treffer via städtischem OGDAddressService REST-Endpunkt; Spalte `rest_ranking` zeigt API-Konfidenz |
+| `unmatched_after_rest` | REST API wurde aufgerufen, aber kein Treffer zurückgegeben |
+| `rest_skipped_over_budget` | REST API übersprungen — Sitzungsbudget von 250 Aufrufen bereits ausgeschöpft |
+| `unmatched` | Keine Zeile in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) gefunden (REST API noch nicht versucht) |
 
 *Hinweis: Der DE/EN-Umschalter ergänzt das deutsche Erzählvignette unter
 [scrollytell\_de.html](scrollytell_de.html) — jene Seite erklärt ACD-Codes;
@@ -784,13 +790,14 @@ nutzen den Browser-Cache und sind unabhängig von der Verbindungsgeschwindigkeit
 
 ::: {data-lang="en"}
 Each fix is documented with its assumptions, benefits, costs, and example
-addresses where it does and does not work. Fixes C and D are planned for
-future issues and not yet active.
+addresses where it does and does not work. Fix C (REST API fallback) is now
+active. Fix D (multi-unit dedup) is planned for a future issue.
 :::
 
 ::: {data-lang="de"}
 Jede Verbesserung ist mit ihren Annahmen, Vorteilen, Kosten und Beispieladressen
-dokumentiert. Korrekturen C und D sind geplant und noch nicht aktiv.
+dokumentiert. Fix C (REST API Fallback) ist jetzt aktiv. Fix D (Mehrfacheinheit-Deduplizierung)
+ist für ein künftiges Issue geplant.
 :::
 
 ::: {.panel-tabset}
@@ -1057,106 +1064,187 @@ oder `"split_partial"` (einer gefunden) zusammengeführt.
 
 :::
 
-## Fix C — REST API fallback (geplant / planned) {#fix-c}
+## Fix C — REST API fallback (aktiv / active) {#fix-c}
 
 ::: {.panel-tabset}
 
 ### Summary / Zusammenfassung
 
 ::: {data-lang="en"}
-**Status: PLANNED** — tracked in a separate issue. For rows still unmatched
-after Fix A + Fix B, optionally call the city's
+**Status: ACTIVE** — implemented in [issue #48](https://github.com/JohnGavin/acd_area_climate_design/issues/48).
+For rows still unmatched after Fix A + Fix B, click the
+**"🌐 Try REST API for residual unmatched"** button that appears below the
+results. The page calls the city's
 [`OGDAddressService.svc/GetAddressInfo`](https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo)
-REST endpoint per row. The API does its own fuzzy matching on the server side
-and returns the canonical ACD. A concurrency cap of 8 parallel requests and a
-maximum of ~250 calls per upload session keep the per-run cost manageable.
+REST endpoint once per unmatched row. The API performs server-side fuzzy
+matching and returns the canonical ACD. Concurrency is capped at 8 parallel
+requests and a maximum of 250 calls per upload session to stay within polite
+use of the public OGD service. Matched rows receive `match_quality =
+"rest_api_fallback"`.
+
+Target: ≥ 98% match rate on the 2,039-row test file (up from 94.2% after
+Fix A + Fix B).
 :::
 
 ::: {data-lang="de"}
-**Status: GEPLANT** — wird in einem eigenen Issue verfolgt. Für nach Fix A + B
-noch nicht gefundene Zeilen kann optional der städtische REST-Endpunkt
+**Status: AKTIV** — umgesetzt in [Issue #48](https://github.com/JohnGavin/acd_area_climate_design/issues/48).
+Für nach Fix A + B noch nicht gefundene Zeilen erscheint unterhalb der
+Ergebnisse die Schaltfläche **„🌐 REST API für verbleibende Adressen versuchen"**.
+Die Seite ruft den städtischen REST-Endpunkt
 [`OGDAddressService.svc/GetAddressInfo`](https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo)
-pro Zeile aufgerufen werden. Die API führt serverseitig eigenes Fuzzy-Matching
-durch und gibt die kanonische ACD zurück. Eine Parallelitäts-Obergrenze von
-8 Anfragen und maximal ~250 Aufrufe pro Upload-Sitzung halten die Kosten
-beherrschbar.
+einmal pro nicht gefundener Zeile auf. Die API führt serverseitig eigenes
+Fuzzy-Matching durch und gibt die kanonische ACD zurück. Die Parallelität ist
+auf 8 gleichzeitige Anfragen und maximal 250 Aufrufe pro Sitzung begrenzt.
+Gefundene Zeilen erhalten `match_quality = "rest_api_fallback"`.
+
+Ziel: ≥ 98 % Trefferquote auf der 2.039-zeiligen Testdatei (gegenüber 94,2 % nach Fix A + B).
 :::
 
 ### Assumptions / Annahmen
 
 ::: {data-lang="en"}
-- The city's OGDAddressService API remains publicly available without
-  authentication.
-- ~200 ms per API call; 8 concurrent requests cap total time to ~6 s for 250
-  residual rows.
-- The API's own matching is more permissive than our static Parquet for
-  Schrebergärten and edge-case spellings.
+- The city's OGDAddressService API is publicly available without authentication
+  and is subject to reasonable use; the 250-call session cap stays well within
+  polite limits.
+- Round-trip time is approximately 200–500 ms per request; 8 concurrent
+  requests cap total elapsed time to ≤ 30 s for 118 residual rows.
+- The API's own matching is more permissive than our static Parquet snapshot
+  for Schrebergarten parcel addresses and edge-case spellings.
+- The city's JSON response schema is stable: `features[0].properties.ACD` and
+  `features[0].properties.SCD` are present when a match is found. The
+  `Ranking` property indicates the API's internal match confidence.
+- Users accept that unmatched address fragments (street + house number only,
+  no name or personal data) are sent to the OGD server when they click the
+  button.
 :::
 
 ::: {data-lang="de"}
-- Der städtische OGDAddressService-Endpunkt bleibt ohne Authentifizierung
-  öffentlich verfügbar.
-- ~200 ms pro API-Aufruf; 8 parallele Anfragen begrenzen die Gesamtzeit auf
-  ~6 s für 250 verbleibende Zeilen.
-- Das eigene Matching der API ist für Schrebergärten und Sonderfälle
-  großzügiger als unser statisches Parquet.
+- Der OGDAddressService-Endpunkt der Stadt Wien ist ohne Authentifizierung
+  öffentlich verfügbar und für vernünftige Nutzung ausgelegt; das Sitzungslimit
+  von 250 Aufrufen liegt weit innerhalb fairer Nutzung.
+- Die Roundtrip-Zeit beträgt ca. 200–500 ms pro Anfrage; 8 gleichzeitige
+  Anfragen begrenzen die Gesamtdauer auf ≤ 30 s für 118 verbleibende Zeilen.
+- Das eigene Matching der API ist für Schrebergarten-Parzellenadressen und
+  Sonderfälle großzügiger als unser statischer Parquet-Snapshot.
+- Das JSON-Antwortschema der Stadt ist stabil: `features[0].properties.ACD`
+  und `features[0].properties.SCD` sind vorhanden, wenn ein Treffer gefunden
+  wird. Die Eigenschaft `Ranking` gibt die interne Match-Konfidenz der API an.
+- Nutzer akzeptieren, dass nicht gefundene Adressfragmente (nur Straße und
+  Hausnummer, keine Namen oder personenbezogenen Daten) an den OGD-Server
+  gesendet werden, wenn sie die Schaltfläche drücken.
 :::
 
 ### Benefits / Vorteile
 
 ::: {data-lang="en"}
-- Expected to recover ~1–2 additional percentage points on top of Fix A + B.
-- Canonicalises multi-unit ambiguity for the resolved rows.
-- No local data updates needed — the API always reflects the current register.
+- Expected to recover ~2–5 additional percentage points on top of Fix A + B,
+  targeting ≥ 98% match rate on the test file.
+- Canonicalises multi-unit deduplication ambiguity for the rows it resolves,
+  since the API returns the registered ACD directly.
+- No local data updates needed — the API always reflects the current live
+  Wien address register, including newly built addresses not yet in our
+  Parquet snapshot.
+- Completely optional: users who do not need the extra coverage, or who are
+  offline, can skip the button and download the 94.2% result as-is.
+- `rest_ranking` column exposes the API's internal match score so users can
+  filter low-confidence API matches.
 :::
 
 ::: {data-lang="de"}
-- Voraussichtlich ~1–2 weitere Prozentpunkte zusätzlich zu Fix A + B.
-- Kanonisiert Mehrdeutigkeiten bei Mehrfamilienhäusern für die gefundenen Zeilen.
+- Voraussichtlich ~2–5 weitere Prozentpunkte zusätzlich zu Fix A + B, mit dem
+  Ziel einer Trefferquote von ≥ 98 % auf der Testdatei.
+- Kanonisiert Mehrdeutigkeiten bei Mehrfamilienhäusern für die gefundenen
+  Zeilen, da die API die registrierte ACD direkt zurückgibt.
 - Keine lokalen Datenaktualisierungen erforderlich — die API spiegelt immer
-  den aktuellen Stand wider.
+  den aktuellen Stand des Wiener Adressregisters wider, einschließlich Neubauten,
+  die noch nicht in unserem Parquet-Snapshot enthalten sind.
+- Vollständig optional: Nutzer, die keine zusätzliche Abdeckung benötigen oder
+  offline sind, können die Schaltfläche überspringen und das 94,2%-Ergebnis
+  herunterladen.
+- Die Spalte `rest_ranking` gibt den internen Match-Score der API zurück, damit
+  unsichere API-Treffer herausgefiltert werden können.
 :::
 
 ### Costs / Kosten
 
 ::: {data-lang="en"}
-- Requires network connectivity — not offline-capable for the fallback rows.
-- City API may change or become unavailable without notice.
-- User must consent to sending unmatched address fragments to an external server.
+- Requires network connectivity for the fallback rows — not offline-capable
+  for this step (Fix A + Fix B still run offline).
+- The city API may change its JSON schema or become temporarily unavailable
+  without notice; errors are handled gracefully (`match_quality =
+  "unmatched_after_rest"` on failure, no exception thrown).
+- Users must accept that unmatched address fragments (street + house number,
+  no personal data) are sent to the external OGD server when the button is
+  clicked. This is stated clearly in the UI.
+- Session budget is 250 calls; rows beyond the budget receive
+  `match_quality = "rest_skipped_over_budget"` and are not sent.
+- CORS: the API must permit cross-origin requests from the GitHub Pages
+  domain. Tested on the live URL — see the QA report for the result.
 :::
 
 ::: {data-lang="de"}
-- Erfordert Netzwerkzugang — für die Fallback-Zeilen nicht offline nutzbar.
-- Die städtische API kann sich ohne Vorankündigung ändern oder ausfallen.
-- Der Nutzer muss zustimmen, nicht gefundene Adressfragmente an einen
-  externen Server zu senden.
+- Erfordert Netzwerkzugang für die Fallback-Zeilen — dieser Schritt ist nicht
+  offline nutzbar (Fix A + Fix B laufen weiterhin offline).
+- Das JSON-Schema der städtischen API kann sich ohne Vorankündigung ändern oder
+  der Dienst kann vorübergehend ausfallen; Fehler werden sauber abgefangen
+  (`match_quality = "unmatched_after_rest"` bei Fehler, keine Ausnahme).
+- Nutzer müssen akzeptieren, dass nicht gefundene Adressfragmente (Straße und
+  Hausnummer, keine personenbezogenen Daten) beim Klick auf die Schaltfläche
+  an den externen OGD-Server übertragen werden. Dies ist in der Benutzeroberfläche
+  klar ersichtlich.
+- Das Sitzungsbudget beträgt 250 Aufrufe; Zeilen darüber erhalten
+  `match_quality = "rest_skipped_over_budget"` und werden nicht übermittelt.
+- CORS: Die API muss Cross-Origin-Anfragen von der GitHub-Pages-Domain erlauben.
+  Testergebnis: siehe QA-Bericht.
 :::
 
 ### Works on / Funktioniert bei
 
 ::: {data-lang="en"}
-- Schrebergarten parcel addresses the API maps to a base building address.
-- New buildings registered in the live Wien register but not yet in our
-  Parquet snapshot.
+- **Schrebergarten parcel addresses** that the API maps to a registered base
+  building address — e.g. `Kleingarten Aspern Parz 38` → nearest registered
+  building in the same Kleingarten area.
+- **New buildings** registered in the live Wien address register but not yet
+  in our Parquet snapshot (snapshot date: `r ADDRESSES_SNAPSHOT_DATE`).
+- **Edge-case spellings** the API normalises on the server side (umlauts,
+  abbreviations, minor typos).
+- Any address where the city's OGD service has a match even if our static
+  join does not.
 :::
 
 ::: {data-lang="de"}
-- Schrebergarten-Parzellenadressen, die die API einer Basisgebäudeadresse
-  zuordnet.
-- Neubauten, die im Live-Register Wien registriert sind, aber noch nicht in
-  unserem Parquet-Snapshot enthalten sind.
+- **Schrebergarten-Parzellenadressen**, die die API einer registrierten
+  Basisgebäudeadresse zuordnet — z. B. `Kleingarten Aspern Parz 38` →
+  nächstgelegenes registriertes Gebäude im selben Kleingartenareal.
+- **Neubauten**, die im Live-Adressregister Wien registriert sind, aber noch
+  nicht in unserem Parquet-Snapshot enthalten sind (Stand: `r ADDRESSES_SNAPSHOT_DATE`).
+- **Sonderfallschreibweisen**, die die API serverseitig normalisiert (Umlaute,
+  Abkürzungen, kleinere Tippfehler).
+- Jede Adresse, für die der OGD-Dienst der Stadt einen Treffer hat, auch wenn
+  unser statischer Join keinen findet.
 :::
 
 ### Doesn't work on / Funktioniert nicht bei
 
 ::: {data-lang="en"}
-- Addresses with no match in the live Wien register either.
-- Offline use cases.
+- Addresses with no match in the live Wien register either — these receive
+  `match_quality = "unmatched_after_rest"`.
+- Offline use cases — the button requires an active internet connection.
+- Rows beyond the 250-call session budget — these receive
+  `match_quality = "rest_skipped_over_budget"`.
+- CORS-blocked environments (e.g. certain corporate proxies that block
+  cross-origin API calls to external domains).
 :::
 
 ::: {data-lang="de"}
-- Adressen, die auch im Live-Register Wien keinen Treffer haben.
-- Offline-Anwendungsfälle.
+- Adressen, die auch im Live-Register Wien keinen Treffer haben — diese erhalten
+  `match_quality = "unmatched_after_rest"`.
+- Offline-Anwendungsfälle — die Schaltfläche erfordert eine aktive
+  Internetverbindung.
+- Zeilen, die das Sitzungsbudget von 250 Aufrufen überschreiten — diese erhalten
+  `match_quality = "rest_skipped_over_budget"`.
+- CORS-blockierte Umgebungen (z. B. bestimmte Firmen-Proxys, die
+  Cross-Origin-API-Aufrufe an externe Domains sperren).
 :::
 
 :::
