@@ -32,17 +32,22 @@ if (!exists("REMOTE_BASE_URL"))         REMOTE_BASE_URL         <- "https://john
 # Load addresses for inline summary stats only (not passed to JS)
 addr_local <- load_acd_data("addresses", source = "local")
 
-n_addresses      <- format(nrow(addr_local),        big.mark = ",")
-n_acd_codes      <- format(length(unique(addr_local$ACD)), big.mark = ",")
+n_addresses      <- nrow(addr_local)
+n_acd_codes      <- length(unique(addr_local$ACD))
 addr_parquet_url <- paste0(REMOTE_BASE_URL, "/addresses_", ADDRESSES_SNAPSHOT_DATE, ".parquet")
 ```
 
 ```{=html}
+<!-- ── Upload page styles (toolbar + bilingual + dark mode) ──────────────── -->
 <style>
-/* upload page typography + tables */
+/* ── Base typography ─────────────────────────────────────────────────────── */
 main, .quarto-container, .upload-page-prose,
 .upload-page-prose p, .upload-page-prose li,
-.upload-page-prose td, .upload-page-prose th { font-size: 1.15em; }
+.upload-page-prose td, .upload-page-prose th {
+  font-size: var(--upload-font-size, 1.15em);
+}
+:root { --upload-font-size: 1.15em; }
+
 .upload-page-prose table { width: 100%; border-collapse: collapse; }
 .upload-page-prose table th, .upload-page-prose table td {
   padding: 6px 10px; border-bottom: 1px solid #dee2e6;
@@ -50,45 +55,267 @@ main, .quarto-container, .upload-page-prose,
 }
 .upload-page-prose table th.step-col,
 .upload-page-prose table td.step-col {
-  width: 4.5em;        /* matches "Step" header width plus a hair */
+  width: 4.5em;
   text-align: center;
   white-space: nowrap;
 }
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+.upload-toolbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; gap: 8px; align-items: center; justify-content: flex-end;
+  padding: 6px 12px;
+  background: var(--bg, #fff);
+  border-bottom: 1px solid var(--border, #dee2e6);
+  flex-wrap: nowrap;
+}
+@media (max-width: 600px) { .upload-toolbar { flex-wrap: wrap; } }
+.upload-toolbar button {
+  padding: 4px 10px; border-radius: 4px; border: 1px solid var(--border, #ced4da);
+  background: var(--card-bg, #f8f9fa); color: var(--text, #212529);
+  cursor: pointer; font-size: 0.88em; font-weight: 600; white-space: nowrap;
+}
+.upload-toolbar button:hover { opacity: 0.8; }
+.upload-toolbar .toolbar-sep {
+  color: var(--border, #ced4da); font-size: 0.8em; user-select: none;
+}
+
+/* ── Bilingual visibility ────────────────────────────────────────────────── */
+body[lang="en"] [data-lang="de"] { display: none; }
+body[lang="de"] [data-lang="en"] { display: none; }
+
+/* ── Dark mode ───────────────────────────────────────────────────────────── */
+body.dark-mode {
+  --bg: #1a1a2e;
+  --text: #e0e0e0;
+  --card-bg: #16213e;
+  --border: #2a2a4a;
+  --link: #4ea8de;
+}
+body.dark-mode main,
+body.dark-mode .upload-page-prose {
+  background: var(--bg); color: var(--text);
+}
+body.dark-mode #drop-zone {
+  background: var(--card-bg); border-color: var(--border); color: var(--text);
+}
+body.dark-mode #sample-strip {
+  background: #2a2a3e; border-color: #4a4a5a; color: #f0e8c0;
+}
+body.dark-mode .upload-page-prose table th,
+body.dark-mode .upload-page-prose table td {
+  border-color: var(--border);
+}
+body.dark-mode a { color: var(--link); }
+body.dark-mode .upload-toolbar {
+  background: var(--card-bg); border-color: var(--border);
+}
+body.dark-mode #upload-section label,
+body.dark-mode #upload-section h4,
+body.dark-mode #col-map-section { color: var(--text); }
+body.dark-mode #match-summary {
+  background: var(--card-bg); border-color: var(--border); color: var(--text);
+}
+body.dark-mode #results-section h3,
+body.dark-mode #results-section h4 { color: var(--text); }
+body.dark-mode #empty-state-msg { color: #aaa; }
+body.dark-mode select {
+  background: var(--card-bg); color: var(--text); border-color: var(--border);
+}
 </style>
+
+<!-- ── Toolbar ─────────────────────────────────────────────────────────────── -->
+<div class="upload-toolbar" id="upload-toolbar" role="toolbar" aria-label="Page controls">
+  <button id="lang-btn" title="Switch language / Sprache wechseln"
+          aria-label="Switch language">🌐 DE</button>
+  <span class="toolbar-sep">|</span>
+  <button id="font-up-btn" title="Increase font size" aria-label="Increase font size">A+</button>
+  <button id="font-down-btn" title="Decrease font size" aria-label="Decrease font size">A−</button>
+  <span class="toolbar-sep">|</span>
+  <button id="dark-btn" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
+</div>
+
+<!-- ── Toolbar JS ──────────────────────────────────────────────────────────── -->
+<script>
+(function() {
+  // ── Constants ──────────────────────────────────────────────────────────────
+  const LS_LANG      = "acd-upload-lang";
+  const LS_FONT      = "acd-upload-font-size";
+  const LS_DARK      = "acd-upload-dark-mode";
+  const FONT_MIN     = 12;
+  const FONT_MAX     = 22;
+  const FONT_STEP    = 1;
+  const FONT_DEFAULT = 17;  // 1.15em equivalent at base 16px → ~18.4; use 17 as round default
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  function applyLang(lang) {
+    document.body.setAttribute("lang", lang);
+    const btn = document.getElementById("lang-btn");
+    if (btn) btn.textContent = lang === "de" ? "🌐 EN" : "🌐 DE";
+    // Swap data-en / data-de textContent on interactive elements
+    document.querySelectorAll("[data-en][data-de]").forEach(el => {
+      el.textContent = el.getAttribute("data-" + lang);
+    });
+  }
+
+  function applyFont(px) {
+    document.documentElement.style.setProperty("--upload-font-size", px + "px");
+  }
+
+  function applyDark(on) {
+    document.body.classList.toggle("dark-mode", on);
+    const btn = document.getElementById("dark-btn");
+    if (btn) btn.textContent = on ? "☀️" : "🌙";
+  }
+
+  // ── First-visit defaults ───────────────────────────────────────────────────
+  function detectLang() {
+    const saved = localStorage.getItem(LS_LANG);
+    if (saved) return saved;
+    return (navigator.language || "").startsWith("de") ? "de" : "en";
+  }
+
+  function detectDark() {
+    const saved = localStorage.getItem(LS_DARK);
+    if (saved !== null) return saved === "1";
+    return window.matchMedia &&
+           window.matchMedia("(prefers-color-scheme: dark)").matches;
+  }
+
+  function detectFont() {
+    const saved = parseInt(localStorage.getItem(LS_FONT), 10);
+    return (saved >= FONT_MIN && saved <= FONT_MAX) ? saved : FONT_DEFAULT;
+  }
+
+  // ── Init ───────────────────────────────────────────────────────────────────
+  let currentLang = detectLang();
+  let currentFont = detectFont();
+  let currentDark = detectDark();
+
+  applyLang(currentLang);
+  applyFont(currentFont);
+  applyDark(currentDark);
+
+  // ── Button wiring (defer until DOM ready) ─────────────────────────────────
+  document.addEventListener("DOMContentLoaded", function() {
+    applyLang(currentLang);
+    applyFont(currentFont);
+    applyDark(currentDark);
+
+    document.getElementById("lang-btn").addEventListener("click", function() {
+      currentLang = currentLang === "en" ? "de" : "en";
+      localStorage.setItem(LS_LANG, currentLang);
+      applyLang(currentLang);
+    });
+
+    document.getElementById("font-up-btn").addEventListener("click", function() {
+      currentFont = Math.min(FONT_MAX, currentFont + FONT_STEP);
+      localStorage.setItem(LS_FONT, currentFont);
+      applyFont(currentFont);
+    });
+
+    document.getElementById("font-down-btn").addEventListener("click", function() {
+      currentFont = Math.max(FONT_MIN, currentFont - FONT_STEP);
+      localStorage.setItem(LS_FONT, currentFont);
+      applyFont(currentFont);
+    });
+
+    document.getElementById("dark-btn").addEventListener("click", function() {
+      currentDark = !currentDark;
+      localStorage.setItem(LS_DARK, currentDark ? "1" : "0");
+      applyDark(currentDark);
+    });
+  });
+})();
+</script>
 ```
 
 ::: {.upload-page-prose}
 
 ## Quick guide
 
+::: {data-lang="en"}
 Upload an Excel (`.xlsx`) or CSV file with **at least three columns**: postcode
 (`PLZ`), street name, and house number. The lookup runs entirely in your browser
 using [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html) — your file
 never leaves your device.
+:::
+
+::: {data-lang="de"}
+Laden Sie eine Excel- (`.xlsx`-) oder CSV-Datei mit **mindestens drei Spalten** hoch:
+Postleitzahl (`PLZ`), Straßenname und Hausnummer. Die Suche läuft vollständig in Ihrem
+Browser via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html) — Ihre Datei
+verlässt Ihr Gerät nicht.
+:::
 
 ```{=html}
 <table>
-  <thead><tr><th class="step-col">Step</th><th>What to do</th></tr></thead>
+  <thead>
+    <tr>
+      <th class="step-col" data-en="Step" data-de="Schritt">Step</th>
+      <th data-en="What to do" data-de="Was zu tun ist">What to do</th>
+    </tr>
+  </thead>
   <tbody>
-    <tr><td class="step-col">1</td><td>Click <strong>Choose file</strong> (or drag-and-drop)</td></tr>
-    <tr><td class="step-col">2</td><td>Map your columns to PLZ / Street / HouseNumber if the auto-detect is wrong</td></tr>
-    <tr><td class="step-col">3</td><td>Click <strong>Run lookup</strong></td></tr>
-    <tr><td class="step-col">4</td><td>Review results and click <strong>Download CSV</strong></td></tr>
+    <tr>
+      <td class="step-col">1</td>
+      <td>
+        <span data-lang="en">Click <strong>Choose file</strong> (or drag-and-drop)</span>
+        <span data-lang="de">Auf <strong>Datei auswählen</strong> klicken (oder per Drag &amp; Drop)</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="step-col">2</td>
+      <td>
+        <span data-lang="en">Map your columns to PLZ / Street / HouseNumber if the auto-detect is wrong</span>
+        <span data-lang="de">Spalten PLZ / Straße / Hausnummer zuordnen, falls die Erkennung fehlschlägt</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="step-col">3</td>
+      <td>
+        <span data-lang="en">Click <strong>Run lookup</strong></span>
+        <span data-lang="de">Auf <strong>Suche starten</strong> klicken</span>
+      </td>
+    </tr>
+    <tr>
+      <td class="step-col">4</td>
+      <td>
+        <span data-lang="en">Review results and click <strong>Download CSV</strong></span>
+        <span data-lang="de">Ergebnisse prüfen und auf <strong>CSV herunterladen</strong> klicken</span>
+      </td>
+    </tr>
   </tbody>
 </table>
 ```
 
+::: {data-lang="en"}
 **Example values:** postcode `1210`, street `Achengasse`, house number `3`
 → ACD code `070268`, SCD `00012`.
 
-**Coverage:** `r n_addresses` registered address points,
-`r n_acd_codes` unique ACD codes.
+**Coverage:** `r format(n_addresses, big.mark=",")` registered address points,
+`r format(n_acd_codes, big.mark=",")` unique ACD codes.
 Source: [Vienna Open Government Data WFS](https://www.data.gv.at/katalog/dataset/stadt-wien_adressenwien)
 ([`ogdwien:ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD)),
 snapshot `r ADDRESSES_SNAPSHOT_DATE`.
 
 **Privacy:** addresses you upload are processed locally in your browser
 via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). They are never sent to any server.
+:::
+
+::: {data-lang="de"}
+**Beispielwerte:** PLZ `1210`, Straße `Achengasse`, Hausnummer `3`
+→ ACD-Code `070268`, SCD `00012`.
+
+**Abdeckung:** `r format(n_addresses, big.mark=".")` registrierte Adresspunkte,
+`r format(n_acd_codes, big.mark=".")` eindeutige ACD-Codes.
+Quelle: [Wien Open Government Data WFS](https://www.data.gv.at/katalog/dataset/stadt-wien_adressenwien)
+([`ogdwien:ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD)),
+Stand `r ADDRESSES_SNAPSHOT_DATE`.
+
+**Datenschutz:** Die hochgeladenen Adressen werden lokal in Ihrem Browser verarbeitet
+via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden keine Daten an einen Server übertragen.
+:::
 
 :::
 
@@ -111,19 +338,27 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). They are neve
     display:flex; flex-wrap:wrap; gap:10px; align-items:center;
     font-size:0.92em; color:#5a4500;">
     <span style="flex:1; min-width:200px;">
-      📄 <strong>First time here?</strong> Try a 12-row sample
-      (5 matches across Bezirke 21+22, 2 focus-district rows for 20, 2 central, 3 deliberate edge cases).
+      📄 <strong>
+        <span data-lang="en">First time here?</span>
+        <span data-lang="de">Zum ersten Mal hier?</span>
+      </strong>
+      <span data-lang="en">Try a 12-row sample
+        (5 matches across Bezirke 21+22, 2 focus-district rows for 20, 2 central, 3 deliberate edge cases).</span>
+      <span data-lang="de">Testen Sie mit einer 12-Zeilen-Beispieldatei
+        (5 Treffer in den Bezirken 21+22, 2 Fokus-Bezirk-Zeilen für 20, 2 zentral, 3 Grenzfälle).</span>
     </span>
     <button id="try-sample-btn" style="
       padding:6px 14px; background:#0d6efd; color:#fff; border:none;
-      border-radius:4px; cursor:pointer; font-weight:600; white-space:nowrap;">
+      border-radius:4px; cursor:pointer; font-weight:600; white-space:nowrap;"
+      data-en="▶ Try with sample" data-de="▶ Beispiel laden">
       ▶ Try with sample
     </button>
     <a id="download-sample-btn" href="../../data/sample_acd_test.xlsx" download
        style="padding:6px 14px; background:#fff; color:#0d6efd;
               border:1px solid #0d6efd; border-radius:4px;
               text-decoration:none; font-weight:600; white-space:nowrap;">
-      ⬇ Download template
+      <span data-lang="en">⬇ Download template</span>
+      <span data-lang="de">⬇ Vorlage herunterladen</span>
     </a>
   </div>
 
@@ -132,8 +367,10 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). They are neve
     border:2px dashed #6c757d; border-radius:8px; padding:24px 20px;
     text-align:center; background:#f8f9fa; cursor:pointer; margin-bottom:16px;">
     <p style="margin:0; font-size:1.05em; color:#495057;">
-      Drag &amp; drop your <strong>.xlsx</strong> or <strong>.csv</strong> file here,
-      or <label for="file-input" style="color:#0d6efd; cursor:pointer; text-decoration:underline;">choose file</label>.
+      <span data-lang="en">Drag &amp; drop your <strong>.xlsx</strong> or <strong>.csv</strong> file here,
+        or <label for="file-input" style="color:#0d6efd; cursor:pointer; text-decoration:underline;">choose file</label>.</span>
+      <span data-lang="de">Ziehen Sie Ihre <strong>.xlsx</strong>- oder <strong>.csv</strong>-Datei hierher,
+        oder <label for="file-input" style="color:#0d6efd; cursor:pointer; text-decoration:underline;">Datei auswählen</label>.</span>
     </p>
     <input type="file" id="file-input" accept=".xlsx,.csv"
            style="display:none;" />
@@ -142,24 +379,31 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). They are neve
 
   <!-- Column mapping -->
   <div id="col-map-section" style="display:none; margin-bottom:16px;">
-    <h4 style="margin-bottom:8px;">Column mapping</h4>
+    <h4 style="margin-bottom:8px;">
+      <span data-lang="en">Column mapping</span>
+      <span data-lang="de">Spaltenzuordnung</span>
+    </h4>
     <div style="display:flex; flex-wrap:wrap; gap:16px;">
       <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9em;">
-        PLZ (postcode)
+        <span data-lang="en">PLZ (postcode)</span>
+        <span data-lang="de">PLZ (Postleitzahl)</span>
         <select id="map-plz" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
       </label>
       <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9em;">
-        Street name
+        <span data-lang="en">Street name</span>
+        <span data-lang="de">Straßenname</span>
         <select id="map-street" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
       </label>
       <label style="display:flex; flex-direction:column; gap:4px; font-size:0.9em;">
-        House number
+        <span data-lang="en">House number</span>
+        <span data-lang="de">Hausnummer</span>
         <select id="map-hausnr" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
       </label>
     </div>
     <button id="run-btn" style="
       margin-top:14px; padding:8px 20px; background:#0d6efd; color:#fff;
-      border:none; border-radius:6px; cursor:pointer; font-size:1em;">
+      border:none; border-radius:6px; cursor:pointer; font-size:1em;"
+      data-en="Run lookup" data-de="Suche starten">
       Run lookup
     </button>
   </div>
@@ -174,14 +418,18 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). They are neve
 
   <!-- Empty-state message (shown until upload runs) -->
   <p id="empty-state-msg" style="color:#6c757d; font-style:italic; margin-top:8px;">
-    Upload a file to begin. No data will leave your browser.
+    <span data-lang="en">Upload a file to begin. No data will leave your browser.</span>
+    <span data-lang="de">Datei hochladen, um zu beginnen. Keine Daten verlassen Ihren Browser.</span>
   </p>
 
 </div>
 
 <!-- ── Results section (hidden until lookup runs) ─────────────────────────── -->
 <div id="results-section" style="display:none; margin-top:24px; font-family:sans-serif; max-width:1100px;">
-  <h3>Results</h3>
+  <h3>
+    <span data-lang="en">Results</span>
+    <span data-lang="de">Ergebnisse</span>
+  </h3>
 
   <!-- Match rate summary -->
   <div id="match-summary" style="
@@ -191,13 +439,19 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). They are neve
 
   <!-- Per-district chart -->
   <div id="chart-section" style="margin-bottom:16px;">
-    <h4 style="margin-bottom:6px;">Match rate by district (PLZ)</h4>
+    <h4 style="margin-bottom:6px;">
+      <span data-lang="en">Match rate by district (PLZ)</span>
+      <span data-lang="de">Trefferquote nach Bezirk (PLZ)</span>
+    </h4>
     <canvas id="district-chart" height="160"
             style="max-width:700px; width:100%;"></canvas>
   </div>
 
   <!-- Results table (first 50 rows) -->
-  <h4>Preview (first 50 matched rows)</h4>
+  <h4>
+    <span data-lang="en">Preview (first 50 matched rows)</span>
+    <span data-lang="de">Vorschau (erste 50 Treffer)</span>
+  </h4>
   <div style="overflow-x:auto;">
     <table id="results-table" style="
       border-collapse:collapse; width:100%; font-size:0.85em;">
@@ -207,7 +461,8 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). They are neve
   <!-- Download button -->
   <button id="download-btn" style="
     margin-top:14px; padding:8px 20px; background:#198754; color:#fff;
-    border:none; border-radius:6px; cursor:pointer; font-size:1em;">
+    border:none; border-radius:6px; cursor:pointer; font-size:1em;"
+    data-en="Download filled CSV" data-de="CSV herunterladen">
     Download filled CSV
   </button>
 </div>
@@ -215,14 +470,18 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). They are neve
 
 ---
 
-## Methodology
+## How it works {.panel-tabset}
 
+### Algorithm / Algorithmus
+
+::: {data-lang="en"}
 This page does **not** use the project's spatial join or building-footprint
 layer. It is a direct address-table lookup against
 [`ogdwien:ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD)
-(`r n_addresses` registered address points), running in
+(`r format(n_addresses, big.mark=",")` registered address points), running in
 [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html) entirely in your
-browser.
+browser. See the [Methodology page](methodology.qmd) for the dashboard's
+spatial pipeline (different layers, different question).
 
 The join uses three normalised keys:
 
@@ -243,17 +502,186 @@ the house-number column are split into two lookup attempts automatically.
 Spatial enrichment of matched rows with these fields is tracked as a follow-up
 in [issue #42](https://github.com/JohnGavin/acd_area_climate_design/issues/42).
 
-For background on the dashboard's spatial pipeline (different layers, different
-question), see the [Methodology page](methodology.qmd) — particularly
-[Section 4](methodology.qmd#what-stage-0-found-a-category-error) on the Stage 0
-finding that ACD is a building registry number, not a zone reference.
-
 **Match quality legend:**
 
 | Value | Meaning |
 |-------|---------|
 | `exact` | All three keys matched exactly after normalisation |
 | `unmatched` | No row in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) matched this combination |
+
+*Note: this DE/EN toggle is complementary to the German narrative vignette at
+[scrollytell\_de.html](scrollytell_de.html) — that page tells the story of
+ACD codes; this page is a utility tool.*
+:::
+
+::: {data-lang="de"}
+Diese Seite nutzt **nicht** die räumliche Verknüpfung oder die Gebäudegrundriss-Ebene
+des Projekts. Es handelt sich um eine direkte Adresstabellen-Suche gegen
+[`ogdwien:ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD)
+(`r format(n_addresses, big.mark=".")` registrierte Adresspunkte), die vollständig in
+[DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html) im Browser läuft.
+Die räumliche Pipeline des Dashboards ist auf der [Methodik-Seite](methodology.qmd) beschrieben.
+
+Die Verknüpfung verwendet drei normalisierte Schlüssel:
+
+- **PLZ** — vierstellige Postleitzahl (als `VARCHAR`)
+- **Straßenname** — `LOWER(TRIM(name_str))` mit der Benutzerspalte abgeglichen
+- **Hausnummer** — `LOWER(TRIM(name_onr))` mit der Benutzerspalte abgeglichen
+
+Schrebergarten-Adressen mit `/` im Straßennamen oder `Parz` in der Hausnummer
+werden automatisch in zwei Suchversuche aufgeteilt.
+
+### Was diese Seite nicht leistet
+
+- ❌ Kein räumlicher Join via `R/join_buildings_zones.R`
+- ❌ Kein `confidence_tier` (A–E, distanzbasiert)
+- ❌ Kein `zone_id` oder `nearest_zone_dist_m`
+- ❌ Kein Abgleich mit der `GEBAEUDEINFOOGD`-Gebäudegrundriss-Ebene
+
+Die räumliche Anreicherung wird als Folgeaufgabe in
+[Issue #42](https://github.com/JohnGavin/acd_area_climate_design/issues/42) verfolgt.
+
+**Treffer-Qualität Legende:**
+
+| Wert | Bedeutung |
+|------|-----------|
+| `exact` | Alle drei Schlüssel nach Normalisierung exakt übereinstimmend |
+| `unmatched` | Keine Zeile in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) für diese Kombination gefunden |
+
+*Hinweis: Der DE/EN-Umschalter ergänzt das deutsche Erzählvignette unter
+[scrollytell\_de.html](scrollytell_de.html) — jene Seite erklärt ACD-Codes;
+diese Seite ist ein Werkzeug.*
+:::
+
+### Performance
+
+::: {data-lang="en"}
+All timings are for the DuckDB-WASM query phase after warm-up (first visit
+adds ~3–4 s for DuckDB cold-start; subsequent queries on the same page load
+are fast). Time scales sub-linearly with input rows because the join is one
+query, not per-row.
+
+| Rows | Operation | Estimated time |
+|------|-----------|----------------|
+| 12 (sample) | One DuckDB join | <100 ms after warm-up |
+| 100 | One DuckDB join | <200 ms |
+| 500 | One DuckDB join | <300 ms |
+| 2,000 | One DuckDB join | ~500 ms |
+| 10,000 | One DuckDB join + chunked CSV write | 1–2 s |
+:::
+
+::: {data-lang="de"}
+Alle Zeiten gelten für die DuckDB-WASM-Abfragephase nach dem Aufwärmen (erster Besuch
+benötigt zusätzlich ~3–4 s für den DuckDB-Kaltstart; folgende Abfragen auf derselben
+Seite sind schnell). Die Zeit skaliert sublinear mit den Eingabezeilen, da die
+Verknüpfung eine einzige Abfrage ist.
+
+| Zeilen | Vorgang | Geschätzte Zeit |
+|--------|---------|-----------------|
+| 12 (Beispiel) | Eine DuckDB-Verknüpfung | <100 ms nach Aufwärmen |
+| 100 | Eine DuckDB-Verknüpfung | <200 ms |
+| 500 | Eine DuckDB-Verknüpfung | <300 ms |
+| 2.000 | Eine DuckDB-Verknüpfung | ~500 ms |
+| 10.000 | Eine DuckDB-Verknüpfung + CSV-Ausgabe | 1–2 s |
+:::
+
+### Page weight / Seitengröße
+
+::: {data-lang="en"}
+All sizes are gzipped estimates. The Parquet file is range-fetched via
+predicate pushdown — the browser does not download all 15.7 MB per query.
+
+| Component | Size |
+|-----------|------|
+| HTML shell (upload.qmd render) | ~45 KB |
+| PapaParse (CDN) | ~14 KB |
+| SheetJS (CDN) | ~90 KB |
+| DuckDB-WASM core (CDN, lazy-loaded on first query) | ~3–4 MB |
+| Chart.js (CDN) | ~80 KB |
+| Address Parquet (`docs/data/addresses_2026-05-02.parquet`, range-fetched) | 15.7 MB total; typically ~500 KB read per query via predicate pushdown |
+| **Initial first-visit total** | **~4 MB** (DuckDB warm-up dominates) |
+| **Repeat visit (cached)** | **~150 KB** |
+:::
+
+::: {data-lang="de"}
+Alle Größen sind gzip-komprimierte Schätzungen. Die Parquet-Datei wird per
+Predicate Pushdown range-abgerufen — der Browser lädt nicht alle 15,7 MB pro Abfrage.
+
+| Komponente | Größe |
+|------------|-------|
+| HTML-Gerüst (upload.qmd gerendert) | ~45 KB |
+| PapaParse (CDN) | ~14 KB |
+| SheetJS (CDN) | ~90 KB |
+| DuckDB-WASM-Kern (CDN, lazy beim ersten Aufruf) | ~3–4 MB |
+| Chart.js (CDN) | ~80 KB |
+| Adressen-Parquet (`docs/data/addresses_2026-05-02.parquet`, range-fetch) | 15,7 MB gesamt; typischerweise ~500 KB pro Abfrage via Predicate Pushdown |
+| **Erster Besuch gesamt** | **~4 MB** (DuckDB-Kaltstart dominiert) |
+| **Wiederholter Besuch (gecacht)** | **~150 KB** |
+:::
+
+### Compatibility / Kompatibilität
+
+::: {data-lang="en"}
+| Requirement | Needed? |
+|-------------|---------|
+| Install anything | No |
+| Special browser | Modern (Chrome/Safari/Firefox/Edge 2020+) — needs `WebAssembly` and ES module support |
+| Desktop required | No (works on phone) |
+| Internet | Yes, for CDN libraries and Parquet on first visit; cached after |
+:::
+
+::: {data-lang="de"}
+| Voraussetzung | Erforderlich? |
+|---------------|---------------|
+| Software installieren | Nein |
+| Besonderer Browser | Modern (Chrome/Safari/Firefox/Edge 2020+) — benötigt `WebAssembly` und ES-Modul-Unterstützung |
+| Desktop erforderlich | Nein (funktioniert am Handy) |
+| Internet | Ja, für CDN-Bibliotheken und Parquet beim ersten Besuch; danach gecacht |
+:::
+
+### Mobile
+
+::: {data-lang="en"}
+| Concern | Answer |
+|---------|--------|
+| Browser support | All modern mobile browsers |
+| Screen size | Functional; results table needs horizontal scroll |
+| Processing | Fine — DuckDB-WASM runs in-browser, single query for any plausible upload size |
+| Offline | After first visit, partial — Parquet + libs cached; CDN libs may need network on first load |
+:::
+
+::: {data-lang="de"}
+| Thema | Antwort |
+|-------|---------|
+| Browser-Unterstützung | Alle modernen Mobilbrowser |
+| Bildschirmgröße | Nutzbar; Ergebnistabelle braucht horizontales Scrollen |
+| Verarbeitung | Kein Problem — DuckDB-WASM läuft im Browser, eine Abfrage für jede sinnvolle Dateigröße |
+| Offline | Nach dem ersten Besuch eingeschränkt — Parquet + Bibliotheken gecacht; CDN-Bibliotheken benötigen beim ersten Laden Netzwerk |
+:::
+
+### Load time / Ladezeit
+
+::: {data-lang="en"}
+DuckDB cold-start dominates first-visit time. Subsequent page loads use the
+browser cache and are fast regardless of connection speed.
+
+| Network | First visit | Repeat (cached) |
+|---------|-------------|-----------------|
+| 4G mobile | ~6–8 s (DuckDB cold-start dominates) | <0.5 s |
+| Office WiFi | ~2–3 s | Instant |
+| Slow 3G | ~15–20 s | <1 s |
+:::
+
+::: {data-lang="de"}
+Der DuckDB-Kaltstart bestimmt die Ladezeit beim ersten Besuch. Folgende Seitenaufrufe
+nutzen den Browser-Cache und sind unabhängig von der Verbindungsgeschwindigkeit schnell.
+
+| Netzwerk | Erster Besuch | Wiederholter Besuch (gecacht) |
+|----------|---------------|-------------------------------|
+| 4G Mobilfunk | ~6–8 s (DuckDB-Kaltstart dominiert) | <0,5 s |
+| Büro-WLAN | ~2–3 s | Sofort |
+| Langsames 3G | ~15–20 s | <1 s |
+:::
 
 ```{=html}
 <!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->
