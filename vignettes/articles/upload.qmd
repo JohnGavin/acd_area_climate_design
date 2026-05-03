@@ -472,13 +472,28 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
     </table>
   </div>
 
-  <!-- Download button -->
-  <button id="download-btn" style="
-    margin-top:14px; padding:8px 20px; background:#198754; color:#fff;
-    border:none; border-radius:6px; cursor:pointer; font-size:1em;"
-    data-en="Download filled CSV" data-de="CSV herunterladen">
-    Download filled CSV
-  </button>
+  <!-- Download section (button + Fix D: first-ACD vs all-ACDs toggle) -->
+  <div id="download-section" style="margin-top:14px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+    <button id="download-btn" style="
+      padding:8px 20px; background:#198754; color:#fff;
+      border:none; border-radius:6px; cursor:pointer; font-size:1em;"
+      data-en="Download filled CSV" data-de="CSV herunterladen">
+      Download filled CSV
+    </button>
+    <!-- Fix D: CSV mode toggle (only visible after a lookup has been run) -->
+    <div id="csv-mode-toggle" style="display:none; font-size:0.88em; color:#495057;">
+      <label style="cursor:pointer; margin-right:10px;">
+        <input type="radio" name="csv-mode" value="first" checked style="margin-right:4px;">
+        <span data-lang="en">First ACD only (1:1 with input)</span>
+        <span data-lang="de">Nur erste ACD (1:1 zur Eingabe)</span>
+      </label>
+      <label style="cursor:pointer;">
+        <input type="radio" name="csv-mode" value="all" style="margin-right:4px;">
+        <span data-lang="en">All ACDs (one row per ACD for multi-unit)</span>
+        <span data-lang="de">Alle ACDs (eine Zeile je ACD bei Mehrfamilienhaus)</span>
+      </label>
+    </div>
+  </div>
 
   <!-- Fix C — REST API fallback button (hidden until unmatched rows exist) -->
   <div id="rest-fallback-section" style="display:none; margin-top:16px;
@@ -570,7 +585,8 @@ in [issue #42](https://github.com/JohnGavin/acd_area_climate_design/issues/42).
 
 | Value | Meaning |
 |-------|---------|
-| `exact` | All three keys matched exactly after normalisation |
+| `exact` | All three keys matched exactly and there is exactly one ACD for this address |
+| `ambiguous_multi` | All three keys matched but **multiple ACDs** exist for this address (multi-unit building). The first ACD is shown; click the ⚠ badge to see all. `acd_count` = number of ACDs, `acd_codes` = comma-joined list |
 | `fuzzy_nearest_house` | PLZ + street matched; nearest existing house number used (distance shown in `house_distance` column) |
 | `split_both` | Composite `A/B` street — both halves resolved to an ACD (`ACD` = first, `acd_b` = second) |
 | `split_partial` | Composite `A/B` street — only one half resolved |
@@ -617,7 +633,8 @@ Die räumliche Anreicherung wird als Folgeaufgabe in
 
 | Wert | Bedeutung |
 |------|-----------|
-| `exact` | Alle drei Schlüssel nach Normalisierung exakt übereinstimmend |
+| `exact` | Alle drei Schlüssel exakt übereinstimmend und genau eine ACD für diese Adresse vorhanden |
+| `ambiguous_multi` | Alle drei Schlüssel stimmen überein, aber **mehrere ACDs** existieren für diese Adresse (Mehrfamilienhaus / Stiegenhäuser). Die erste ACD wird angezeigt; ⚠-Badge anklicken, um alle zu sehen. `acd_count` = Anzahl ACDs, `acd_codes` = kommagetrennte Liste |
 | `fuzzy_nearest_house` | PLZ + Straße stimmen überein; nächstgelegene vorhandene Hausnummer verwendet (Abstand in `house_distance`) |
 | `split_both` | Zusammengesetzte `A/B`-Adresse — beide Hälften aufgelöst (`ACD` = erste, `acd_b` = zweite) |
 | `split_partial` | Zusammengesetzte `A/B`-Adresse — nur eine Hälfte aufgelöst |
@@ -800,14 +817,14 @@ nutzen den Browser-Cache und sind unabhängig von der Verbindungsgeschwindigkeit
 
 ::: {data-lang="en"}
 Each fix is documented with its assumptions, benefits, costs, and example
-addresses where it does and does not work. Fix C (REST API fallback) is now
-active. Fix D (multi-unit dedup) is planned for a future issue.
+addresses where it does and does not work. Fix C (REST API fallback) and Fix D
+(multi-unit dedup correctness) are both now active.
 :::
 
 ::: {data-lang="de"}
 Jede Verbesserung ist mit ihren Annahmen, Vorteilen, Kosten und Beispieladressen
-dokumentiert. Fix C (REST API Fallback) ist jetzt aktiv. Fix D (Mehrfacheinheit-Deduplizierung)
-ist für ein künftiges Issue geplant.
+dokumentiert. Fix C (REST API Fallback) und Fix D (Mehrfacheinheit-Deduplizierung,
+Korrektheit) sind jetzt beide aktiv.
 :::
 
 ::: {.panel-tabset}
@@ -1259,94 +1276,184 @@ Ziel: ≥ 98 % Trefferquote auf der 2.039-zeiligen Testdatei (gegenüber 94,2 % 
 
 :::
 
-## Fix D — Multi-unit dedup (geplant / planned) {#fix-d}
+## Fix D — Multi-unit dedup (aktiv / active) {#fix-d}
 
 ::: {.panel-tabset}
 
 ### Summary / Zusammenfassung
 
 ::: {data-lang="en"}
-**Status: PLANNED** — tracked in a separate issue. ADRESSENOGD contains
-291,823 rows but only ~149,676 unique `(PLZ, street, house)` tuples. Around
-13% of those tuples have more than one ACD — multi-unit buildings, separate
-staircases, or sub-addresses. The current page deduplicates on `(PLZ, street,
-house)` and returns one ACD arbitrarily. Fix D replaces the deduplication with
-a `GROUP BY` returning all ACDs for a matched tuple, with a UI element
-letting the user select or accept all.
+**Status: ACTIVE** — implemented in [issue #49](https://github.com/JohnGavin/acd_area_climate_design/issues/49).
+
+ADRESSENOGD contains 291,823 rows but only 148,444 unique `(PLZ, street, house)`
+tuples. **19,319 of those tuples (13.0%) have more than one ACD** — multi-unit
+buildings, separate staircases (`Stiegen`), or sub-addresses. For example,
+`Achengasse 4, 1210` has 82 registered ACDs.
+
+The previous page deduplicated on `(PLZ, street, house)` and returned one ACD
+arbitrarily — whichever sorted first. Fix D replaces that with a `GROUP BY +
+ARRAY_AGG` in the DuckDB-WASM `addr` VIEW. When multiple ACDs match an address:
+
+- `match_quality = "ambiguous_multi"` (shown in purple)
+- `acd_count` column shows how many ACDs exist
+- `acd_codes` column shows all ACDs comma-joined
+- The **⚠ N units** badge next to the ACD cell is clickable to reveal all codes
+- The CSV download offers a **"All ACDs (one row per ACD)"** mode that expands
+  ambiguous rows with `acd_unit_index = 0..N-1` for join-back
+
+Match rate is unchanged — the 13% ambiguous rows were previously counted as
+"matched" (just silently wrong). What changes is honesty: the user now sees the
+ambiguity instead of receiving an arbitrary result.
 :::
 
 ::: {data-lang="de"}
-**Status: GEPLANT** — wird in einem eigenen Issue verfolgt. ADRESSENOGD
-enthält 291.823 Zeilen, aber nur ~149.676 eindeutige `(PLZ, Straße, Haus)`-
-Tupel. Etwa 13 % dieser Tupel haben mehr als eine ACD — Mehrfamilienhäuser,
-separate Stiegen oder Unteradressen. Derzeit wird auf `(PLZ, Straße, Haus)`
-dedupliziert und eine ACD willkürlich zurückgegeben. Fix D ersetzt die
-Deduplizierung durch ein `GROUP BY`, das alle ACDs für ein gefundenes Tupel
-zurückgibt, mit einem UI-Element, das dem Nutzer die Auswahl ermöglicht.
+**Status: AKTIV** — umgesetzt in [Issue #49](https://github.com/JohnGavin/acd_area_climate_design/issues/49).
+
+ADRESSENOGD enthält 291.823 Zeilen, aber nur 148.444 eindeutige
+`(PLZ, Straße, Haus)`-Tupel. **19.319 dieser Tupel (13,0 %) haben mehr als
+eine ACD** — Mehrfamilienhäuser, separate Stiegen oder Unteradressen. Zum
+Beispiel hat `Achengasse 4, 1210` 82 registrierte ACDs.
+
+Die bisherige Seite deduplizierte auf `(PLZ, Straße, Haus)` und gab eine ACD
+willkürlich zurück — jeweils die, die nach Sortierung zuerst kam. Fix D ersetzt
+das durch ein `GROUP BY + ARRAY_AGG` in der DuckDB-WASM-View `addr`. Bei
+mehreren ACDs für eine Adresse:
+
+- `match_quality = "ambiguous_multi"` (lila hervorgehoben)
+- Spalte `acd_count`: Anzahl der übereinstimmenden ACDs
+- Spalte `acd_codes`: alle ACDs kommagetrennt
+- Das **⚠ N units**-Badge neben der ACD-Zelle ist klickbar und zeigt alle Codes
+- Der CSV-Download bietet den Modus **„Alle ACDs (eine Zeile je ACD)"**, der
+  mehrdeutige Zeilen mit `acd_unit_index = 0..N-1` für einen Rück-Join aufklappt
+
+Die Trefferquote bleibt gleich — die 13 % mehrdeutigen Zeilen wurden bisher als
+„gefunden" gezählt (aber still falsch). Was sich ändert, ist die Ehrlichkeit:
+Der Nutzer sieht jetzt die Mehrdeutigkeit statt ein willkürliches Ergebnis.
 :::
 
 ### Assumptions / Annahmen
 
 ::: {data-lang="en"}
-- The user knows their own unit / Stiege and can select from a list.
-- Returning multiple ACDs is preferable to silently picking one at random.
+- The user knows their own unit / `Stiege` and can use the `acd_codes` list
+  or the expanded CSV to identify their specific ACD.
+- Returning multiple ACDs is strictly preferable to silently picking one at
+  random. There is no failure mode — single-unit addresses are unaffected.
+- The 13.0% figure (19,319 / 148,444 unique tuples) is based on the
+  `addresses_2026-05-02.parquet` snapshot. The fraction is stable over time
+  because it reflects Vienna's physical building stock.
+- `ARRAY_AGG(ACD ORDER BY ACD)` is deterministic: the list is sorted
+  alphabetically, so `acd_list[1]` (the backward-compatible primary ACD) is
+  always the lexicographically smallest ACD — not random.
 :::
 
 ::: {data-lang="de"}
-- Der Nutzer kennt seine eigene Einheit / Stiege und kann aus einer Liste
-  auswählen.
-- Mehrere ACDs zurückzugeben ist besser als eine zufällig auszuwählen.
+- Der Nutzer kennt seine eigene Einheit / Stiege und kann die Liste in
+  `acd_codes` oder das aufgeklappte CSV nutzen, um seine spezifische ACD
+  zu identifizieren.
+- Mehrere ACDs zurückzugeben ist einer willkürlichen Einzelauswahl eindeutig
+  vorzuziehen. Es gibt keinen Fehlerfall — Einzeladressen sind unberührt.
+- Der Anteil von 13,0 % (19.319 / 148.444 eindeutige Tupel) basiert auf dem
+  Snapshot `addresses_2026-05-02.parquet`. Er ist über die Zeit stabil, da er
+  den physischen Gebäudebestand Wiens widerspiegelt.
+- `ARRAY_AGG(ACD ORDER BY ACD)` ist deterministisch: Die Liste ist
+  alphabetisch sortiert, `acd_list[1]` (die abwärtskompatible primäre ACD)
+  ist immer die lexikografisch kleinste ACD — nicht zufällig.
 :::
 
 ### Benefits / Vorteile
 
 ::: {data-lang="en"}
 - Eliminates a hidden correctness bug affecting ~13% of matched rows.
-- No extra queries needed — the information is already in ADRESSENOGD.
+- No extra queries — the information is already in ADRESSENOGD; `GROUP BY`
+  replaces `DISTINCT` at no additional cost.
+- Match rate is unchanged (≥ 96.9%); correctness improves for the 13% ambiguous
+  cohort.
+- `acd_codes` column gives the user the full picture to look up their unit.
+- CSV "All ACDs" mode preserves all valid options for downstream processing.
 :::
 
 ::: {data-lang="de"}
-- Beseitigt einen versteckten Korrektheitsfehler, der ~13 % der gefundenen
-  Zeilen betrifft.
-- Keine zusätzlichen Abfragen erforderlich — die Information ist bereits in
-  ADRESSENOGD vorhanden.
+- Beseitigt einen versteckten Korrektheitsfehler, der ~13 % der Treffer betrifft.
+- Keine zusätzlichen Abfragen — die Information ist schon in ADRESSENOGD;
+  `GROUP BY` ersetzt `DISTINCT` ohne Mehraufwand.
+- Trefferquote bleibt unverändert (≥ 96,9 %); Korrektheit verbessert sich für
+  die 13 % mehrdeutigen Adressen.
+- Spalte `acd_codes` gibt dem Nutzer alle Optionen für die Einheitensuche.
+- Der CSV-Modus „Alle ACDs" erhält alle gültigen Optionen für die
+  Weiterverarbeitung.
 :::
 
 ### Costs / Kosten
 
 ::: {data-lang="en"}
-- Requires UI work to render and disambiguate multi-ACD cells.
-- Download CSV format changes: multi-ACD rows need either multiple columns
-  or a delimiter-separated value in the ACD column.
+- CSV row-count exceeds input-row-count in "All ACDs" mode for multi-unit rows.
+  Users expecting a strict 1:1 output should use "First ACD only" (default).
+- The `acd_list` object from DuckDB-WASM requires array unpacking in JavaScript;
+  handled transparently, but adds a small deserialization step.
+- Column `acd_b` (Fix B composite-street second ACD) and `acd_codes` (Fix D
+  all-units list) are conceptually different and both present in the output.
+  Documentation makes the distinction clear.
 :::
 
 ::: {data-lang="de"}
-- Erfordert UI-Arbeit zum Darstellen und Disambiguieren von Multi-ACD-Zellen.
-- Das CSV-Download-Format ändert sich: Zeilen mit mehreren ACDs benötigen
-  entweder mehrere Spalten oder einen trennzeichengetrennten Wert in der
-  ACD-Spalte.
+- Im Modus „Alle ACDs" überschreitet die CSV-Zeilenanzahl die Eingabezeilenanzahl
+  bei Mehrfamilienhaus-Zeilen. Nutzer, die eine strikte 1:1-Ausgabe erwarten,
+  sollten „Nur erste ACD" (Standard) verwenden.
+- Das `acd_list`-Objekt aus DuckDB-WASM erfordert Array-Entpackung in JavaScript;
+  wird transparent verarbeitet, fügt aber einen kleinen Deserialisierungsschritt hinzu.
+- Die Spalten `acd_b` (Fix B: zweite ACD bei zusammengesetzter Adresse) und
+  `acd_codes` (Fix D: alle Einheiten-ACDs) sind konzeptuell verschieden, aber
+  beide in der Ausgabe vorhanden. Die Dokumentation macht den Unterschied klar.
 :::
 
 ### Works on / Funktioniert bei
 
 ::: {data-lang="en"}
-- Any matched address in a multi-unit building — e.g. `Achengasse 4, 1210`
-  with 82 registered ACDs returns all 82 for user selection.
+- **Any matched address in a multi-unit building.** Example: `Achengasse 4,
+  1210` has 82 registered ACDs — all 82 are returned in `acd_codes`; the
+  badge shows "⚠ 82 units".
+- **All match quality levels** that produce a match (`exact` → upgraded to
+  `ambiguous_multi` when `acd_count > 1`; similarly for `fuzzy_nearest_house`).
+- **Backward compatibility:** `ACD` column still contains the first (lowest
+  lexicographic) ACD, so existing downstream code reading only the `ACD`
+  column continues to work.
 :::
 
 ::: {data-lang="de"}
-- Jede gefundene Adresse in einem Mehrfamilienhaus — z. B. `Achengasse 4,
-  1210` mit 82 registrierten ACDs gibt alle 82 zur Nutzerauswahl zurück.
+- **Jede gefundene Adresse in einem Mehrfamilienhaus.** Beispiel:
+  `Achengasse 4, 1210` hat 82 registrierte ACDs — alle 82 werden in `acd_codes`
+  zurückgegeben; das Badge zeigt „⚠ 82 units".
+- **Alle Treffer-Qualitätsstufen**, die einen Treffer erzeugen (`exact` →
+  aufgewertet zu `ambiguous_multi` bei `acd_count > 1`; ebenso für
+  `fuzzy_nearest_house`).
+- **Abwärtskompatibilität:** Die Spalte `ACD` enthält weiterhin die erste
+  (lexikografisch kleinste) ACD, sodass bestehender Code, der nur die `ACD`-
+  Spalte liest, weiterhin funktioniert.
 :::
 
 ### Doesn't work on / Funktioniert nicht bei
 
 ::: {data-lang="en"}
-- Single-unit addresses — no change in behaviour (only one ACD anyway).
+- **Single-unit addresses** — no change in behaviour (`acd_count = 1`,
+  `match_quality = "exact"`, no badge shown).
+- **Unmatched addresses** — Fix D only affects rows that do match; unmatched
+  rows remain `match_quality = "unmatched"`.
+- **Unit-level disambiguation** — Fix D tells the user there are N ACDs for
+  their address, but does not know which unit is theirs. The user must look up
+  their `Stiege` / door number in the `acd_codes` list or use the city's
+  [Adressensuche Wien](https://www.wien.gv.at/adressensuche/) to confirm.
 :::
 
 ::: {data-lang="de"}
-- Einzeladressen — keine Verhaltensänderung (ohnehin nur eine ACD).
+- **Einzeladressen** — keine Verhaltensänderung (`acd_count = 1`,
+  `match_quality = "exact"`, kein Badge).
+- **Nicht gefundene Adressen** — Fix D betrifft nur Treffer; nicht gefundene
+  Adressen bleiben `match_quality = "unmatched"`.
+- **Einheiten-genaue Disambiguierung** — Fix D teilt dem Nutzer mit, dass N
+  ACDs für seine Adresse existieren, weiß aber nicht, welche Einheit gemeint ist.
+  Der Nutzer muss seine Stiege / Türnummer in der Liste `acd_codes` nachschlagen
+  oder die städtische
+  [Adressensuche Wien](https://www.wien.gv.at/adressensuche/) nutzen.
 :::
 
 :::
@@ -1478,13 +1585,27 @@ async function initDuck() {
   await dbConn.query("INSTALL httpfs; LOAD httpfs;");
 
   setProgress(25, "Registering address Parquet view…");
+  // Fix D: GROUP BY (plz_norm, street_norm, house_norm) instead of keeping an
+  // arbitrary first row.  ARRAY_AGG collects all ACDs for multi-unit buildings
+  // so the UI can surface ambiguity instead of silently picking one ACD.
   await dbConn.query(`
     CREATE OR REPLACE VIEW addr AS
-    SELECT *,
-      LOWER(TRIM(NAME_STR))  AS street_norm,
-      LOWER(TRIM(NAME_ONR))  AS house_norm,
-      CAST(PLZ AS VARCHAR)   AS plz_norm
+    SELECT
+      CAST(PLZ AS VARCHAR)                         AS plz_norm,
+      LOWER(TRIM(NAME_STR))                        AS street_norm,
+      LOWER(TRIM(NAME_ONR))                        AS house_norm,
+      ARRAY_AGG(ACD           ORDER BY ACD)        AS acd_list,
+      ARRAY_AGG(SCD_NAME_STR  ORDER BY ACD)        AS scd_list,
+      ARRAY_AGG(STRABS_ZUGANG_STR ORDER BY ACD)    AS strabs_list,
+      ARRAY_AGG(OBJEKT_ID     ORDER BY ACD)        AS objekt_id_list,
+      ANY_VALUE(lon)                               AS lon,
+      ANY_VALUE(lat)                               AS lat,
+      COUNT(*)                                     AS acd_count
     FROM read_parquet('${PARQUET_URL}')
+    GROUP BY
+      CAST(PLZ AS VARCHAR),
+      LOWER(TRIM(NAME_STR)),
+      LOWER(TRIM(NAME_ONR))
   `);
   dbReady = true;
   setProgress(35, "Address lookup ready.");
@@ -1523,6 +1644,9 @@ async function runExactLookup(expanded) {
   `);
 
   setProgress(70, "Joining against ADRESSENOGD (exact pass)…");
+  // Fix D: addr view now has acd_list (ARRAY), acd_count (INTEGER) instead of
+  // individual ACD/SCD_NAME_STR/... columns.  We expose the first element as
+  // the primary ACD for backward compatibility, plus the full list and count.
   const res = await dbConn.query(`
     SELECT
       u.orig_idx,
@@ -1533,14 +1657,20 @@ async function runExactLookup(expanded) {
       u.garden_plot,
       u.composite_index,
       u.composite_total,
-      a.ACD,
-      a.SCD_NAME_STR       AS SCD,
-      a.STRABS_ZUGANG_STR  AS STRABS,
-      a.OBJEKT_ID,
+      a.acd_list[1]        AS ACD,
+      a.scd_list[1]        AS SCD,
+      a.strabs_list[1]     AS STRABS,
+      a.objekt_id_list[1]  AS OBJEKT_ID,
       a.lon,
       a.lat,
+      a.acd_list           AS acd_list,
+      a.acd_count          AS acd_count,
       NULL::INTEGER        AS house_distance,
-      CASE WHEN a.ACD IS NOT NULL THEN 'exact' ELSE 'unmatched' END AS match_quality
+      CASE
+        WHEN a.acd_list IS NULL THEN 'unmatched'
+        WHEN a.acd_count > 1   THEN 'ambiguous_multi'
+        ELSE 'exact'
+      END AS match_quality
     FROM user_in u
     LEFT JOIN addr a
       ON u.plz_in    = a.plz_norm
@@ -1549,24 +1679,43 @@ async function runExactLookup(expanded) {
     ORDER BY u.orig_idx, u.composite_index
   `);
 
-  return res.toArray().map(r => ({
-    orig_idx:         Number(r.orig_idx),
-    row_id:           Number(r.row_id),
-    plz_in:           r.plz_in,
-    street_in:        r.street_in,
-    house_in:         r.house_in,
-    garden_plot:      r.garden_plot === 1,
-    composite_index:  Number(r.composite_index),
-    composite_total:  Number(r.composite_total),
-    ACD:              r.ACD,
-    SCD:              r.SCD,
-    STRABS:           r.STRABS,
-    OBJEKT_ID:        r.OBJEKT_ID,
-    lon:              r.lon,
-    lat:              r.lat,
-    house_distance:   null,
-    match_quality:    r.match_quality
-  }));
+  return res.toArray().map(r => {
+    // acd_list comes back as a DuckDB Vector/Array object — convert to plain JS array
+    let acdArr = [];
+    try {
+      const raw = r.acd_list;
+      if (raw != null) {
+        if (typeof raw.toArray === "function") {
+          acdArr = raw.toArray().map(String);
+        } else if (Array.isArray(raw)) {
+          acdArr = raw.map(String);
+        } else {
+          acdArr = [String(raw)];
+        }
+      }
+    } catch (_) { /* leave empty */ }
+
+    return {
+      orig_idx:         Number(r.orig_idx),
+      row_id:           Number(r.row_id),
+      plz_in:           r.plz_in,
+      street_in:        r.street_in,
+      house_in:         r.house_in,
+      garden_plot:      r.garden_plot === 1,
+      composite_index:  Number(r.composite_index),
+      composite_total:  Number(r.composite_total),
+      ACD:              r.ACD,
+      SCD:              r.SCD,
+      STRABS:           r.STRABS,
+      OBJEKT_ID:        r.OBJEKT_ID,
+      lon:              r.lon,
+      lat:              r.lat,
+      house_distance:   null,
+      acd_list:         acdArr,
+      acd_count:        r.acd_count != null ? Number(r.acd_count) : null,
+      match_quality:    r.match_quality
+    };
+  });
 }
 
 // ── Fix A — Fuzzy nearest-house fallback ──────────────────────────────────
@@ -1602,16 +1751,20 @@ async function runFuzzyFallback(exactResults) {
   // on the same (PLZ, street).  QUALIFY keeps only the single closest match.
   // DuckDB does not support QUALIFY with window functions in older builds —
   // use a subquery approach instead.
+  // Fix D: addr view now exposes acd_list[1]/scd_list[1]/... instead of
+  // individual ACD/SCD_NAME_STR/STRABS_ZUGANG_STR/OBJEKT_ID columns.
   const fuzzy = await dbConn.query(`
     WITH candidates AS (
       SELECT
         u.row_id,
-        a.ACD,
-        a.SCD_NAME_STR       AS SCD,
-        a.STRABS_ZUGANG_STR  AS STRABS,
-        a.OBJEKT_ID,
+        a.acd_list[1]       AS ACD,
+        a.scd_list[1]       AS SCD,
+        a.strabs_list[1]    AS STRABS,
+        a.objekt_id_list[1] AS OBJEKT_ID,
         a.lon,
         a.lat,
+        a.acd_list          AS acd_list,
+        a.acd_count         AS acd_count,
         ABS(
           COALESCE(TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER), -9999) -
           COALESCE(TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER), -9999)
@@ -1637,6 +1790,17 @@ async function runFuzzyFallback(exactResults) {
   // Index fuzzy results by row_id
   const fuzzyMap = {};
   fuzzy.toArray().forEach(r => {
+    // Fix D: convert acd_list Vector → plain JS array
+    let acdArr = [];
+    try {
+      const raw = r.acd_list;
+      if (raw != null) {
+        if (typeof raw.toArray === "function") acdArr = raw.toArray().map(String);
+        else if (Array.isArray(raw))           acdArr = raw.map(String);
+        else                                   acdArr = [String(raw)];
+      }
+    } catch (_) { /* leave empty */ }
+
     fuzzyMap[Number(r.row_id)] = {
       ACD:            r.ACD,
       SCD:            r.SCD,
@@ -1644,7 +1808,9 @@ async function runFuzzyFallback(exactResults) {
       OBJEKT_ID:      r.OBJEKT_ID,
       lon:            r.lon,
       lat:            r.lat,
-      house_distance: Number(r.house_distance)
+      house_distance: Number(r.house_distance),
+      acd_list:       acdArr,
+      acd_count:      r.acd_count != null ? Number(r.acd_count) : null
     };
   });
 
@@ -1663,6 +1829,8 @@ async function runFuzzyFallback(exactResults) {
       lon:            f.lon,
       lat:            f.lat,
       house_distance: f.house_distance,
+      acd_list:       f.acd_list,
+      acd_count:      f.acd_count,
       match_quality:  "fuzzy_nearest_house"
     });
   });
@@ -1753,15 +1921,18 @@ async function restFallback(unmatchedRows, opts = {}) {
 }
 
 // ── Merge results back to original rows ───────────────────────────────────
-// Quality rank (lower = better):  exact=0, fuzzy=1, split_both=2,
-// split_partial=3, rest_api_fallback=4, unmatched_after_rest=97,
+// Quality rank (lower = better):  exact=0, ambiguous_multi=1, fuzzy=2,
+// split_both=3, split_partial=4, rest_api_fallback=5, unmatched_after_rest=97,
 // rest_skipped_over_budget=98, unmatched=99
+// Fix D: ambiguous_multi ranks just below exact — it IS a match, it's just
+// a multi-unit building where we surface all ACDs instead of picking one.
 const QUALITY_RANK = {
   exact:                     0,
-  fuzzy_nearest_house:       1,
-  split_both:                2,
-  split_partial:             3,
-  rest_api_fallback:         4,
+  ambiguous_multi:           1,
+  fuzzy_nearest_house:       2,
+  split_both:                3,
+  split_partial:             4,
+  rest_api_fallback:         5,
   unmatched_after_rest:      97,
   rest_skipped_over_budget:  98,
   unmatched:                 99
@@ -1782,7 +1953,9 @@ function mergeResults(origRows, expanded, joinedRows) {
     if (parts.length === 0) {
       return Object.assign({}, row, {
         ACD: "", SCD: "", STRABS: "", OBJEKT_ID: "", lon: "", lat: "",
-        house_distance: "", acd_b: "", match_quality: "unmatched"
+        house_distance: "", acd_b: "",
+        acd_count: "", acd_codes: "",
+        match_quality: "unmatched"
       });
     }
 
@@ -1793,6 +1966,11 @@ function mergeResults(origRows, expanded, joinedRows) {
       const best = parts.reduce((a, b) =>
         qualityRank(a.match_quality) <= qualityRank(b.match_quality) ? a : b
       );
+      // Fix D: surface acd_count and acd_codes from the grouped view result
+      const cnt   = best.acd_count ?? (best.ACD ? 1 : 0);
+      const codes = (Array.isArray(best.acd_list) && best.acd_list.length > 0)
+        ? best.acd_list.join(",")
+        : (best.ACD ?? "");
       return Object.assign({}, row, {
         ACD:            best.ACD           ?? "",
         SCD:            best.SCD           ?? "",
@@ -1802,6 +1980,8 @@ function mergeResults(origRows, expanded, joinedRows) {
         lat:            best.lat           ?? "",
         house_distance: best.house_distance ?? "",
         acd_b:          "",
+        acd_count:      cnt,
+        acd_codes:      codes,
         match_quality:  best.match_quality ?? "unmatched"
       });
     }
@@ -1827,6 +2007,10 @@ function mergeResults(origRows, expanded, joinedRows) {
       lat:            primary.lat           ?? "",
       house_distance: "",
       acd_b:          (m1 && p1 ? p1.ACD : "") ?? "",
+      acd_count:      primary.acd_count ?? 1,
+      acd_codes:      (Array.isArray(primary.acd_list) && primary.acd_list.length > 0)
+                        ? primary.acd_list.join(",")
+                        : (primary.ACD ?? ""),
       match_quality:  matchQuality
     });
   });
@@ -1882,7 +2066,11 @@ function renderChart(merged) {
 // ── HTML table (first 50 rows) ─────────────────────────────────────────────
 function renderTable(merged) {
   const tbl  = document.getElementById("results-table");
-  const cols = Object.keys(merged[0] || {}).filter(c => !c.startsWith("__"));
+  // Fix D: exclude the raw acd_list array from the display table (it's an
+  // internal object); acd_count and acd_codes are shown instead.
+  const cols = Object.keys(merged[0] || {}).filter(
+    c => !c.startsWith("__") && c !== "acd_list"
+  );
   const rows = merged.slice(0, 50);
 
   const head = `<thead><tr>${cols.map(c =>
@@ -1893,14 +2081,35 @@ function renderTable(merged) {
     `<tr>${cols.map(c => {
       const v   = r[c] ?? "";
       const isQ = c === "match_quality";
+      const isA = c === "ACD";  // Fix D: badge next to ACD cell when ambiguous
       const style = isQ && v === "exact"                     ? "background:#d1e7dd;" :
-                    isQ && v === "fuzzy_nearest_house"      ? "background:#fff3cd;" :
-                    isQ && v === "split_both"               ? "background:#cff4fc;" :
-                    isQ && v === "split_partial"            ? "background:#e2e3e5;" :
-                    isQ && v === "rest_api_fallback"        ? "background:#ffd9b3;" :
-                    isQ && v === "unmatched_after_rest"     ? "background:#f8d7da;" :
-                    isQ && v === "rest_skipped_over_budget" ? "background:#f0f0f0;" :
-                    isQ && v === "unmatched"                ? "background:#f8d7da;" : "";
+                    isQ && v === "ambiguous_multi"           ? "background:#e9d8fd;" :
+                    isQ && v === "fuzzy_nearest_house"       ? "background:#fff3cd;" :
+                    isQ && v === "split_both"                ? "background:#cff4fc;" :
+                    isQ && v === "split_partial"             ? "background:#e2e3e5;" :
+                    isQ && v === "rest_api_fallback"         ? "background:#ffd9b3;" :
+                    isQ && v === "unmatched_after_rest"      ? "background:#f8d7da;" :
+                    isQ && v === "rest_skipped_over_budget"  ? "background:#f0f0f0;" :
+                    isQ && v === "unmatched"                 ? "background:#f8d7da;" : "";
+      // Fix D: for the ACD column, append a badge and expandable code list
+      // when this row has acd_count > 1.
+      if (isA && r.match_quality === "ambiguous_multi" && r.acd_count > 1) {
+        const cnt   = r.acd_count;
+        const codes = r.acd_codes || String(v);
+        const uid   = `acd-expand-${Math.random().toString(36).slice(2)}`;
+        return `<td style="border:1px solid #dee2e6; padding:4px 8px; background:#f3e8ff;">` +
+          `${v} ` +
+          `<span title="Multi-unit building: ${cnt} ACDs match this address. Click to see all."` +
+               ` style="cursor:pointer; color:#6f42c1; font-weight:600; white-space:nowrap;"` +
+               ` onclick="document.getElementById('${uid}').style.display=` +
+                  `document.getElementById('${uid}').style.display==='none'?'block':'none'">` +
+            `&#9888; ${cnt} units` +
+          `</span>` +
+          `<div id="${uid}" style="display:none; margin-top:4px; font-size:0.8em; color:#6f42c1; word-break:break-all;">` +
+            codes +
+          `</div>` +
+          `</td>`;
+      }
       return `<td style="border:1px solid #dee2e6; padding:4px 8px; ${style}">${v}</td>`;
     }).join("")}</tr>`
   ).join("")}</tbody>`;
@@ -1909,22 +2118,57 @@ function renderTable(merged) {
 }
 
 // ── CSV download ───────────────────────────────────────────────────────────
+// Fix D: mode = "first" (default, 1:1 with input) or "all" (one row per ACD
+// for ambiguous_multi rows, with an acd_unit_index column for joining back).
+function csvEsc(v) {
+  const s = String(v ?? "");
+  return s.includes(",") || s.includes('"') || s.includes("\n")
+    ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+function buildCsvRows(merged, mode) {
+  // Columns to emit — exclude internal-only fields
+  const allCols = Object.keys(merged[0] || {}).filter(
+    c => !c.startsWith("__") && c !== "acd_list"
+  );
+
+  if (mode !== "all") {
+    // "First ACD only" — one row per input row (backwards compatible)
+    return { cols: allCols, rows: merged };
+  }
+
+  // "All ACDs" — expand ambiguous_multi rows
+  const expandedCols = [...allCols, "acd_unit_index"];
+  const expandedRows = [];
+  merged.forEach(r => {
+    if (r.match_quality === "ambiguous_multi" &&
+        Array.isArray(r.acd_list) && r.acd_list.length > 1) {
+      r.acd_list.forEach((acd, i) => {
+        expandedRows.push(Object.assign({}, r, {
+          ACD:            acd,
+          acd_unit_index: i
+        }));
+      });
+    } else {
+      expandedRows.push(Object.assign({}, r, { acd_unit_index: 0 }));
+    }
+  });
+  return { cols: expandedCols, rows: expandedRows };
+}
+
 function downloadCsv(merged) {
-  const cols = Object.keys(merged[0] || {}).filter(c => !c.startsWith("__"));
+  const modeEl = document.querySelector('input[name="csv-mode"]:checked');
+  const mode   = modeEl ? modeEl.value : "first";
+  const { cols, rows } = buildCsvRows(merged, mode);
+
   const header = cols.join(",");
-  const body   = merged.map(r =>
-    cols.map(c => {
-      const v = String(r[c] ?? "");
-      return v.includes(",") || v.includes('"') || v.includes("\n")
-        ? `"${v.replace(/"/g, '""')}"` : v;
-    }).join(",")
-  ).join("\n");
-  const csv  = header + "\n" + body;
-  const blob = new Blob([csv], { type: "text/csv" });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement("a");
-  a.href     = url;
-  a.download = "addresses_with_acd.csv";
+  const body   = rows.map(r => cols.map(c => csvEsc(r[c])).join(",")).join("\n");
+  const csv    = header + "\n" + body;
+  const blob   = new Blob([csv], { type: "text/csv" });
+  const url    = URL.createObjectURL(blob);
+  const a      = document.createElement("a");
+  a.href       = url;
+  a.download   = mode === "all" ? "addresses_with_acd_all_units.csv" : "addresses_with_acd.csv";
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1977,15 +2221,16 @@ async function parseFile(file) {
 
 // ── Match summary helper (used by both main run and REST update) ───────────
 function updateMatchSummary(merged) {
-  const nTotal        = merged.length;
-  const nExact        = merged.filter(r => r.match_quality === "exact").length;
-  const nFuzzy        = merged.filter(r => r.match_quality === "fuzzy_nearest_house").length;
-  const nSplitBoth    = merged.filter(r => r.match_quality === "split_both").length;
-  const nSplitPartial = merged.filter(r => r.match_quality === "split_partial").length;
-  const nRestApi      = merged.filter(r => r.match_quality === "rest_api_fallback").length;
-  const nAnyMatch     = nExact + nFuzzy + nSplitBoth + nSplitPartial + nRestApi;
-  const nUnmatched    = nTotal - nAnyMatch;
-  const pct           = nTotal > 0 ? Math.round(100 * nAnyMatch / nTotal) : 0;
+  const nTotal          = merged.length;
+  const nExact          = merged.filter(r => r.match_quality === "exact").length;
+  const nAmbiguous      = merged.filter(r => r.match_quality === "ambiguous_multi").length;  // Fix D
+  const nFuzzy          = merged.filter(r => r.match_quality === "fuzzy_nearest_house").length;
+  const nSplitBoth      = merged.filter(r => r.match_quality === "split_both").length;
+  const nSplitPartial   = merged.filter(r => r.match_quality === "split_partial").length;
+  const nRestApi        = merged.filter(r => r.match_quality === "rest_api_fallback").length;
+  const nAnyMatch       = nExact + nAmbiguous + nFuzzy + nSplitBoth + nSplitPartial + nRestApi;
+  const nUnmatched      = nTotal - nAnyMatch;
+  const pct             = nTotal > 0 ? Math.round(100 * nAnyMatch / nTotal) : 0;
 
   const lang = document.body.getAttribute("lang") || "en";
   const isDE = lang === "de";
@@ -1996,6 +2241,8 @@ function updateMatchSummary(merged) {
     (isDE ? "Adressen zugeordnet" : "addresses matched") +
     ` (${pct}%). ` +
     `<span style="color:#198754;">&#10003; exact: ${nExact.toLocaleString()}</span>` +
+    // Fix D: ambiguous_multi shown inline with count
+    (nAmbiguous    > 0 ? ` &nbsp; <span style="color:#6f42c1; font-weight:600;">&#9888; ambiguous (multi-unit): ${nAmbiguous.toLocaleString()}</span>` : "") +
     (nFuzzy        > 0 ? ` &nbsp; <span style="color:#fd7e14;">~ fuzzy: ${nFuzzy.toLocaleString()}</span>` : "") +
     (nSplitBoth    > 0 ? ` &nbsp; <span style="color:#0dcaf0;">&#8679; split (both): ${nSplitBoth.toLocaleString()}</span>` : "") +
     (nSplitPartial > 0 ? ` &nbsp; <span style="color:#6c757d;">&#8679; split (partial): ${nSplitPartial.toLocaleString()}</span>` : "") +
@@ -2096,10 +2343,11 @@ document.getElementById("run-btn").addEventListener("click", async () => {
 
     const nTotal         = merged.length;
     const nExact         = merged.filter(r => r.match_quality === "exact").length;
+    const nAmbiguous     = merged.filter(r => r.match_quality === "ambiguous_multi").length;  // Fix D
     const nFuzzy         = merged.filter(r => r.match_quality === "fuzzy_nearest_house").length;
     const nSplitBoth     = merged.filter(r => r.match_quality === "split_both").length;
     const nSplitPartial  = merged.filter(r => r.match_quality === "split_partial").length;
-    const nAnyMatch      = nExact + nFuzzy + nSplitBoth + nSplitPartial;
+    const nAnyMatch      = nExact + nAmbiguous + nFuzzy + nSplitBoth + nSplitPartial;
     const nUnmatched     = nTotal - nAnyMatch;
     const pct            = nTotal > 0 ? Math.round(100 * nAnyMatch / nTotal) : 0;
 
@@ -2110,6 +2358,10 @@ document.getElementById("run-btn").addEventListener("click", async () => {
 
     document.getElementById("results-section").style.display = "block";
     setProgress(100, "");
+
+    // Fix D: show CSV mode toggle if any ambiguous_multi rows exist
+    const csvToggle = document.getElementById("csv-mode-toggle");
+    if (csvToggle) csvToggle.style.display = nAmbiguous > 0 ? "block" : "none";
 
     // Show REST fallback button if there are unmatched rows
     const restSec = document.getElementById("rest-fallback-section");
