@@ -639,8 +639,13 @@ diese Seite ist ein Werkzeug.*
 | Algorithm | Matched | Rate |
 |-----------|--------:|-----:|
 | Baseline — exact join only (pre-#37) | 1,661 | 81.5% |
-| **Fix A + Fix B (this page)** | **1,921** | **94.2%** |
-| OGDAddressService REST API (external claim) | ~1,928 | ~94.5% |
+| Fix A + Fix B (post-#37) | 1,921 | 94.2% |
+| **Fix A + Fix B + Fix C REST API (post-#48)** | **1,976** | **96.9%** |
+
+Fix C recovered 55 of the 118 residual unmatched rows (46.6% of residual)
+in 4 seconds using concurrency 8. The remaining 63 rows have no match in
+the live Wien address register. See
+`analysis/qa/upload_match_rate_post_c.md` for the full diagnostic.
 
 Fix A (fuzzy nearest house) recovers 246 rows (12.1 pp). Fix B (composite
 split) recovers 14 rows (0.7 pp). The residual 118 unmatched rows are
@@ -667,8 +672,13 @@ negligible when most rows match on the first pass.
 | Algorithmus | Treffer | Quote |
 |-------------|--------:|------:|
 | Baseline — exakter Join (vor #37) | 1.661 | 81,5 % |
-| **Fix A + Fix B (diese Seite)** | **1.921** | **94,2 %** |
-| OGDAddressService REST API (externe Angabe) | ~1.928 | ~94,5 % |
+| Fix A + Fix B (nach #37) | 1.921 | 94,2 % |
+| **Fix A + Fix B + Fix C REST API (nach #48)** | **1.976** | **96,9 %** |
+
+Fix C hat 55 der 118 verbleibenden nicht gefundenen Zeilen (46,6 % der
+Restzahl) in 4 Sekunden bei Parallelität 8 aufgelöst. Die verbleibenden
+63 Zeilen haben keinen Treffer im Live-Wiener Adressregister. Siehe
+`analysis/qa/upload_match_rate_post_c.md` für den vollständigen Bericht.
 
 Fix A (nächstgelegene Hausnummer) erholt 246 Zeilen (12,1 Pp.). Fix B
 (zusammengesetzte Straße) erholt 14 Zeilen (0,7 Pp.). Die verbleibenden
