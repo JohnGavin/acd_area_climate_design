@@ -484,6 +484,12 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
 
 ---
 
+<!-- NOTE: Quarto panel-tabset tab headers are static text rendered at build time.
+     The data-lang CSS visibility toggle cannot hide/show tab headings because
+     Quarto wraps them in <li role="tab"> elements outside our CSS scope.
+     Workaround: bilingual tab titles separated by " / " (e.g. "Algorithm / Algorithmus").
+     Tab body content uses the standard data-lang fence-div pattern. -->
+
 ## How it works {.panel-tabset}
 
 ### Algorithm / Algorithmus
