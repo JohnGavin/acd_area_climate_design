@@ -248,6 +248,17 @@ main { background: #ffffff; color: #212529; }
 .upload-toolbar .toolbar-sep {
   color: var(--border, #ced4da); font-size: 0.8em; user-select: none;
 }
+/* Theme toggle — keep a dark backdrop in BOTH modes so the moon/sun emoji
+   stays legible (☀️ on white was hard to see).                             */
+#dark-btn {
+  background: #1a3a5c !important;
+  color: #ffffff !important;
+  border-color: #1a3a5c !important;
+}
+body.dark-mode #dark-btn {
+  background: #16213e !important;
+  border-color: #4ea8de !important;
+}
 
 /* ── Bilingual visibility ────────────────────────────────────────────────── */
 body[lang="en"] [data-lang="de"] { display: none; }
@@ -265,14 +276,32 @@ body.dark-mode main,
 body.dark-mode .upload-page-prose {
   background: var(--bg); color: var(--text);
 }
+/* Dark-mode prose contrast — override the explicit light-mode color on
+   descendants (p, li, td, th, strong) so text is readable on dark bg.    */
+body.dark-mode .upload-page-prose,
+body.dark-mode .upload-page-prose p,
+body.dark-mode .upload-page-prose li,
+body.dark-mode .upload-page-prose td,
+body.dark-mode .upload-page-prose th,
+body.dark-mode .upload-page-prose strong {
+  color: var(--text);
+}
 body.dark-mode #drop-zone {
   background: var(--card-bg); border-color: var(--border); color: var(--text);
 }
 body.dark-mode #sample-strip {
   background: #2a2a3e; border-color: #4a4a5a; color: #f0e8c0;
 }
+/* Dark-mode table — Bootstrap defaults a light background on <table>;
+   force dark bg + light text so contrast matches surrounding prose.      */
+body.dark-mode .upload-page-prose table,
+body.dark-mode .upload-page-prose table thead,
+body.dark-mode .upload-page-prose table tbody,
+body.dark-mode .upload-page-prose table tr,
 body.dark-mode .upload-page-prose table th,
 body.dark-mode .upload-page-prose table td {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
   border-color: var(--border);
 }
 body.dark-mode a { color: var(--link); }
@@ -306,8 +335,8 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 <div class="upload-toolbar" id="upload-toolbar" role="toolbar" aria-label="Page controls">
   <button id="lang-btn" title="Switch language / Sprache wechseln" aria-label="Switch language">🌐 DE</button>
   <span class="toolbar-sep">|</span>
-  <button id="font-up-btn" title="Increase font size" aria-label="Increase font size">A+</button>
   <button id="font-down-btn" title="Decrease font size" aria-label="Decrease font size">A−</button>
+  <button id="font-up-btn" title="Increase font size" aria-label="Increase font size">A+</button>
   <span class="toolbar-sep">|</span>
   <button id="dark-btn" title="Toggle dark mode" aria-label="Toggle dark mode">🌙</button>
 </div>
