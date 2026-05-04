@@ -599,13 +599,77 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 </div>
 <hr>
 </section>
-<section id="how-it-works" class="level2">
-<h2 class="anchored" data-anchor-id="how-it-works">How it works</h2>
+<section id="how-it-works" class="level2 panel-tabset">
+<h2 class="panel-tabset anchored" data-anchor-id="how-it-works">How it works</h2>
+<section id="algorithm-algorithmus" class="level3">
+<h3 class="anchored" data-anchor-id="algorithm-algorithmus">Algorithm / Algorithmus</h3>
 <div data-lang="en">
-<p>For the algorithm, per-fix details (assumptions / benefits / costs / works on / doesn’t work on), performance numbers, and bilingual methodology, see the <a href="upload_methodology.html">Upload methodology page</a>.</p>
-</div>
-<div data-lang="de">
-<p>Den Algorithmus, die Details je Verbesserung (Annahmen / Vorteile / Kosten / funktioniert bei / funktioniert nicht bei), Leistungskennzahlen und die zweisprachige Methodik finden Sie auf der <a href="upload_methodology.html">Methodik-Seite für den Upload</a>.</p>
+<p>This page does <strong>not</strong> use the project’s spatial join or building-footprint layer. It is a direct address-table lookup against <a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ogdwien:ADRESSENOGD</code></a> (291,823 registered address points), running in <a href="https://duckdb.org/docs/api/wasm/overview.html">DuckDB-Wasm</a> entirely in your browser. See the <a href="../../vignettes/articles/methodology.html">Methodology page</a> for the dashboard’s spatial pipeline (different layers, different question).</p>
+<p>The join uses three normalised keys:</p>
+<ul>
+<li><strong>PLZ</strong> — four-digit postcode (cast to <code>VARCHAR</code>)</li>
+<li><strong>Street name</strong> — <code>LOWER(TRIM(name_str))</code> matched against the user column</li>
+<li><strong>House number</strong> — <code>LOWER(TRIM(name_onr))</code> matched against the user column</li>
+</ul>
+<p>Schrebergärten / garden-plot addresses with a <code>/</code> in the street or <code>Parz</code> in the house-number column are split into two lookup attempts automatically.</p>
+<section id="what-this-page-does-not-do" class="level3">
+<h3 class="anchored" data-anchor-id="what-this-page-does-not-do">What this page does NOT do</h3>
+<ul>
+<li>❌ It does not run the <code>R/join_buildings_zones.R</code> spatial join</li>
+<li>❌ It does not return <code>confidence_tier</code> (A–E distance-based labels)</li>
+<li>❌ It does not return <code>zone_id</code> or <code>nearest_zone_dist_m</code> for matched buildings</li>
+<li>❌ It does not consult the <code>GEBAEUDEINFOOGD</code> building-footprint layer</li>
+</ul>
+<p>Spatial enrichment of matched rows with these fields is tracked as a follow-up in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/42">issue #42</a>.</p>
+<p><strong>Match quality legend:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>exact</code></td>
+<td>All three keys matched exactly and there is exactly one ACD for this address</td>
+</tr>
+<tr class="even">
+<td><code>ambiguous_multi</code></td>
+<td>All three keys matched but <strong>multiple ACDs</strong> exist for this address (multi-unit building). The first ACD is shown; click the ⚠ badge to see all. <code>acd_count</code> = number of ACDs, <code>acd_codes</code> = comma-joined list</td>
+</tr>
+<tr class="odd">
+<td><code>fuzzy_nearest_house</code></td>
+<td>PLZ + street matched; nearest existing house number used (distance shown in <code>house_distance</code> column)</td>
+</tr>
+<tr class="even">
+<td><code>split_both</code></td>
+<td>Composite <code>A/B</code> street — both halves resolved to an ACD (<code>ACD</code> = first, <code>acd_b</code> = second)</td>
+</tr>
+<tr class="odd">
+<td><code>split_partial</code></td>
+<td>Composite <code>A/B</code> street — only one half resolved</td>
+</tr>
+<tr class="even">
+<td><code>rest_api_fallback</code></td>
+<td>Fix C: matched via the city’s OGDAddressService REST API; <code>rest_ranking</code> column shows API confidence</td>
+</tr>
+<tr class="odd">
+<td><code>unmatched_after_rest</code></td>
+<td>REST API was tried but returned no match</td>
+</tr>
+<tr class="even">
+<td><code>rest_skipped_over_budget</code></td>
+<td>REST API skipped — session budget of 250 calls already consumed</td>
+</tr>
+<tr class="odd">
+<td><code>unmatched</code></td>
+<td>No row in <a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ADRESSENOGD</code></a> matched (REST API not yet tried)</td>
+</tr>
+</tbody>
+</table>
+<p><em>Note: this DE/EN toggle is complementary to the German narrative vignette at <a href="scrollytell_de.html">scrollytell_de.html</a> — that page tells the story of ACD codes; this page is a utility tool.</em></p>
+</section>
 </div>
 <div data-lang="de">
 <p>Diese Seite nutzt <strong>nicht</strong> die räumliche Verknüpfung oder die Gebäudegrundriss-Ebene des Projekts. Es handelt sich um eine direkte Adresstabellen-Suche gegen <a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ogdwien:ADRESSENOGD</code></a> (291.823 registrierte Adresspunkte), die vollständig in <a href="https://duckdb.org/docs/api/wasm/overview.html">DuckDB-Wasm</a> im Browser läuft. Die räumliche Pipeline des Dashboards ist auf der <a href="../../vignettes/articles/methodology.html">Methodik-Seite</a> beschrieben.</p>
@@ -675,6 +739,7 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 <p><em>Hinweis: Der DE/EN-Umschalter ergänzt das deutsche Erzählvignette unter <a href="scrollytell_de.html">scrollytell_de.html</a> — jene Seite erklärt ACD-Codes; diese Seite ist ein Werkzeug.</em></p>
 </section>
 </div>
+</section>
 <section id="performance" class="level3">
 <h3 class="anchored" data-anchor-id="performance">Performance</h3>
 <div data-lang="en">
@@ -1120,8 +1185,8 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 </table>
 </div>
 </section>
-<section id="per-fix-details-details-je-verbesserung" class="level3">
-<h3 class="anchored" data-anchor-id="per-fix-details-details-je-verbesserung">Per-fix details / Details je Verbesserung</h3>
+<section id="per-fix-details" class="level3">
+<h3 class="anchored" data-anchor-id="per-fix-details">Per-fix details / Details je Verbesserung</h3>
 <div data-lang="en">
 <p>Each fix is documented with its assumptions, benefits, costs, and example addresses where it does and does not work. Fix C (REST API fallback) and Fix D (multi-unit dedup correctness) are both now active.</p>
 </div>
@@ -2223,7 +2288,7 @@ function renderChart(merged) {
     `Highest: ${top.district} at ${top.rate}%; lowest: ${bot.district} at ${bot.rate}%; ` +
     `${nAbove90} of ${districtData.length} districts achieved \u226590%. ` +
     `Source: user-uploaded XLSX joined to ADRESSENOGD Parquet via DuckDB-WASM. ` +
-    `See <a href="upload_methodology.html" style="color:#5dadff;">methodology</a> for the per-fix breakdown. ` +
+    `See <a href="#how-it-works" style="color:#5dadff;">methodology tabs below</a> for the per-fix breakdown. ` +
     `ACD\u202f=\u202faddress-cluster designator; Bezirk\u202f=\u202fVienna municipal district.`;
 
   const captionDE = `Cleveland-Punktdiagramm der Adress-zu-ACD-Trefferquote nach Wiener Bezirk. ` +
@@ -2232,7 +2297,7 @@ function renderChart(merged) {
     `H\u00f6chster: ${top.district} mit ${top.rate}%; niedrigster: ${bot.district} mit ${bot.rate}%; ` +
     `${nAbove90} von ${districtData.length} Bezirken erreichten \u226590%. ` +
     `Quelle: Benutzer-XLSX verkn\u00fcpft mit ADRESSENOGD-Parquet via DuckDB-WASM. ` +
-    `Siehe <a href="upload_methodology.html" style="color:#5dadff;">Methodik</a> f\u00fcr die Einzelaufschl\u00fcsselung. ` +
+    `Siehe <a href="#how-it-works" style="color:#5dadff;">Methodik-Tabs unten</a> f\u00fcr die Einzelaufschl\u00fcsselung. ` +
     `ACD\u202f=\u202fAdress-Cluster-Bezeichner; Bezirk\u202f=\u202fWiener Stadtbezirk.`;
 
   const captionEl = document.getElementById("district-chart-caption");

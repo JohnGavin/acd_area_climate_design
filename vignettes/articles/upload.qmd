@@ -583,19 +583,55 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
 
 ---
 
-## How it works
+## How it works {.panel-tabset}
+
+### Algorithm / Algorithmus
 
 ::: {data-lang="en"}
-For the algorithm, per-fix details (assumptions / benefits / costs / works on / doesn't work on),
-performance numbers, and bilingual methodology, see the
-[Upload methodology page](upload_methodology.html).
-:::
+This page does **not** use the project's spatial join or building-footprint
+layer. It is a direct address-table lookup against
+[`ogdwien:ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD)
+(`r format(n_addresses, big.mark=",")` registered address points), running in
+[DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html) entirely in your
+browser. See the [Methodology page](methodology.qmd) for the dashboard's
+spatial pipeline (different layers, different question).
 
-::: {data-lang="de"}
-Den Algorithmus, die Details je Verbesserung (Annahmen / Vorteile / Kosten /
-funktioniert bei / funktioniert nicht bei), Leistungskennzahlen und die
-zweisprachige Methodik finden Sie auf der
-[Methodik-Seite für den Upload](upload_methodology.html).
+The join uses three normalised keys:
+
+- **PLZ** — four-digit postcode (cast to `VARCHAR`)
+- **Street name** — `LOWER(TRIM(name_str))` matched against the user column
+- **House number** — `LOWER(TRIM(name_onr))` matched against the user column
+
+Schrebergärten / garden-plot addresses with a `/` in the street or `Parz` in
+the house-number column are split into two lookup attempts automatically.
+
+### What this page does NOT do
+
+- ❌ It does not run the `R/join_buildings_zones.R` spatial join
+- ❌ It does not return `confidence_tier` (A–E distance-based labels)
+- ❌ It does not return `zone_id` or `nearest_zone_dist_m` for matched buildings
+- ❌ It does not consult the `GEBAEUDEINFOOGD` building-footprint layer
+
+Spatial enrichment of matched rows with these fields is tracked as a follow-up
+in [issue #42](https://github.com/JohnGavin/acd_area_climate_design/issues/42).
+
+**Match quality legend:**
+
+| Value | Meaning |
+|-------|---------|
+| `exact` | All three keys matched exactly and there is exactly one ACD for this address |
+| `ambiguous_multi` | All three keys matched but **multiple ACDs** exist for this address (multi-unit building). The first ACD is shown; click the ⚠ badge to see all. `acd_count` = number of ACDs, `acd_codes` = comma-joined list |
+| `fuzzy_nearest_house` | PLZ + street matched; nearest existing house number used (distance shown in `house_distance` column) |
+| `split_both` | Composite `A/B` street — both halves resolved to an ACD (`ACD` = first, `acd_b` = second) |
+| `split_partial` | Composite `A/B` street — only one half resolved |
+| `rest_api_fallback` | Fix C: matched via the city's OGDAddressService REST API; `rest_ranking` column shows API confidence |
+| `unmatched_after_rest` | REST API was tried but returned no match |
+| `rest_skipped_over_budget` | REST API skipped — session budget of 250 calls already consumed |
+| `unmatched` | No row in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) matched (REST API not yet tried) |
+
+*Note: this DE/EN toggle is complementary to the German narrative vignette at
+[scrollytell\_de.html](scrollytell_de.html) — that page tells the story of
+ACD codes; this page is a utility tool.*
 :::
 
 ::: {data-lang="de"}
@@ -811,7 +847,7 @@ nutzen den Browser-Cache und sind unabhängig von der Verbindungsgeschwindigkeit
 | Langsames 3G | ~15–20 s | <1 s |
 :::
 
-### Per-fix details / Details je Verbesserung
+### Per-fix details / Details je Verbesserung {#per-fix-details}
 
 ::: {data-lang="en"}
 Each fix is documented with its assumptions, benefits, costs, and example
@@ -2123,7 +2159,7 @@ function renderChart(merged) {
     `Highest: ${top.district} at ${top.rate}%; lowest: ${bot.district} at ${bot.rate}%; ` +
     `${nAbove90} of ${districtData.length} districts achieved \u226590%. ` +
     `Source: user-uploaded XLSX joined to ADRESSENOGD Parquet via DuckDB-WASM. ` +
-    `See <a href="upload_methodology.html" style="color:#5dadff;">methodology</a> for the per-fix breakdown. ` +
+    `See <a href="#how-it-works" style="color:#5dadff;">methodology tabs below</a> for the per-fix breakdown. ` +
     `ACD\u202f=\u202faddress-cluster designator; Bezirk\u202f=\u202fVienna municipal district.`;
 
   const captionDE = `Cleveland-Punktdiagramm der Adress-zu-ACD-Trefferquote nach Wiener Bezirk. ` +
@@ -2132,7 +2168,7 @@ function renderChart(merged) {
     `H\u00f6chster: ${top.district} mit ${top.rate}%; niedrigster: ${bot.district} mit ${bot.rate}%; ` +
     `${nAbove90} von ${districtData.length} Bezirken erreichten \u226590%. ` +
     `Quelle: Benutzer-XLSX verkn\u00fcpft mit ADRESSENOGD-Parquet via DuckDB-WASM. ` +
-    `Siehe <a href="upload_methodology.html" style="color:#5dadff;">Methodik</a> f\u00fcr die Einzelaufschl\u00fcsselung. ` +
+    `Siehe <a href="#how-it-works" style="color:#5dadff;">Methodik-Tabs unten</a> f\u00fcr die Einzelaufschl\u00fcsselung. ` +
     `ACD\u202f=\u202fAdress-Cluster-Bezeichner; Bezirk\u202f=\u202fWiener Stadtbezirk.`;
 
   const captionEl = document.getElementById("district-chart-caption");
