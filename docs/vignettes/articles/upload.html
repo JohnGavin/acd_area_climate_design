@@ -195,6 +195,13 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 
 <!-- ── Upload page styles (toolbar + bilingual + dark mode) ──────────────── -->
 <style>
+/* ── Page-wide black gutters (window background) ─────────────────────────── */
+/* The viewport gutters outside the central article should be black so the
+   page reads as a single dark canvas. The central <main> keeps its own
+   background (white in light mode, dark blue in dark mode) so prose stays
+   readable. !important is required to defeat the cosmo theme defaults.   */
+html, body { background: #000000 !important; }
+
 /* ── Base typography ─────────────────────────────────────────────────────── */
 main, .quarto-container, .upload-page-prose,
 .upload-page-prose p, .upload-page-prose li,
@@ -2161,7 +2168,7 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
 </div>
 <hr style="margin-top:30px; border:none; border-top:1px solid #dee2e6;">
 <p style="text-align:left; font-size:0.82em; color:#6c757d; margin-top:8px;">
-<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/592a53ab0b0a462334ea91c659d3bcac232d23fa"><code>592a53a</code></a> | built 2026-05-04 15:30 UTC
+<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/90a3eb99b426c2fa0e2c78222ef7696bb5881707"><code>90a3eb9</code></a> | built 2026-05-04 21:21 UTC
 </p>
 
 

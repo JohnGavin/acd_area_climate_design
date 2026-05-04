@@ -51,6 +51,13 @@ addr_parquet_url <- paste0(REMOTE_BASE_URL, "/addresses_", ADDRESSES_SNAPSHOT_DA
 ```{=html}
 <!-- ── Upload page styles (toolbar + bilingual + dark mode) ──────────────── -->
 <style>
+/* ── Page-wide black gutters (window background) ─────────────────────────── */
+/* The viewport gutters outside the central article should be black so the
+   page reads as a single dark canvas. The central <main> keeps its own
+   background (white in light mode, dark blue in dark mode) so prose stays
+   readable. !important is required to defeat the cosmo theme defaults.   */
+html, body { background: #000000 !important; }
+
 /* ── Base typography ─────────────────────────────────────────────────────── */
 main, .quarto-container, .upload-page-prose,
 .upload-page-prose p, .upload-page-prose li,
