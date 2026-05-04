@@ -605,21 +605,54 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
         <span data-lang="en">Data table (accessibility)</span>
         <span data-lang="de">Datentabelle (Barrierefreiheit)</span>
       </summary>
-      
-<table id="district-data-table" class="caption-top" style="font-size:0.78em; border-collapse:collapse; margin-top:4px; color:#e0e0e0;">
-<thead>
-<tr class="header">
-<th data-quarto-table-cell-role="th" style="border: 1px solid #555; padding: 3px 8px">District (PLZ)</th>
-<th data-quarto-table-cell-role="th" style="border: 1px solid #555; padding: 3px 8px">Total</th>
-<th data-quarto-table-cell-role="th" style="border: 1px solid #555; padding: 3px 8px">Matched</th>
-<th data-quarto-table-cell-role="th" style="border: 1px solid #555; padding: 3px 8px">Match rate (%)</th>
-</tr>
-</thead>
-<tbody id="district-data-tbody">
-</tbody>
-</table>
+      <div id="district-data-table" role="table" aria-label="Match rate by district" style="display:grid; grid-template-columns: 1fr 80px 80px 100px;
+                  gap: 0; font-size:0.78em; margin-top:4px; color:#e0e0e0;
+                  border:1px solid #555;">
+        <div role="rowgroup" style="display:contents;">
+          <div role="row" style="display:contents; font-weight:bold; background:#222;">
+            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">District (PLZ)</div>
+            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">Total</div>
+            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">Matched</div>
+            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">Match rate (%)</div>
+          </div>
+        </div>
+        <div role="rowgroup" id="district-data-tbody" style="display:contents;"></div>
+      </div>
+    </details>
+  </div>
 
-  </details></div>
+  <!-- Download section (button + Fix D: first-ACD vs all-ACDs toggle) — ABOVE table -->
+  <div id="download-section" style="margin-bottom:14px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+    <button id="download-btn" style="
+      padding:8px 20px; background:#198754; color:#fff;
+      border:none; border-radius:6px; cursor:pointer; font-size:1em;" data-en="Download filled CSV" data-de="CSV herunterladen">
+      Download filled CSV
+    </button>
+    <!-- Fix D: CSV mode toggle (only visible after a lookup has been run) -->
+    <div id="csv-mode-toggle" style="display:none; font-size:0.88em; color:#495057;">
+      <label style="cursor:pointer; margin-right:10px;">
+        <input type="radio" name="csv-mode" value="first" checked="" style="margin-right:4px;">
+        <span data-lang="en">First ACD only (1:1 with input)</span>
+        <span data-lang="de">Nur erste ACD (1:1 zur Eingabe)</span>
+      </label>
+      <label style="cursor:pointer;">
+        <input type="radio" name="csv-mode" value="all" style="margin-right:4px;">
+        <span data-lang="en">All ACDs (one row per ACD for multi-unit)</span>
+        <span data-lang="de">Alle ACDs (eine Zeile je ACD bei Mehrfamilienhaus)</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Results table (first 50 rows) -->
+  <h4 class="anchored">
+    <span data-lang="en">Preview (first 50 matched rows)</span>
+    <span data-lang="de">Vorschau (erste 50 Treffer)</span>
+  </h4>
+  <div style="overflow-x:auto;">
+    <table id="results-table" style="
+      border-collapse:collapse; width:100%; font-size:0.85em;">
+    </table>
+  </div>
 
   <!-- REST API fallback button (hidden until unmatched rows exist) -->
   <div id="rest-fallback-section" style="display:none; margin-top:16px;
@@ -875,7 +908,7 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 <li>Matched rows receive <code>match_quality = "rest_api_fallback"</code></li>
 <li>Rows beyond budget receive <code>match_quality = "rest_skipped_over_budget"</code></li>
 </ul>
-<p>This step is not implemented in the current <code>R/upload_algorithm.R</code> (see <code>upload_algorithm.R</code> line 14: “Step 6: REST API fallback. NOT IMPLEMENTED”). Future work tracked in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/48">issue #48</a>.</p>
+<p>This step is not implemented in the current <code>R/upload_algorithm.R</code> (see <a href="https://github.com/JohnGavin/acd_area_climate_design/blob/main/R/upload_algorithm.R#L14"><code>upload_algorithm.R</code> line 14</a>: “Step 6: REST API fallback. NOT IMPLEMENTED”). Future work tracked in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/48">issue #48</a>.</p>
 <!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->
 
 <!-- Inline Chart.js for the per-district bar chart (no server needed) -->
@@ -1559,12 +1592,12 @@ function renderChart(merged) {
   const tbody = document.getElementById("district-data-tbody");
   if (tbody) {
     tbody.innerHTML = districtData.map(d =>
-      `<tr>
-        <td style="border:1px solid #555; padding:2px 8px;">${d.district}</td>
-        <td style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.total}</td>
-        <td style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.matched}</td>
-        <td style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.rate}</td>
-      </tr>`
+      `<div role="row" style="display:contents;">
+        <div role="cell" style="border:1px solid #555; padding:2px 8px;">${d.district}</div>
+        <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.total}</div>
+        <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.matched}</div>
+        <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.rate}</div>
+      </div>`
     ).join("");
   }
 }
@@ -1998,6 +2031,10 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
 </div>
 </div>
 </div>
+<hr style="margin-top:30px; border:none; border-top:1px solid #dee2e6;">
+<p style="text-align:left; font-size:0.82em; color:#6c757d; margin-top:8px;">
+<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/6684eb39de61c43d1487c2124984d98de31ea00b"><code>6684eb3</code></a> | built 2026-05-04 14:44 UTC
+</p>
 
 
 </section>
