@@ -127,9 +127,24 @@ body.dark-mode #progress-msg { color: #ccc; }
 /* Drop zone hover in dark mode */
 body.dark-mode #drop-zone:hover,
 body.dark-mode #drop-zone.drag-over { background: #1e2a3e !important; }
-body.dark-mode p#file-name-display { color: #aaa; }
+body.dark-mode p#file-name-display { color: #fff; }
 body.dark-mode #match-summary span[style*="198754"] { color: #69d4a0 !important; }
 body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important; }
+
+/* ── Chart section & caption ─────────────────────────────────────────────── */
+#chart-section {
+  background: #1a1a1a;
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+#district-chart-caption {
+  color: #e0e0e0;   /* white-on-dark: contrast ratio >> 4.5:1 vs #1a1a1a */
+  font-size: 0.82em;
+  line-height: 1.5;
+  text-align: left;
+  margin-bottom: 6px;
+}
+#district-chart-caption a { color: #5dadff; }
 </style>
 
 <!-- ── Toolbar ─────────────────────────────────────────────────────────────── -->
@@ -388,10 +403,10 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
     </p>
     <input type="file" id="file-input" accept=".xlsx,.csv"
            style="display:none;" />
-    <p id="file-name-display" style="margin:8px 0 0; color:#6c757d; font-size:0.9em;"></p>
+    <p id="file-name-display" style="margin:8px 0 0; color:#0d6efd; font-size:1.3em; font-weight:bold;"></p>
   </div>
 
-  <!-- Column mapping -->
+  <!-- Column mapping (hidden until file is loaded) -->
   <div id="col-map-section" style="display:none; margin-bottom:16px;">
     <h4 style="margin-bottom:8px;">
       <span data-lang="en">Column mapping</span>
@@ -414,13 +429,16 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
         <select id="map-hausnr" style="padding:4px 8px; border-radius:4px; border:1px solid #ced4da;"></select>
       </label>
     </div>
-    <button id="run-btn" style="
-      margin-top:14px; padding:8px 20px; background:#0d6efd; color:#fff;
-      border:none; border-radius:6px; cursor:pointer; font-size:1em;"
-      data-en="Run lookup" data-de="Suche starten">
-      Run lookup
-    </button>
   </div>
+
+  <!-- Run lookup button — visible on load (disabled until file is parsed) -->
+  <button id="run-btn" disabled style="
+    margin-top:14px; padding:8px 20px; background:#0d6efd; color:#fff;
+    border:none; border-radius:6px; font-size:1em;
+    cursor:not-allowed; opacity:0.55;"
+    data-en="Run lookup" data-de="Suche starten">
+    Run lookup
+  </button>
 
   <!-- Progress bar -->
   <div id="progress-section" style="display:none; margin-bottom:12px;">
@@ -457,23 +475,34 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
       <span data-lang="en">Match rate by district (PLZ)</span>
       <span data-lang="de">Trefferquote nach Bezirk (PLZ)</span>
     </h4>
-    <canvas id="district-chart" height="160"
+    <figcaption id="district-chart-caption"
+      style="font-size:0.82em; color:#e0e0e0; margin-bottom:6px; text-align:left; line-height:1.45;"></figcaption>
+    <canvas id="district-chart" height="300"
+            aria-label="Match rate by Vienna district, Cleveland dot plot"
             style="max-width:700px; width:100%;"></canvas>
+    <!-- Accessible data table fallback (screen readers + keyboard users) -->
+    <details style="margin-top:6px;">
+      <summary style="font-size:0.8em; color:#adb5bd; cursor:pointer;">
+        <span data-lang="en">Data table (accessibility)</span>
+        <span data-lang="de">Datentabelle (Barrierefreiheit)</span>
+      </summary>
+      <table id="district-data-table"
+             style="font-size:0.78em; border-collapse:collapse; margin-top:4px; color:#e0e0e0;">
+        <thead>
+          <tr>
+            <th style="border:1px solid #555; padding:3px 8px;">District (PLZ)</th>
+            <th style="border:1px solid #555; padding:3px 8px;">Total</th>
+            <th style="border:1px solid #555; padding:3px 8px;">Matched</th>
+            <th style="border:1px solid #555; padding:3px 8px;">Match rate (%)</th>
+          </tr>
+        </thead>
+        <tbody id="district-data-tbody"></tbody>
+      </table>
+    </details>
   </div>
 
-  <!-- Results table (first 50 rows) -->
-  <h4>
-    <span data-lang="en">Preview (first 50 matched rows)</span>
-    <span data-lang="de">Vorschau (erste 50 Treffer)</span>
-  </h4>
-  <div style="overflow-x:auto;">
-    <table id="results-table" style="
-      border-collapse:collapse; width:100%; font-size:0.85em;">
-    </table>
-  </div>
-
-  <!-- Download section (button + Fix D: first-ACD vs all-ACDs toggle) -->
-  <div id="download-section" style="margin-top:14px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
+  <!-- Download section (button + Fix D: first-ACD vs all-ACDs toggle) — ABOVE table -->
+  <div id="download-section" style="margin-bottom:14px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
     <button id="download-btn" style="
       padding:8px 20px; background:#198754; color:#fff;
       border:none; border-radius:6px; cursor:pointer; font-size:1em;"
@@ -493,6 +522,17 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
         <span data-lang="de">Alle ACDs (eine Zeile je ACD bei Mehrfamilienhaus)</span>
       </label>
     </div>
+  </div>
+
+  <!-- Results table (first 50 rows) -->
+  <h4>
+    <span data-lang="en">Preview (first 50 matched rows)</span>
+    <span data-lang="de">Vorschau (erste 50 Treffer)</span>
+  </h4>
+  <div style="overflow-x:auto;">
+    <table id="results-table" style="
+      border-collapse:collapse; width:100%; font-size:0.85em;">
+    </table>
   </div>
 
   <!-- Fix C — REST API fallback button (hidden until unmatched rows exist) -->
@@ -543,61 +583,19 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
 
 ---
 
-<!-- NOTE: Quarto panel-tabset tab headers are static text rendered at build time.
-     The data-lang CSS visibility toggle cannot hide/show tab headings because
-     Quarto wraps them in <li role="tab"> elements outside our CSS scope.
-     Workaround: bilingual tab titles separated by " / " (e.g. "Algorithm / Algorithmus").
-     Tab body content uses the standard data-lang fence-div pattern. -->
-
-## How it works {.panel-tabset}
-
-### Algorithm / Algorithmus
+## How it works
 
 ::: {data-lang="en"}
-This page does **not** use the project's spatial join or building-footprint
-layer. It is a direct address-table lookup against
-[`ogdwien:ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD)
-(`r format(n_addresses, big.mark=",")` registered address points), running in
-[DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html) entirely in your
-browser. See the [Methodology page](methodology.qmd) for the dashboard's
-spatial pipeline (different layers, different question).
+For the algorithm, per-fix details (assumptions / benefits / costs / works on / doesn't work on),
+performance numbers, and bilingual methodology, see the
+[Upload methodology page](upload_methodology.html).
+:::
 
-The join uses three normalised keys:
-
-- **PLZ** — four-digit postcode (cast to `VARCHAR`)
-- **Street name** — `LOWER(TRIM(name_str))` matched against the user column
-- **House number** — `LOWER(TRIM(name_onr))` matched against the user column
-
-Schrebergärten / garden-plot addresses with a `/` in the street or `Parz` in
-the house-number column are split into two lookup attempts automatically.
-
-### What this page does NOT do
-
-- ❌ It does not run the `R/join_buildings_zones.R` spatial join
-- ❌ It does not return `confidence_tier` (A–E distance-based labels)
-- ❌ It does not return `zone_id` or `nearest_zone_dist_m` for matched buildings
-- ❌ It does not consult the `GEBAEUDEINFOOGD` building-footprint layer
-
-Spatial enrichment of matched rows with these fields is tracked as a follow-up
-in [issue #42](https://github.com/JohnGavin/acd_area_climate_design/issues/42).
-
-**Match quality legend:**
-
-| Value | Meaning |
-|-------|---------|
-| `exact` | All three keys matched exactly and there is exactly one ACD for this address |
-| `ambiguous_multi` | All three keys matched but **multiple ACDs** exist for this address (multi-unit building). The first ACD is shown; click the ⚠ badge to see all. `acd_count` = number of ACDs, `acd_codes` = comma-joined list |
-| `fuzzy_nearest_house` | PLZ + street matched; nearest existing house number used (distance shown in `house_distance` column) |
-| `split_both` | Composite `A/B` street — both halves resolved to an ACD (`ACD` = first, `acd_b` = second) |
-| `split_partial` | Composite `A/B` street — only one half resolved |
-| `rest_api_fallback` | Fix C: matched via the city's OGDAddressService REST API; `rest_ranking` column shows API confidence |
-| `unmatched_after_rest` | REST API was tried but returned no match |
-| `rest_skipped_over_budget` | REST API skipped — session budget of 250 calls already consumed |
-| `unmatched` | No row in [`ADRESSENOGD`](https://data.wien.gv.at/daten/geo?service=WFS&request=DescribeFeatureType&typeNames=ogdwien:ADRESSENOGD) matched (REST API not yet tried) |
-
-*Note: this DE/EN toggle is complementary to the German narrative vignette at
-[scrollytell\_de.html](scrollytell_de.html) — that page tells the story of
-ACD codes; this page is a utility tool.*
+::: {data-lang="de"}
+Den Algorithmus, die Details je Verbesserung (Annahmen / Vorteile / Kosten /
+funktioniert bei / funktioniert nicht bei), Leistungskennzahlen und die
+zweisprachige Methodik finden Sie auf der
+[Methodik-Seite für den Upload](upload_methodology.html).
 :::
 
 ::: {data-lang="de"}
@@ -1748,42 +1746,61 @@ async function runFuzzyFallback(exactResults) {
   await dbConn.query(`INSERT INTO unmatched_in VALUES ${vals}`);
 
   // Fuzzy query: for each unmatched row, find the nearest registered house
-  // on the same (PLZ, street).  QUALIFY keeps only the single closest match.
-  // DuckDB does not support QUALIFY with window functions in older builds —
-  // use a subquery approach instead.
+  // on the same (PLZ, street).  Uses a portable CTE + WHERE rn = 1 subquery
+  // (avoids QUALIFY which is not supported in all duckdb-wasm builds).
+  // ROW_NUMBER() OVER (PARTITION BY … ORDER BY …) IS fully supported.
   // Fix D: addr view now exposes acd_list[1]/scd_list[1]/... instead of
   // individual ACD/SCD_NAME_STR/STRABS_ZUGANG_STR/OBJEKT_ID columns.
-  const fuzzy = await dbConn.query(`
-    WITH candidates AS (
-      SELECT
-        u.row_id,
-        a.acd_list[1]       AS ACD,
-        a.scd_list[1]       AS SCD,
-        a.strabs_list[1]    AS STRABS,
-        a.objekt_id_list[1] AS OBJEKT_ID,
-        a.lon,
-        a.lat,
-        a.acd_list          AS acd_list,
-        a.acd_count         AS acd_count,
-        ABS(
-          COALESCE(TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER), -9999) -
-          COALESCE(TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER), -9999)
-        ) AS house_distance,
-        ROW_NUMBER() OVER (
-          PARTITION BY u.row_id
-          ORDER BY ABS(
+  let fuzzy;
+  try {
+    fuzzy = await dbConn.query(`
+      WITH candidates AS (
+        SELECT
+          u.row_id,
+          a.acd_list[1]       AS ACD,
+          a.scd_list[1]       AS SCD,
+          a.strabs_list[1]    AS STRABS,
+          a.objekt_id_list[1] AS OBJEKT_ID,
+          a.lon,
+          a.lat,
+          a.acd_list          AS acd_list,
+          a.acd_count         AS acd_count,
+          ABS(
             COALESCE(TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER), -9999) -
             COALESCE(TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER), -9999)
-          )
-        ) AS rn
-      FROM unmatched_in u
-      JOIN addr a ON u.plz_in = a.plz_norm AND u.street_in = a.street_norm
-      WHERE a.house_norm REGEXP '^[0-9]'
-        AND TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER) IS NOT NULL
-        AND TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER) IS NOT NULL
-    )
-    SELECT * FROM candidates WHERE rn = 1
-  `).catch(() => null);  // if the query fails (e.g. no REGEXP support), skip
+          ) AS house_distance,
+          ROW_NUMBER() OVER (
+            PARTITION BY u.row_id
+            ORDER BY ABS(
+              COALESCE(TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER), -9999) -
+              COALESCE(TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER), -9999)
+            )
+          ) AS rn
+        FROM unmatched_in u
+        JOIN addr a ON u.plz_in = a.plz_norm AND u.street_in = a.street_norm
+        WHERE a.house_norm REGEXP '^[0-9]'
+          AND TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER) IS NOT NULL
+          AND TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER) IS NOT NULL
+      )
+      SELECT * FROM candidates WHERE rn = 1
+    `);
+  } catch (fuzzyErr) {
+    // Fuzzy fallback failed — surface a visible warning so this is not hidden
+    console.error("[Fix A] Fuzzy nearest-house query failed:", fuzzyErr);
+    const warn = document.createElement("div");
+    warn.id = "fuzzy-error-banner";
+    warn.style.cssText =
+      "background:#fff3cd; border:1px solid #ffc107; border-radius:6px; " +
+      "padding:10px 14px; margin-bottom:12px; font-size:0.92em; color:#664d03;";
+    warn.innerHTML =
+      "<strong>⚠ Fix A (fuzzy nearest-house) failed</strong> — " +
+      "some addresses may show as <em>unmatched</em> that could have been " +
+      "recovered. Error: <code>" + fuzzyErr.message + "</code>. " +
+      "Check the browser console for details.";
+    const res = document.getElementById("results-section");
+    if (res) res.prepend(warn);
+    return exactResults;
+  }
 
   if (!fuzzy) return exactResults;
 
@@ -2028,39 +2045,111 @@ function renderChart(merged) {
     byDistrict[key].total++;
     if (r.match_quality !== "unmatched") byDistrict[key].matched++;
   });
-  const labels = Object.keys(byDistrict).sort();
-  const rates  = labels.map(k => {
-    const d = byDistrict[k];
-    return d.total > 0 ? Math.round(100 * d.matched / d.total) : 0;
-  });
+  // Build sorted array: descending by match rate
+  const districtData = Object.entries(byDistrict).map(([key, val]) => ({
+    district: key,
+    total:    val.total,
+    matched:  val.matched,
+    rate:     val.total > 0 ? Math.round(100 * val.matched / val.total) : 0
+  })).sort((a, b) => b.rate - a.rate);
 
   const canvas = document.getElementById("district-chart");
   const existing = Chart.getChart(canvas);
   if (existing) existing.destroy();
 
+  // Cleveland dot plot: type="scatter", x=rate, y=integer index
+  const points = districtData.map((d, i) => ({ x: d.rate, y: i }));
+
   new Chart(canvas, {
-    type: "bar",
+    type: "scatter",
     data: {
-      labels,
       datasets: [{
-        label: "Match rate (%)",
-        data: rates,
-        backgroundColor: "#0d6efd88",
-        borderColor: "#0d6efd",
-        borderWidth: 1
+        data: points,
+        pointRadius: 6,
+        pointBackgroundColor: "#5dadff",   // 4.5:1 contrast on #1a1a1a
+        pointBorderColor: "#ffffff",
+        pointBorderWidth: 1.5
       }]
     },
     options: {
       responsive: true,
       plugins: {
         legend: { display: false },
-        tooltip: { callbacks: { label: ctx => ctx.parsed.y + "%" } }
+        tooltip: {
+          callbacks: {
+            label: ctx => {
+              const d = districtData[ctx.parsed.y];
+              return d ? `${d.district}: ${d.rate}%` : ctx.parsed.x + "%";
+            }
+          }
+        }
       },
       scales: {
-        y: { min: 0, max: 100, ticks: { callback: v => v + "%" } }
+        x: {
+          min: 0, max: 100,
+          title: { display: true, text: "Match rate (%)", color: "#ffffff" },
+          ticks: { color: "#ffffff", callback: v => v + "%" },
+          grid:  { color: "rgba(255,255,255,0.15)" }
+        },
+        y: {
+          type: "linear",
+          min: -0.5,
+          max: districtData.length - 0.5,
+          reverse: false,
+          ticks: {
+            color: "#ffffff",
+            stepSize: 1,
+            callback: (val) => {
+              const d = districtData[val];
+              return d ? d.district : "";
+            }
+          },
+          grid: { color: "rgba(255,255,255,0.15)" }
+        }
       }
     }
   });
+
+  // ── Dynamic 7-item bilingual caption ────────────────────────────────────
+  const nAbove90 = districtData.filter(d => d.rate >= 90).length;
+  const top = districtData[0] || { district: "–", rate: 0 };
+  const bot = districtData[districtData.length - 1] || { district: "–", rate: 0 };
+  const lang = document.documentElement.lang || "en";
+  const isDE = lang.startsWith("de");
+
+  const captionEN = `Cleveland dot plot of address-to-ACD match rate by Vienna district (Bezirk). ` +
+    `x\u202f=\u202fmatch rate (%, range 0\u2013100); y\u202f=\u202fdistrict postal code (PLZ). ` +
+    `Each blue dot represents one district; districts sorted by match rate descending. ` +
+    `Highest: ${top.district} at ${top.rate}%; lowest: ${bot.district} at ${bot.rate}%; ` +
+    `${nAbove90} of ${districtData.length} districts achieved \u226590%. ` +
+    `Source: user-uploaded XLSX joined to ADRESSENOGD Parquet via DuckDB-WASM. ` +
+    `See <a href="upload_methodology.html" style="color:#5dadff;">methodology</a> for the per-fix breakdown. ` +
+    `ACD\u202f=\u202faddress-cluster designator; Bezirk\u202f=\u202fVienna municipal district.`;
+
+  const captionDE = `Cleveland-Punktdiagramm der Adress-zu-ACD-Trefferquote nach Wiener Bezirk. ` +
+    `x\u202f=\u202fTrefferquote (%, Bereich 0\u2013100); y\u202f=\u202fBezirk (PLZ). ` +
+    `Jeder blaue Punkt steht f\u00fcr einen Bezirk; Bezirke absteigend nach Trefferquote sortiert. ` +
+    `H\u00f6chster: ${top.district} mit ${top.rate}%; niedrigster: ${bot.district} mit ${bot.rate}%; ` +
+    `${nAbove90} von ${districtData.length} Bezirken erreichten \u226590%. ` +
+    `Quelle: Benutzer-XLSX verkn\u00fcpft mit ADRESSENOGD-Parquet via DuckDB-WASM. ` +
+    `Siehe <a href="upload_methodology.html" style="color:#5dadff;">Methodik</a> f\u00fcr die Einzelaufschl\u00fcsselung. ` +
+    `ACD\u202f=\u202fAdress-Cluster-Bezeichner; Bezirk\u202f=\u202fWiener Stadtbezirk.`;
+
+  const captionEl = document.getElementById("district-chart-caption");
+  if (captionEl) captionEl.innerHTML = isDE ? captionDE : captionEN;
+
+  // ── Accessible data table ───────────────────────────────────────────────
+  const tbody = document.getElementById("district-data-tbody");
+  if (tbody) {
+    tbody.innerHTML = districtData.map(d =>
+      `<tr>
+        <td style="border:1px solid #555; padding:2px 8px;">${d.district}</td>
+        <td style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.total}</td>
+        <td style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.matched}</td>
+        <td style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.rate}</td>
+      </tr>`
+    ).join("");
+  }
 }
 
 // ── HTML table (first 50 rows) ─────────────────────────────────────────────
@@ -2306,6 +2395,11 @@ async function handleFile(file) {
     const det   = autoDetect(cols);
     populateSelects(cols, det);
     document.getElementById("col-map-section").style.display = "block";
+    // Enable run button now that a file is loaded
+    const runBtn = document.getElementById("run-btn");
+    runBtn.disabled       = false;
+    runBtn.style.cursor   = "pointer";
+    runBtn.style.opacity  = "1";
     setProgress(100, "");
   } catch (err) {
     setProgress(100, "");
