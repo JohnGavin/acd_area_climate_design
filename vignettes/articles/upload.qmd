@@ -156,32 +156,6 @@ body.dark-mode p#file-name-display { color: #fff; }
 body.dark-mode #match-summary span[style*="198754"] { color: #69d4a0 !important; }
 body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important; }
 
-/* ── Chart section & caption ─────────────────────────────────────────────── */
-#chart-section {
-  background: #1a1a1a;
-  border-radius: 6px;
-  padding: 10px 12px;
-  cursor: zoom-in;
-  transition: all 0.2s;
-}
-#chart-section.chart-fullscreen {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  width: 100vw; height: 100vh; z-index: 9999;
-  background: #1a1a1a; padding: 30px;
-  cursor: zoom-out; overflow: auto;
-  border-radius: 0;
-}
-#chart-section.chart-fullscreen #district-chart {
-  max-width: none !important; width: 100% !important; max-height: 90vh;
-}
-#district-chart-caption {
-  color: #e0e0e0;   /* white-on-dark: contrast ratio >> 4.5:1 vs #1a1a1a */
-  font-size: 0.82em;
-  line-height: 1.5;
-  text-align: left;
-  margin-bottom: 6px;
-}
-#district-chart-caption a { color: #5dadff; }
 </style>
 
 <!-- ── Toolbar ─────────────────────────────────────────────────────────────── -->
@@ -514,39 +488,7 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
     padding:12px 16px; margin-bottom:16px; font-size:0.92em;">
   </div>
 
-  <!-- Per-district chart -->
-  <div id="chart-section" style="margin-bottom:16px;">
-    <h4 style="margin-bottom:6px;">
-      <span data-lang="en">Match rate by district (PLZ)</span>
-      <span data-lang="de">Trefferquote nach Bezirk (PLZ)</span>
-    </h4>
-    <figcaption id="district-chart-caption"
-      style="font-size:0.82em; color:#e0e0e0; margin-bottom:6px; text-align:left; line-height:1.45;"></figcaption>
-    <canvas id="district-chart" height="300"
-            aria-label="Match rate by Vienna district, Cleveland dot plot"
-            style="max-width:700px; width:100%;"></canvas>
-    <!-- Accessible data table fallback (screen readers + keyboard users) -->
-    <details style="margin-top:6px;">
-      <summary style="font-size:0.8em; color:#adb5bd; cursor:pointer;">
-        <span data-lang="en">Data table (accessibility)</span>
-        <span data-lang="de">Datentabelle (Barrierefreiheit)</span>
-      </summary>
-      <div id="district-data-table" role="table" aria-label="Match rate by district"
-           style="display:grid; grid-template-columns: 1fr 80px 80px 100px;
-                  gap: 0; font-size:0.78em; margin-top:4px; color:#e0e0e0;
-                  border:1px solid #555;">
-        <div role="rowgroup" style="display:contents;">
-          <div role="row" style="display:contents; font-weight:bold; background:#222;">
-            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">District (PLZ)</div>
-            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">Total</div>
-            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">Matched</div>
-            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">Match rate (%)</div>
-          </div>
-        </div>
-        <div role="rowgroup" id="district-data-tbody" style="display:contents;"></div>
-      </div>
-    </details>
-  </div>
+  <!-- District chart removed per #73 -->
 
   <!-- Download section (button + Fix D: first-ACD vs all-ACDs toggle) — ABOVE table -->
   <div id="download-section" style="margin-bottom:14px; display:flex; flex-wrap:wrap; align-items:center; gap:12px;">
@@ -886,8 +828,6 @@ Dieser Schritt ist nicht in der aktuellen `R/upload_algorithm.R` implementiert (
 ```{=html}
 <!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->
 
-<!-- Inline Chart.js for the per-district bar chart (no server needed) -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 
 <script type="module">
 // ── NOTE ON SQL USAGE ──────────────────────────────────────────────────────
@@ -1458,155 +1398,6 @@ function mergeResults(origRows, expanded, joinedRows) {
   });
 }
 
-// ── Match-rate chart ───────────────────────────────────────────────────────
-function renderChart(merged) {
-  const byDistrict = {};
-  merged.forEach(r => {
-    const plz = r[Object.keys(r).find(k => k === "PLZ" || k === "_plz_")] ??
-                r.__plzCol__ ?? r._plzVal_ ?? "";
-    // Use plz_in if available (we stored it separately)
-    const key = r.__plz__ || "";
-    if (!byDistrict[key]) byDistrict[key] = { total: 0, matched: 0 };
-    byDistrict[key].total++;
-    if (r.match_quality !== "unmatched") byDistrict[key].matched++;
-  });
-  // Build sorted array: descending by match rate
-  const districtData = Object.entries(byDistrict).map(([key, val]) => ({
-    district: key,
-    total:    val.total,
-    matched:  val.matched,
-    rate:     val.total > 0 ? Math.round(100 * val.matched / val.total) : 0
-  })).sort((a, b) => b.rate - a.rate);
-
-  const canvas = document.getElementById("district-chart");
-  const existing = Chart.getChart(canvas);
-  if (existing) existing.destroy();
-
-  // Auto-size canvas: 28px per district + 100px header/footer
-  const canvasHeight = Math.max(400, districtData.length * 28 + 100);
-  canvas.height = canvasHeight;
-  canvas.style.height = canvasHeight + "px";
-
-  // Cleveland dot plot: type="scatter", x=rate, y=integer index
-  const points = districtData.map((d, i) => ({ x: d.rate, y: i }));
-
-  new Chart(canvas, {
-    type: "scatter",
-    data: {
-      datasets: [{
-        data: points,
-        pointRadius: 6,
-        pointBackgroundColor: "#5dadff",   // 4.5:1 contrast on #1a1a1a
-        pointBorderColor: "#ffffff",
-        pointBorderWidth: 1.5
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      layout: {
-        padding: { left: 90, right: 30, top: 10, bottom: 30 }
-      },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: ctx => {
-              const d = districtData[ctx.parsed.y];
-              return d ? `${d.district}: ${d.rate}%` : ctx.parsed.x + "%";
-            }
-          }
-        }
-      },
-      scales: {
-        x: {
-          min: 0, max: 100,
-          title: { display: true, text: "Match rate (%)", color: "#ffffff" },
-          ticks: { color: "#ffffff", callback: v => v + "%" },
-          grid:  { color: "rgba(255,255,255,0.15)" }
-        },
-        y: {
-          type: "linear",
-          min: -0.5,
-          max: districtData.length - 0.5,
-          reverse: false,
-          ticks: {
-            color: "#ffffff",
-            stepSize: 1,
-            autoSkip: false,
-            padding: 8,
-            callback: (val) => {
-              const d = districtData[val];
-              return d ? d.district : "";
-            }
-          },
-          grid: { color: "rgba(255,255,255,0.15)" }
-        }
-      }
-    }
-  });
-
-  // ── Dynamic 7-item bilingual caption ────────────────────────────────────
-  const nAbove90 = districtData.filter(d => d.rate >= 90).length;
-  const top = districtData[0] || { district: "–", rate: 0 };
-  const bot = districtData[districtData.length - 1] || { district: "–", rate: 0 };
-  const lang = document.documentElement.lang || "en";
-  const isDE = lang.startsWith("de");
-
-  const captionEN = `Cleveland dot plot of address-to-ACD match rate by Vienna district (Bezirk). ` +
-    `x\u202f=\u202fmatch rate (%, range 0\u2013100); y\u202f=\u202fdistrict postal code (PLZ). ` +
-    `Each blue dot represents one district; districts sorted by match rate descending. ` +
-    `Highest: ${top.district} at ${top.rate}%; lowest: ${bot.district} at ${bot.rate}%; ` +
-    `${nAbove90} of ${districtData.length} districts achieved \u226590%. ` +
-    `Source: user-uploaded XLSX joined to ADRESSENOGD Parquet via DuckDB-WASM. ` +
-    `See <a href="#how-it-works" style="color:#5dadff;">methodology tabs below</a> for the per-fix breakdown. ` +
-    `ACD\u202f=\u202faddress-cluster designator; Bezirk\u202f=\u202fVienna municipal district.`;
-
-  const captionDE = `Cleveland-Punktdiagramm der Adress-zu-ACD-Trefferquote nach Wiener Bezirk. ` +
-    `x\u202f=\u202fTrefferquote (%, Bereich 0\u2013100); y\u202f=\u202fBezirk (PLZ). ` +
-    `Jeder blaue Punkt steht f\u00fcr einen Bezirk; Bezirke absteigend nach Trefferquote sortiert. ` +
-    `H\u00f6chster: ${top.district} mit ${top.rate}%; niedrigster: ${bot.district} mit ${bot.rate}%; ` +
-    `${nAbove90} von ${districtData.length} Bezirken erreichten \u226590%. ` +
-    `Quelle: Benutzer-XLSX verkn\u00fcpft mit ADRESSENOGD-Parquet via DuckDB-WASM. ` +
-    `Siehe <a href="#how-it-works" style="color:#5dadff;">Methodik-Tabs unten</a> f\u00fcr die Einzelaufschl\u00fcsselung. ` +
-    `ACD\u202f=\u202fAdress-Cluster-Bezeichner; Bezirk\u202f=\u202fWiener Stadtbezirk.`;
-
-  const captionEl = document.getElementById("district-chart-caption");
-  if (captionEl) captionEl.innerHTML = isDE ? captionDE : captionEN;
-
-  // ── Accessible data table ───────────────────────────────────────────────
-  const tbody = document.getElementById("district-data-tbody");
-  if (tbody) {
-    tbody.innerHTML = districtData.map(d =>
-      `<div role="row" style="display:contents;">
-        <div role="cell" style="border:1px solid #555; padding:2px 8px;">${d.district}</div>
-        <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.total}</div>
-        <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.matched}</div>
-        <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.rate}</div>
-      </div>`
-    ).join("");
-  }
-
-  // ── Click-toggle fullscreen (#66) ────────────────────────────────────────
-  const chartSection = document.getElementById("chart-section");
-  // Attach once: guard against re-attaching on re-render
-  if (!chartSection.__fullscreenListenerAttached__) {
-    chartSection.__fullscreenListenerAttached__ = true;
-    chartSection.addEventListener("click", (e) => {
-      // Ignore clicks inside the accessible data-table <details>
-      if (e.target.closest("details")) return;
-      chartSection.classList.toggle("chart-fullscreen");
-      if (window.Chart) {
-        const ch = Chart.getChart(canvas);
-        if (ch) setTimeout(() => ch.resize(), 50);
-      }
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") chartSection.classList.remove("chart-fullscreen");
-    });
-  }
-}
-
 // ── HTML table (first 50 rows) ─────────────────────────────────────────────
 function renderTable(merged) {
   const tbl  = document.getElementById("results-table");
@@ -1880,13 +1671,7 @@ document.getElementById("run-btn").addEventListener("click", async () => {
     // Fix A: runLookup now does exact pass + fuzzy fallback
     const joinedRows = await runLookup(expanded);
 
-    // Tag each orig row with its PLZ for chart
-    const withPlz = parsedRows.map((r, idx) => ({
-      ...r,
-      __plz__: String(r[plzCol] ?? "").trim()
-    }));
-
-    const merged = mergeResults(withPlz, expanded, joinedRows);
+    const merged = mergeResults(parsedRows, expanded, joinedRows);
 
     resultRows = merged;
 
@@ -1902,7 +1687,6 @@ document.getElementById("run-btn").addEventListener("click", async () => {
 
     updateMatchSummary(merged);
 
-    renderChart(merged);
     renderTable(merged);
 
     document.getElementById("results-section").style.display = "block";
@@ -1998,7 +1782,6 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
     });
 
     updateMatchSummary(resultRows);
-    renderChart(resultRows);
     renderTable(resultRows);
 
     // Update or hide the REST section
