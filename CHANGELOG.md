@@ -1,5 +1,60 @@
 # Changelog
 
+## 2026-05-04
+
+### Completed
+
+11 PRs merged today on the upload vignette:
+
+| PR | Issue(s) | Summary |
+|---|---|---|
+| #54 | #28, #45 | Consolidation: Fix A QUALIFY-bug, UI tweaks, methodology split, dot-plot chart |
+| #55 | #28, #45 | Unwind: single upload vignette, methodology as in-page tabset (corrected #54 over-split) |
+| #56 | #46 (Tier 1) | QA snapshot regression on V3 CSV (2,039 rows), `R/upload_algorithm.R::run_upload_algorithm()` (5/6 JS steps) |
+| #60 | #57 attempt 1 | Two-page panel-tabset (Upload + Methodology) with 6 step-tabs and real worked examples |
+| #61 | #57 attempt 6 | Fenced-div panel-tabset syntax — heading-attribute `## Pages {.panel-tabset}` silently failed in Quarto 1.8.26; rendered 0 nav-tabs/0 role=tab |
+| #64 | #62, #63 | Fixed Pandoc table-parse swallowing download-btn/results-table; added repo+SHA+build-time footer; embedded `upload_algorithm.R#L14` link |
+| #65 | #62 | German methodology translation (machine-translated, banner flags this); 30 `data-lang="de"` blocks |
+| #68 | #66, #67 | Click-toggle fullscreen chart; in-place "Download updated CSV" after REST; `match_quality = rest_api_fallback` distinct value |
+| #72 | #69, #70, #71 | Y-axis `layout.padding.left=90` + `autoSkip:false`; replaced "Fix A + Fix B" jargon with "static-lookup steps"; added row 13 ("Klosterneub. Str. 5") to sample xlsx |
+| #74 | #73 | Removed district chart entirely (435 lines deleted) — 12 removal gates + 2 regression gates pass on live URL |
+
+Also: hidden site navbar on upload.html only (page-scoped CSS); WCAG 4.5:1 light-mode contrast pair for `.upload-page-prose`; removed arbitrary FONT_MAX=22 (now 96).
+
+### Failed Approaches
+
+- **Heading-attribute panel-tabset syntax** `## Pages {.panel-tabset}` silently produced flat scroll instead of tabs (Quarto 1.8.26). Fix: use fenced-div `::: {.panel-tabset}` everywhere — that's what works in this Quarto version. Logged in #57 attempt 6 history.
+- **Pandoc table parser eats following content.** Embedding a real `<table id="...">` with `<thead>/<tr>` inside a `<details>` block inside a raw-HTML chunk causes Pandoc to parse it AND swallow ~28 lines after `</details>`. The "Don't know how to traverse TableBody" Lua warning is the visible symptom. Fix: replace embedded `<table>` with `<div role="table">` grid — Pandoc stops parsing.
+- **Heading-attribute fragment links from rendered HTML** to fictitious URLs. The first methodology PR linked `upload_methodology.html` from the new tabset; user wanted ZERO references to anything outside the upload vignette. Fix: keep methodology as in-page tab, no cross-link.
+- **Auto-detected dark mode + missing light-mode CSS = white-on-white.** `.upload-page-prose` had `font-size` but no `color` declaration in light mode. When user's OS had `prefers-color-scheme: dark`, body got `dark-mode` class → light-grey text inherited, but background didn't always cascade → white-on-white text. Fix: always pair explicit light-mode AND dark-mode `color`+`background` rules.
+- **Squash-merge strips `Closes #N` keywords.** PRs #68, #72 had Closes-keywords but linked issues stayed open. Fix: manually `gh issue close` after merge, or put the keyword in PR body (which the merge UI uses) not just commit.
+- **`grep -c` counts lines, not occurrences.** Initial live verification showed `role="tab"` = 2 (lines) when actual count was 8 (occurrences). All multi-tab matches were on one line. Fix: `grep -oE pattern | wc -l`.
+- **Build-time SHA in footer ≠ post-merge SHA.** R chunk reads `git rev-parse HEAD` at render time, producing the parent SHA. After squash-merge the live link points one commit behind. Acceptable for now; future: use `GITHUB_SHA` env var in CI render.
+- **Footer chunk was wrong.** Agent put it INSIDE the panel-tabset close, hiding the footer behind a tab. Fix: footer chunk MUST be after final `:::` close.
+- **Cleveland dot plot effort wasted.** Multiple PRs (#61 chart, #68 fullscreen, #72 y-axis padding) tried to fix the chart; user concluded "that was a disaster" and asked for total removal. Lesson: when a UI element keeps regressing after 3 fixes, propose deletion not iteration.
+- **Methodology was authored EN-only by an agent.** Agent built per-step tabsets but didn't know to provide both languages; toggle silently failed for that page. Fix: bilingual scaffolding in agent prompts when site has language toggle.
+
+### Accuracy / Metrics
+
+- Match-rate: still 94.2% baseline (Fix A + B) + REST fallback; chart removal didn't change algorithm
+- Snapshot test: 2 PASS, 1 SKIP (Tier-2 gold-standard) on V3 CSV — `tests/testthat/_snaps/upload-algorithm-snapshot.md` 144 KB
+- Live URL passes 14 verification gates (12 chart-removal + 2 regression)
+- Page weight: -435 lines after #74 chart removal
+
+### Known Limitations
+
+- **#58 (open):** QA Tier-2 gold-standard (~30-45 hand-verified rows from V3) not yet curated. Snapshot covers regression but not correctness.
+- **#59 (open):** `upload-internals.html` should eventually be deleted once user confirms the archived Performance/Page-weight/Compatibility content is no longer needed.
+- **Methodology DE translation** is machine-generated. Banner flags this; native review pending.
+- **Footer SHA staleness:** clicked SHA points to parent commit, not post-merge SHA. Use CI render with `GITHUB_SHA` to fix properly.
+- **Untracked artifacts** in working tree: `analysis/qa/deploy_validation_2026-05-03.md`, `docs/data/osm_coverage_by_district.csv`, `docs/data/osm_total_summary.csv` — provenance unclear from this session, left untouched.
+
+### Process notes
+
+- 6 attempts to land #57 (upload vignette structure) before correct two-page interpretation matched user intent. Lesson: explicit "tabulate intent vs delivered" before the first attempt avoids burning rounds.
+- All agent runs this session were sonnet (no Opus delegation) due to budget pressure (CRITICAL $698/$500 at session start).
+- All PRs included verification-gate `<fill>` placeholders that the agent populated before pushing — this caught Pandoc-table-parse silent failures that would otherwise have shipped.
+
 ## 2026-05-02
 
 ### Completed
