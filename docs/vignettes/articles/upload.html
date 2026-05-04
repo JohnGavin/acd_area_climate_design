@@ -509,10 +509,12 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
         <span data-lang="en">First time here?</span>
         <span data-lang="de">Zum ersten Mal hier?</span>
       </strong>
-      <span data-lang="en">Try a 12-row sample
-        (5 matches across Bezirke 21+22, 2 focus-district rows for 20, 2 central, 3 deliberate edge cases).</span>
-      <span data-lang="de">Testen Sie mit einer 12-Zeilen-Beispieldatei
-        (5 Treffer in den Bezirken 21+22, 2 Fokus-Bezirk-Zeilen für 20, 2 zentral, 3 Grenzfälle).</span>
+      <span data-lang="en">Try a 13-row sample
+        (5 matches across Bezirke 21+22, 2 focus-district rows for 20, 2 central, 3 deliberate edge cases, 1 REST API demo).
+        Click 'Try REST API' after lookup to see one row resolve via match_quality = rest_api_fallback.</span>
+      <span data-lang="de">Testen Sie mit einer 13-Zeilen-Beispieldatei
+        (5 Treffer in den Bezirken 21+22, 2 Fokus-Bezirk-Zeilen für 20, 2 zentral, 3 Grenzfälle, 1 REST-API-Demo).
+        Klicken Sie nach der Suche auf 'REST API versuchen', um eine Zeile mit match_quality = rest_api_fallback aufzulösen.</span>
     </span>
     <button id="try-sample-btn" style="
       padding:6px 14px; background:#0d6efd; color:#fff; border:none;
@@ -674,7 +676,7 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
       <span data-lang="en">
         <strong>
           <span id="rest-unmatched-count">0</span> rows still unmatched
-        </strong> after Fix A + Fix B.
+        </strong> after the static-lookup steps.
         The city's
         <a href="https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo" target="_blank" rel="noopener">OGDAddressService REST API</a>
         can attempt server-side fuzzy matching for these rows.
@@ -683,7 +685,7 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
       <span data-lang="de">
         <strong>
           <span id="rest-unmatched-count-de">0</span> Zeilen noch nicht gefunden
-        </strong> nach Fix A + Fix B.
+        </strong> nach den statischen Suchschritten.
         Der städtische
         <a href="https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo" target="_blank" rel="noopener">OGDAddressService REST-Endpunkt</a>
         kann für diese Zeilen serverseitiges Fuzzy-Matching versuchen.
@@ -1442,7 +1444,7 @@ async function runFuzzyFallback(exactResults) {
   );
   if (unmatched.length === 0) return exactResults;
 
-  setProgress(75, "Fuzzy house-number fallback (Fix A)…");
+  setProgress(75, "Fuzzy house-number fallback…");
 
   // Build VALUES for unmatched rows: (row_id, plz_in, street_in, house_in)
   const vals = unmatched
@@ -1508,7 +1510,7 @@ async function runFuzzyFallback(exactResults) {
       "background:#fff3cd; border:1px solid #ffc107; border-radius:6px; " +
       "padding:10px 14px; margin-bottom:12px; font-size:0.92em; color:#664d03;";
     warn.innerHTML =
-      "<strong>⚠ Fix A (fuzzy nearest-house) failed</strong> — " +
+      "<strong>⚠ Fuzzy nearest-house lookup failed</strong> — " +
       "some addresses may show as <em>unmatched</em> that could have been " +
       "recovered. Error: <code>" + fuzzyErr.message + "</code>. " +
       "Check the browser console for details.";
@@ -1793,6 +1795,10 @@ function renderChart(merged) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
+      layout: {
+        padding: { left: 90, right: 30, top: 10, bottom: 30 }
+      },
       plugins: {
         legend: { display: false },
         tooltip: {
@@ -1819,6 +1825,8 @@ function renderChart(merged) {
           ticks: {
             color: "#ffffff",
             stepSize: 1,
+            autoSkip: false,
+            padding: 8,
             callback: (val) => {
               const d = districtData[val];
               return d ? d.district : "";
@@ -2337,7 +2345,7 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
 </div>
 <hr style="margin-top:30px; border:none; border-top:1px solid #dee2e6;">
 <p style="text-align:left; font-size:0.82em; color:#6c757d; margin-top:8px;">
-<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/c3b992904f84052b5465d82a9e3df190c6267e18"><code>c3b9929</code></a> | built 2026-05-04 15:01 UTC
+<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/0975ce3215ed80cba8e1ca40a002891da602a83a"><code>0975ce3</code></a> | built 2026-05-04 15:16 UTC
 </p>
 
 
