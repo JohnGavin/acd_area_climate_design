@@ -59,6 +59,20 @@ main, .quarto-container, .upload-page-prose,
 }
 :root { --upload-font-size: 1.15em; }
 
+/* ── Light-mode contrast (WCAG 2.1 AA — 4.5:1 minimum) ──────────────────── */
+/* Explicit light-mode pair so browsers WITHOUT prefers-color-scheme:dark
+   render dark text on white. Pairs with body.dark-mode rules below.       */
+.upload-page-prose,
+.upload-page-prose p,
+.upload-page-prose li,
+.upload-page-prose td,
+.upload-page-prose th,
+.upload-page-prose strong {
+  color: #212529;          /* near-black, ~16:1 contrast on white          */
+  background: transparent;
+}
+main { background: #ffffff; color: #212529; }
+
 .upload-page-prose table { width: 100%; border-collapse: collapse; }
 .upload-page-prose table th, .upload-page-prose table td {
   padding: 6px 10px; border-bottom: 1px solid #dee2e6;
@@ -176,9 +190,9 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
   const LS_LANG      = "acd-upload-lang";
   const LS_FONT      = "acd-upload-font-size";
   const LS_DARK      = "acd-upload-dark-mode";
-  const FONT_MIN     = 12;
-  const FONT_MAX     = 22;
-  const FONT_STEP    = 1;
+  const FONT_MIN     = 8;
+  const FONT_MAX     = 96;  // effectively unbounded — user accessibility wins
+  const FONT_STEP    = 2;   // 1px steps felt sluggish; 2px gives perceptible change
   const FONT_DEFAULT = 17;  // 1.15em equivalent at base 16px → ~18.4; use 17 as round default
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -1032,7 +1046,7 @@ async function runFuzzyFallback(exactResults) {
           ) AS rn
         FROM unmatched_in u
         JOIN addr a ON u.plz_in = a.plz_norm AND u.street_in = a.street_norm
-        WHERE a.house_norm REGEXP '^[0-9]'
+        WHERE regexp_matches(a.house_norm, '^[0-9]')
           AND TRY_CAST(REGEXP_EXTRACT(u.house_in,  '[0-9]+', 0) AS INTEGER) IS NOT NULL
           AND TRY_CAST(REGEXP_EXTRACT(a.house_norm, '[0-9]+', 0) AS INTEGER) IS NOT NULL
       )
