@@ -1,0 +1,1656 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.8.26">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Upload methodology / Methodik der Upload-Suche – acd: Vienna ACD</title>
+<style>
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/axe/axe-check.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-587c61ba64f3a5504c4d52d930310e48.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-6366b8537f22fe2521dbe9c1a8a1a9f2.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+
+<link rel="stylesheet" href="../../styles.css">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">acd: Vienna ACD</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll me-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../index.html"> 
+<span class="menu-text">Home</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../vignettes/articles/dashboard.html"> 
+<span class="menu-text">Dashboard</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../vignettes/articles/methodology.html"> 
+<span class="menu-text">Methodology</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../vignettes/articles/lookup.html"> 
+<span class="menu-text">Lookup</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../vignettes/articles/upload.html"> 
+<span class="menu-text">Upload → ACD</span></a>
+  </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../vignettes/articles/scrollytell_de.html"> 
+<span class="menu-text">DE: Wie die Daten funktionieren</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#how-it-works" id="toc-how-it-works" class="nav-link active" data-scroll-target="#how-it-works">How it works</a>
+  <ul class="collapse">
+  <li><a href="#algorithm-algorithmus" id="toc-algorithm-algorithmus" class="nav-link" data-scroll-target="#algorithm-algorithmus">Algorithm / Algorithmus</a></li>
+  <li><a href="#performance" id="toc-performance" class="nav-link" data-scroll-target="#performance">Performance</a></li>
+  <li><a href="#page-weight-seitengröße" id="toc-page-weight-seitengröße" class="nav-link" data-scroll-target="#page-weight-seitengröße">Page weight / Seitengröße</a></li>
+  <li><a href="#compatibility-kompatibilität" id="toc-compatibility-kompatibilität" class="nav-link" data-scroll-target="#compatibility-kompatibilität">Compatibility / Kompatibilität</a></li>
+  <li><a href="#mobile" id="toc-mobile" class="nav-link" data-scroll-target="#mobile">Mobile</a></li>
+  <li><a href="#load-time-ladezeit" id="toc-load-time-ladezeit" class="nav-link" data-scroll-target="#load-time-ladezeit">Load time / Ladezeit</a></li>
+  <li><a href="#per-fix-details" id="toc-per-fix-details" class="nav-link" data-scroll-target="#per-fix-details">Per-fix details / Details je Verbesserung</a></li>
+  </ul></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Upload methodology / Methodik der Upload-Suche</h1>
+<p class="subtitle lead">How the address-to-ACD lookup works (algorithm, performance, per-fix details)</p>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<!-- ── Bilingual visibility ────────────────────────────────────────────────── -->
+<style>
+body[lang="en"] [data-lang="de"] { display: none; }
+body[lang="de"] [data-lang="en"] { display: none; }
+</style>
+
+<div style="margin-bottom:12px;">
+  <button id="lang-btn-meth" style="
+    padding:4px 10px; border-radius:4px; border:1px solid #ced4da;
+    background:#f8f9fa; cursor:pointer; font-size:0.88em; font-weight:600;" title="Switch language / Sprache wechseln">🌐 DE</button>
+</div>
+<script>
+(function() {
+  const LS_LANG = "acd-upload-lang";
+  function applyLang(lang) {
+    document.body.setAttribute("lang", lang);
+    const btn = document.getElementById("lang-btn-meth");
+    if (btn) {
+      btn.textContent = lang === "de" ? "🌐 EN" : "🌐 DE";
+      btn.title = lang === "de" ? "Switch to English" : "Auf Deutsch wechseln";
+    }
+    document.querySelectorAll("[data-en][data-de]").forEach(el => {
+      el.textContent = el.getAttribute("data-" + lang);
+    });
+  }
+  let lang = localStorage.getItem(LS_LANG) ||
+    ((navigator.language || "").startsWith("de") ? "de" : "en");
+  applyLang(lang);
+  document.addEventListener("DOMContentLoaded", function() {
+    applyLang(lang);
+    const btn = document.getElementById("lang-btn-meth");
+    if (btn) btn.addEventListener("click", function() {
+      lang = lang === "en" ? "de" : "en";
+      localStorage.setItem(LS_LANG, lang);
+      applyLang(lang);
+    });
+  });
+})();
+</script>
+<div data-lang="en">
+<p>This page documents how the <a href="upload.html">Upload → ACD</a> tool works internally: algorithm, assumptions, performance numbers, and per-fix details (A/B/C/D). The upload tool itself is at <a href="upload.html">upload.html</a>.</p>
+</div>
+<div data-lang="de">
+<p>Diese Seite dokumentiert die interne Funktionsweise des <a href="upload.html">Upload → ACD</a>-Werkzeugs: Algorithmus, Annahmen, Leistungskennzahlen und Details zu den einzelnen Verbesserungen (A/B/C/D). Das Upload-Werkzeug selbst befindet sich unter <a href="upload.html">upload.html</a>.</p>
+</div>
+<hr>
+<!-- NOTE: Quarto panel-tabset tab headers are static text rendered at build time.
+     The data-lang CSS visibility toggle cannot hide/show tab headings because
+     Quarto wraps them in <li role="tab"> elements outside our CSS scope.
+     Workaround: bilingual tab titles separated by " / " (e.g. "Algorithm / Algorithmus").
+     Tab body content uses the standard data-lang fence-div pattern. -->
+<section id="how-it-works" class="level2 panel-tabset">
+<h2 class="panel-tabset anchored" data-anchor-id="how-it-works">How it works</h2>
+<section id="algorithm-algorithmus" class="level3">
+<h3 class="anchored" data-anchor-id="algorithm-algorithmus">Algorithm / Algorithmus</h3>
+<div data-lang="en">
+<p>This page does <strong>not</strong> use the project’s spatial join or building-footprint layer. It is a direct address-table lookup against <a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ogdwien:ADRESSENOGD</code></a> (291,823 registered address points), running in <a href="https://duckdb.org/docs/api/wasm/overview.html">DuckDB-Wasm</a> entirely in your browser. See the <a href="../../vignettes/articles/methodology.html">Methodology page</a> for the dashboard’s spatial pipeline (different layers, different question).</p>
+<p>The join uses three normalised keys:</p>
+<ul>
+<li><strong>PLZ</strong> — four-digit postcode (cast to <code>VARCHAR</code>)</li>
+<li><strong>Street name</strong> — <code>LOWER(TRIM(name_str))</code> matched against the user column</li>
+<li><strong>House number</strong> — <code>LOWER(TRIM(name_onr))</code> matched against the user column</li>
+</ul>
+<p>Schrebergärten / garden-plot addresses with a <code>/</code> in the street or <code>Parz</code> in the house-number column are split into two lookup attempts automatically.</p>
+<section id="what-this-page-does-not-do" class="level3">
+<h3 class="anchored" data-anchor-id="what-this-page-does-not-do">What this page does NOT do</h3>
+<ul>
+<li>❌ It does not run the <code>R/join_buildings_zones.R</code> spatial join</li>
+<li>❌ It does not return <code>confidence_tier</code> (A–E distance-based labels)</li>
+<li>❌ It does not return <code>zone_id</code> or <code>nearest_zone_dist_m</code> for matched buildings</li>
+<li>❌ It does not consult the <code>GEBAEUDEINFOOGD</code> building-footprint layer</li>
+</ul>
+<p>Spatial enrichment of matched rows with these fields is tracked as a follow-up in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/42">issue #42</a>.</p>
+<p><strong>Match quality legend:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>exact</code></td>
+<td>All three keys matched exactly and there is exactly one ACD for this address</td>
+</tr>
+<tr class="even">
+<td><code>ambiguous_multi</code></td>
+<td>All three keys matched but <strong>multiple ACDs</strong> exist for this address (multi-unit building). The first ACD is shown; click the ⚠ badge to see all. <code>acd_count</code> = number of ACDs, <code>acd_codes</code> = comma-joined list</td>
+</tr>
+<tr class="odd">
+<td><code>fuzzy_nearest_house</code></td>
+<td>PLZ + street matched; nearest existing house number used (distance shown in <code>house_distance</code> column)</td>
+</tr>
+<tr class="even">
+<td><code>split_both</code></td>
+<td>Composite <code>A/B</code> street — both halves resolved to an ACD (<code>ACD</code> = first, <code>acd_b</code> = second)</td>
+</tr>
+<tr class="odd">
+<td><code>split_partial</code></td>
+<td>Composite <code>A/B</code> street — only one half resolved</td>
+</tr>
+<tr class="even">
+<td><code>rest_api_fallback</code></td>
+<td>Fix C: matched via the city’s OGDAddressService REST API; <code>rest_ranking</code> column shows API confidence</td>
+</tr>
+<tr class="odd">
+<td><code>unmatched_after_rest</code></td>
+<td>REST API was tried but returned no match</td>
+</tr>
+<tr class="even">
+<td><code>rest_skipped_over_budget</code></td>
+<td>REST API skipped — session budget of 250 calls already consumed</td>
+</tr>
+<tr class="odd">
+<td><code>unmatched</code></td>
+<td>No row in <a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ADRESSENOGD</code></a> matched (REST API not yet tried)</td>
+</tr>
+</tbody>
+</table>
+<p><em>Note: this DE/EN toggle is complementary to the German narrative vignette at <a href="scrollytell_de.html">scrollytell_de.html</a> — that page tells the story of ACD codes; this page is a utility tool.</em></p>
+</section>
+</div>
+<div data-lang="de">
+<p>Diese Seite nutzt <strong>nicht</strong> die räumliche Verknüpfung oder die Gebäudegrundriss-Ebene des Projekts. Es handelt sich um eine direkte Adresstabellen-Suche gegen <a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ogdwien:ADRESSENOGD</code></a> (291.823 registrierte Adresspunkte), die vollständig in <a href="https://duckdb.org/docs/api/wasm/overview.html">DuckDB-Wasm</a> im Browser läuft. Die räumliche Pipeline des Dashboards ist auf der <a href="../../vignettes/articles/methodology.html">Methodik-Seite</a> beschrieben.</p>
+<p>Die Verknüpfung verwendet drei normalisierte Schlüssel:</p>
+<ul>
+<li><strong>PLZ</strong> — vierstellige Postleitzahl (als <code>VARCHAR</code>)</li>
+<li><strong>Straßenname</strong> — <code>LOWER(TRIM(name_str))</code> mit der Benutzerspalte abgeglichen</li>
+<li><strong>Hausnummer</strong> — <code>LOWER(TRIM(name_onr))</code> mit der Benutzerspalte abgeglichen</li>
+</ul>
+<p>Schrebergarten-Adressen mit <code>/</code> im Straßennamen oder <code>Parz</code> in der Hausnummer werden in zwei Suchversuche aufgeteilt (Fix B). Für Zeilen, bei denen die Straße vorhanden ist, aber die exakte Hausnummer fehlt, wird die nächstgelegene vorhandene Hausnummer herangezogen (Fix A).</p>
+<section id="was-diese-seite-nicht-leistet" class="level3">
+<h3 class="anchored" data-anchor-id="was-diese-seite-nicht-leistet">Was diese Seite nicht leistet</h3>
+<ul>
+<li>❌ Kein räumlicher Join via <code>R/join_buildings_zones.R</code></li>
+<li>❌ Kein <code>confidence_tier</code> (A–E, distanzbasiert)</li>
+<li>❌ Kein <code>zone_id</code> oder <code>nearest_zone_dist_m</code></li>
+<li>❌ Kein Abgleich mit der <code>GEBAEUDEINFOOGD</code>-Gebäudegrundriss-Ebene</li>
+</ul>
+<p>Die räumliche Anreicherung wird als Folgeaufgabe in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/42">Issue #42</a> verfolgt.</p>
+<p><strong>Treffer-Qualität Legende:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Wert</th>
+<th>Bedeutung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>exact</code></td>
+<td>Alle drei Schlüssel exakt übereinstimmend und genau eine ACD für diese Adresse vorhanden</td>
+</tr>
+<tr class="even">
+<td><code>ambiguous_multi</code></td>
+<td>Alle drei Schlüssel stimmen überein, aber <strong>mehrere ACDs</strong> existieren für diese Adresse (Mehrfamilienhaus / Stiegenhäuser). Die erste ACD wird angezeigt; ⚠-Badge anklicken, um alle zu sehen. <code>acd_count</code> = Anzahl ACDs, <code>acd_codes</code> = kommagetrennte Liste</td>
+</tr>
+<tr class="odd">
+<td><code>fuzzy_nearest_house</code></td>
+<td>PLZ + Straße stimmen überein; nächstgelegene vorhandene Hausnummer verwendet (Abstand in <code>house_distance</code>)</td>
+</tr>
+<tr class="even">
+<td><code>split_both</code></td>
+<td>Zusammengesetzte <code>A/B</code>-Adresse — beide Hälften aufgelöst (<code>ACD</code> = erste, <code>acd_b</code> = zweite)</td>
+</tr>
+<tr class="odd">
+<td><code>split_partial</code></td>
+<td>Zusammengesetzte <code>A/B</code>-Adresse — nur eine Hälfte aufgelöst</td>
+</tr>
+<tr class="even">
+<td><code>rest_api_fallback</code></td>
+<td>Fix C: Treffer via städtischem OGDAddressService REST-Endpunkt; Spalte <code>rest_ranking</code> zeigt API-Konfidenz</td>
+</tr>
+<tr class="odd">
+<td><code>unmatched_after_rest</code></td>
+<td>REST API wurde aufgerufen, aber kein Treffer zurückgegeben</td>
+</tr>
+<tr class="even">
+<td><code>rest_skipped_over_budget</code></td>
+<td>REST API übersprungen — Sitzungsbudget von 250 Aufrufen bereits ausgeschöpft</td>
+</tr>
+<tr class="odd">
+<td><code>unmatched</code></td>
+<td>Keine Zeile in <a href="https://data.wien.gv.at/daten/geo?service=WFS&amp;request=DescribeFeatureType&amp;typeNames=ogdwien:ADRESSENOGD"><code>ADRESSENOGD</code></a> gefunden (REST API noch nicht versucht)</td>
+</tr>
+</tbody>
+</table>
+<p><em>Hinweis: Der DE/EN-Umschalter ergänzt das deutsche Erzählvignette unter <a href="scrollytell_de.html">scrollytell_de.html</a> — jene Seite erklärt ACD-Codes; diese Seite ist ein Werkzeug.</em></p>
+</section>
+</div>
+</section>
+<section id="performance" class="level3">
+<h3 class="anchored" data-anchor-id="performance">Performance</h3>
+<div data-lang="en">
+<p><strong>Match rate on the user’s 2,039-row test file (mostly Bezirke 21 + 22):</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 42%">
+<col style="width: 34%">
+<col style="width: 23%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Algorithm</th>
+<th style="text-align: right;">Matched</th>
+<th style="text-align: right;">Rate</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Baseline — exact join only (pre-#37)</td>
+<td style="text-align: right;">1,661</td>
+<td style="text-align: right;">81.5%</td>
+</tr>
+<tr class="even">
+<td>Fix A + Fix B (post-#37)</td>
+<td style="text-align: right;">1,921</td>
+<td style="text-align: right;">94.2%</td>
+</tr>
+<tr class="odd">
+<td><strong>Fix A + Fix B + Fix C REST API (post-#48)</strong></td>
+<td style="text-align: right;"><strong>1,976</strong></td>
+<td style="text-align: right;"><strong>96.9%</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Fix C recovered 55 of the 118 residual unmatched rows (46.6% of residual) in 4 seconds using concurrency 8. The remaining 63 rows have no match in the live Wien address register. See <code>analysis/qa/upload_match_rate_post_c.md</code> for the full diagnostic.</p>
+<p>Fix A (fuzzy nearest house) recovers 246 rows (12.1 pp). Fix B (composite split) recovers 14 rows (0.7 pp). The residual 118 unmatched rows are predominantly Schrebergarten parcel addresses and streets absent from ADRESSENOGD.</p>
+<p>All timings are for the DuckDB-WASM query phase after warm-up (first visit adds ~3–4 s for DuckDB cold-start; subsequent queries on the same page load are fast). The fuzzy fallback adds one extra query for unmatched rows only — negligible when most rows match on the first pass.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Rows</th>
+<th>Operation</th>
+<th>Estimated time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>12 (sample)</td>
+<td>One DuckDB join</td>
+<td>&lt;100 ms after warm-up</td>
+</tr>
+<tr class="even">
+<td>100</td>
+<td>One DuckDB join</td>
+<td>&lt;200 ms</td>
+</tr>
+<tr class="odd">
+<td>500</td>
+<td>One DuckDB join</td>
+<td>&lt;300 ms</td>
+</tr>
+<tr class="even">
+<td>2,000</td>
+<td>Two DuckDB joins (exact + fuzzy pass)</td>
+<td>~600 ms</td>
+</tr>
+<tr class="odd">
+<td>10,000</td>
+<td>Two DuckDB joins + chunked CSV write</td>
+<td>1.5–2.5 s</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div data-lang="de">
+<p><strong>Trefferquote auf der 2.039-zeiligen Testdatei der Nutzerin (überwiegend Bezirke 21 + 22):</strong></p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 44%">
+<col style="width: 31%">
+<col style="width: 24%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Algorithmus</th>
+<th style="text-align: right;">Treffer</th>
+<th style="text-align: right;">Quote</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Baseline — exakter Join (vor #37)</td>
+<td style="text-align: right;">1.661</td>
+<td style="text-align: right;">81,5 %</td>
+</tr>
+<tr class="even">
+<td>Fix A + Fix B (nach #37)</td>
+<td style="text-align: right;">1.921</td>
+<td style="text-align: right;">94,2 %</td>
+</tr>
+<tr class="odd">
+<td><strong>Fix A + Fix B + Fix C REST API (nach #48)</strong></td>
+<td style="text-align: right;"><strong>1.976</strong></td>
+<td style="text-align: right;"><strong>96,9 %</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Fix C hat 55 der 118 verbleibenden nicht gefundenen Zeilen (46,6 % der Restzahl) in 4 Sekunden bei Parallelität 8 aufgelöst. Die verbleibenden 63 Zeilen haben keinen Treffer im Live-Wiener Adressregister. Siehe <code>analysis/qa/upload_match_rate_post_c.md</code> für den vollständigen Bericht.</p>
+<p>Fix A (nächstgelegene Hausnummer) erholt 246 Zeilen (12,1 Pp.). Fix B (zusammengesetzte Straße) erholt 14 Zeilen (0,7 Pp.). Die verbleibenden 118 nicht gefundenen Adressen sind überwiegend Schrebergarten-Parzellen und Straßen, die in ADRESSENOGD nicht enthalten sind.</p>
+<p>Alle Zeiten gelten für die DuckDB-WASM-Abfragephase nach dem Aufwärmen. Der Fuzzy-Fallback fügt bei nicht gefundenen Zeilen eine zweite Abfrage hinzu — bei guter Trefferquote auf dem ersten Durchlauf kaum spürbar.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Zeilen</th>
+<th>Vorgang</th>
+<th>Geschätzte Zeit</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>12 (Beispiel)</td>
+<td>Eine DuckDB-Verknüpfung</td>
+<td>&lt;100 ms nach Aufwärmen</td>
+</tr>
+<tr class="even">
+<td>100</td>
+<td>Eine DuckDB-Verknüpfung</td>
+<td>&lt;200 ms</td>
+</tr>
+<tr class="odd">
+<td>500</td>
+<td>Eine DuckDB-Verknüpfung</td>
+<td>&lt;300 ms</td>
+</tr>
+<tr class="even">
+<td>2.000</td>
+<td>Zwei DuckDB-Abfragen (exakt + Fuzzy)</td>
+<td>~600 ms</td>
+</tr>
+<tr class="odd">
+<td>10.000</td>
+<td>Zwei DuckDB-Abfragen + CSV-Ausgabe</td>
+<td>1,5–2,5 s</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="page-weight-seitengröße" class="level3">
+<h3 class="anchored" data-anchor-id="page-weight-seitengröße">Page weight / Seitengröße</h3>
+<div data-lang="en">
+<p>All sizes are gzipped estimates. The Parquet file is range-fetched via predicate pushdown — the browser does not download all 15.7 MB per query.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 64%">
+<col style="width: 35%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Component</th>
+<th>Size</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>HTML shell (upload.qmd render)</td>
+<td>~45 KB</td>
+</tr>
+<tr class="even">
+<td>PapaParse (CDN)</td>
+<td>~14 KB</td>
+</tr>
+<tr class="odd">
+<td>SheetJS (CDN)</td>
+<td>~90 KB</td>
+</tr>
+<tr class="even">
+<td>DuckDB-WASM core (CDN, lazy-loaded on first query)</td>
+<td>~3–4 MB</td>
+</tr>
+<tr class="odd">
+<td>Chart.js (CDN)</td>
+<td>~80 KB</td>
+</tr>
+<tr class="even">
+<td>Address Parquet (<code>docs/data/addresses_2026-05-02.parquet</code>, range-fetched)</td>
+<td>15.7 MB total; typically ~500 KB read per query via predicate pushdown</td>
+</tr>
+<tr class="odd">
+<td><strong>Initial first-visit total</strong></td>
+<td><strong>~4 MB</strong> (DuckDB warm-up dominates)</td>
+</tr>
+<tr class="even">
+<td><strong>Repeat visit (cached)</strong></td>
+<td><strong>~150 KB</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div data-lang="de">
+<p>Alle Größen sind gzip-komprimierte Schätzungen. Die Parquet-Datei wird per Predicate Pushdown range-abgerufen — der Browser lädt nicht alle 15,7 MB pro Abfrage.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 63%">
+<col style="width: 36%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Komponente</th>
+<th>Größe</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>HTML-Gerüst (upload.qmd gerendert)</td>
+<td>~45 KB</td>
+</tr>
+<tr class="even">
+<td>PapaParse (CDN)</td>
+<td>~14 KB</td>
+</tr>
+<tr class="odd">
+<td>SheetJS (CDN)</td>
+<td>~90 KB</td>
+</tr>
+<tr class="even">
+<td>DuckDB-WASM-Kern (CDN, lazy beim ersten Aufruf)</td>
+<td>~3–4 MB</td>
+</tr>
+<tr class="odd">
+<td>Chart.js (CDN)</td>
+<td>~80 KB</td>
+</tr>
+<tr class="even">
+<td>Adressen-Parquet (<code>docs/data/addresses_2026-05-02.parquet</code>, range-fetch)</td>
+<td>15,7 MB gesamt; typischerweise ~500 KB pro Abfrage via Predicate Pushdown</td>
+</tr>
+<tr class="odd">
+<td><strong>Erster Besuch gesamt</strong></td>
+<td><strong>~4 MB</strong> (DuckDB-Kaltstart dominiert)</td>
+</tr>
+<tr class="even">
+<td><strong>Wiederholter Besuch (gecacht)</strong></td>
+<td><strong>~150 KB</strong></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="compatibility-kompatibilität" class="level3">
+<h3 class="anchored" data-anchor-id="compatibility-kompatibilität">Compatibility / Kompatibilität</h3>
+<div data-lang="en">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 59%">
+<col style="width: 40%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Requirement</th>
+<th>Needed?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Install anything</td>
+<td>No</td>
+</tr>
+<tr class="even">
+<td>Special browser</td>
+<td>Modern (Chrome/Safari/Firefox/Edge 2020+) — needs <code>WebAssembly</code> and ES module support</td>
+</tr>
+<tr class="odd">
+<td>Desktop required</td>
+<td>No (works on phone)</td>
+</tr>
+<tr class="even">
+<td>Internet</td>
+<td>Yes, for CDN libraries and Parquet on first visit; cached after</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div data-lang="de">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Voraussetzung</th>
+<th>Erforderlich?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Software installieren</td>
+<td>Nein</td>
+</tr>
+<tr class="even">
+<td>Besonderer Browser</td>
+<td>Modern (Chrome/Safari/Firefox/Edge 2020+) — benötigt <code>WebAssembly</code> und ES-Modul-Unterstützung</td>
+</tr>
+<tr class="odd">
+<td>Desktop erforderlich</td>
+<td>Nein (funktioniert am Handy)</td>
+</tr>
+<tr class="even">
+<td>Internet</td>
+<td>Ja, für CDN-Bibliotheken und Parquet beim ersten Besuch; danach gecacht</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="mobile" class="level3">
+<h3 class="anchored" data-anchor-id="mobile">Mobile</h3>
+<div data-lang="en">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 52%">
+<col style="width: 47%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Concern</th>
+<th>Answer</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Browser support</td>
+<td>All modern mobile browsers</td>
+</tr>
+<tr class="even">
+<td>Screen size</td>
+<td>Functional; results table needs horizontal scroll</td>
+</tr>
+<tr class="odd">
+<td>Processing</td>
+<td>Fine — DuckDB-WASM runs in-browser, single query for any plausible upload size</td>
+</tr>
+<tr class="even">
+<td>Offline</td>
+<td>After first visit, partial — Parquet + libs cached; CDN libs may need network on first load</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div data-lang="de">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 43%">
+<col style="width: 56%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Thema</th>
+<th>Antwort</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Browser-Unterstützung</td>
+<td>Alle modernen Mobilbrowser</td>
+</tr>
+<tr class="even">
+<td>Bildschirmgröße</td>
+<td>Nutzbar; Ergebnistabelle braucht horizontales Scrollen</td>
+</tr>
+<tr class="odd">
+<td>Verarbeitung</td>
+<td>Kein Problem — DuckDB-WASM läuft im Browser, eine Abfrage für jede sinnvolle Dateigröße</td>
+</tr>
+<tr class="even">
+<td>Offline</td>
+<td>Nach dem ersten Besuch eingeschränkt — Parquet + Bibliotheken gecacht; CDN-Bibliotheken benötigen beim ersten Laden Netzwerk</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="load-time-ladezeit" class="level3">
+<h3 class="anchored" data-anchor-id="load-time-ladezeit">Load time / Ladezeit</h3>
+<div data-lang="en">
+<p>DuckDB cold-start dominates first-visit time. Subsequent page loads use the browser cache and are fast regardless of connection speed.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Network</th>
+<th>First visit</th>
+<th>Repeat (cached)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>4G mobile</td>
+<td>~6–8 s (DuckDB cold-start dominates)</td>
+<td>&lt;0.5 s</td>
+</tr>
+<tr class="even">
+<td>Office WiFi</td>
+<td>~2–3 s</td>
+<td>Instant</td>
+</tr>
+<tr class="odd">
+<td>Slow 3G</td>
+<td>~15–20 s</td>
+<td>&lt;1 s</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div data-lang="de">
+<p>Der DuckDB-Kaltstart bestimmt die Ladezeit beim ersten Besuch. Folgende Seitenaufrufe nutzen den Browser-Cache und sind unabhängig von der Verbindungsgeschwindigkeit schnell.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Netzwerk</th>
+<th>Erster Besuch</th>
+<th>Wiederholter Besuch (gecacht)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>4G Mobilfunk</td>
+<td>~6–8 s (DuckDB-Kaltstart dominiert)</td>
+<td>&lt;0,5 s</td>
+</tr>
+<tr class="even">
+<td>Büro-WLAN</td>
+<td>~2–3 s</td>
+<td>Sofort</td>
+</tr>
+<tr class="odd">
+<td>Langsames 3G</td>
+<td>~15–20 s</td>
+<td>&lt;1 s</td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<section id="per-fix-details" class="level3">
+<h3 class="anchored" data-anchor-id="per-fix-details">Per-fix details / Details je Verbesserung</h3>
+<div data-lang="en">
+<p>Each fix is documented with its assumptions, benefits, costs, and example addresses where it does and does not work. Fix C (REST API fallback) and Fix D (multi-unit dedup correctness) are both now active.</p>
+</div>
+<div data-lang="de">
+<p>Jede Verbesserung ist mit ihren Annahmen, Vorteilen, Kosten und Beispieladressen dokumentiert. Fix C (REST API Fallback) und Fix D (Mehrfacheinheit-Deduplizierung, Korrektheit) sind jetzt beide aktiv.</p>
+</div>
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-5-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-1" role="tab" aria-controls="tabset-5-1" aria-selected="true" href="">Fix A — Fuzzy nearest house / Nächstgelegene Hausnummer</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-2" role="tab" aria-controls="tabset-5-2" aria-selected="false" href="">Fix B — Composite-street splitter / Zusammengesetzte Straße</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-3" role="tab" aria-controls="tabset-5-3" aria-selected="false" href="">Fix C — REST API fallback (aktiv / active)</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-5-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-5-4" role="tab" aria-controls="tabset-5-4" aria-selected="false" href="">Fix D — Multi-unit dedup (aktiv / active)</a></li></ul>
+<div class="tab-content">
+<div id="tabset-5-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-5-1-tab">
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">Summary / Zusammenfassung</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">Assumptions / Annahmen</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false" href="">Benefits / Vorteile</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-4" role="tab" aria-controls="tabset-1-4" aria-selected="false" href="">Costs / Kosten</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-5-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-5" role="tab" aria-controls="tabset-1-5" aria-selected="false" href="">Works on / Funktioniert bei</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-6-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-6" role="tab" aria-controls="tabset-1-6" aria-selected="false" href="">Doesn’t work on / Funktioniert nicht bei</a></li></ul>
+<div class="tab-content">
+<div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<div data-lang="en">
+<p>When <code>(PLZ, street_norm)</code> matches but the exact <code>house_norm</code> is absent from ADRESSENOGD, the algorithm falls back to the nearest registered house number on the same street. The numeric distance between the user’s house number and the nearest ADRESSENOGD house number is stored in the <code>house_distance</code> column so users can filter low-confidence results. Distance is capped at 20 — rows further than that remain <code>unmatched</code>.</p>
+</div>
+<div data-lang="de">
+<p>Wenn <code>(PLZ, Straßennorm)</code> übereinstimmt, die exakte Hausnummer aber nicht in ADRESSENOGD enthalten ist, fällt der Algorithmus auf die nächstgelegene registrierte Hausnummer in derselben Straße zurück. Die numerische Distanz zwischen der eingegebenen und der gefundenen Hausnummer wird in der Spalte <code>house_distance</code> gespeichert, damit unsichere Ergebnisse herausgefiltert werden können. Abstände über 20 bleiben als <code>unmatched</code> erhalten.</p>
+</div>
+</div>
+<div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<div data-lang="en">
+<ul>
+<li>The nearest registered house number on the same street is a reasonable proxy for an unregistered parcel or new building.</li>
+<li>A numeric distance of ≤ 20 is close enough to be useful; beyond that the result is likely a different building entirely.</li>
+<li>The user’s house number contains a leading integer (e.g.&nbsp;<code>21</code>, <code>21a</code>). If the house number is a parcel code like <code>Parz 38</code>, no leading integer is extracted and the fuzzy pass is skipped.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Die nächstgelegene registrierte Hausnummer in derselben Straße ist ein vertretbarer Ersatz für ein nicht registriertes Grundstück oder ein neues Gebäude.</li>
+<li>Ein numerischer Abstand von ≤ 20 ist nahe genug, um nützlich zu sein; darüber hinaus handelt es sich wahrscheinlich um ein anderes Gebäude.</li>
+<li>Die Hausnummer des Nutzers enthält eine führende Ganzzahl (z. B. <code>21</code>, <code>21a</code>). Ist die Hausnummer ein Parzellen-Code wie <code>Parz 38</code>, wird kein Wert extrahiert und der Fuzzy-Durchlauf übersprungen.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
+<div data-lang="en">
+<ul>
+<li>Recovers <strong>246 rows (12.1 pp)</strong> on the 2,039-row test file.</li>
+<li>Lifts overall match rate from <strong>81.5% → ~93.6%</strong> (Fix A alone).</li>
+<li>No external API calls — runs entirely in DuckDB-WASM in the browser.</li>
+<li><code>house_distance</code> column lets the user decide whether to trust the result.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Erholt <strong>246 Zeilen (12,1 Pp.)</strong> auf der 2.039-zeiligen Testdatei.</li>
+<li>Hebt die Gesamttrefferquote von <strong>81,5 % auf ~93,6 %</strong> (nur Fix A).</li>
+<li>Keine externen API-Aufrufe — läuft vollständig in DuckDB-WASM im Browser.</li>
+<li>Die Spalte <code>house_distance</code> erlaubt es dem Nutzer, die Zuverlässigkeit selbst zu beurteilen.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-1-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-4-tab">
+<div data-lang="en">
+<ul>
+<li>Returns a <strong>neighbour’s ACD</strong>, not necessarily the user’s exact building. For buildings registered under a slightly different number (e.g.&nbsp;the city uses <code>21</code> while the user has <code>21a</code>), this is usually correct. For new construction on a vacant plot, the neighbour’s ACD may be wrong.</li>
+<li>Adds a second DuckDB query for unmatched rows — adds ~100 ms on a 2,000-row file with ~18% unmatched rows.</li>
+<li><code>house_distance</code> must be inspected manually to assess confidence.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Gibt die ACD eines <strong>Nachbargebäudes</strong> zurück, nicht zwingend die des gesuchten Gebäudes. Für Gebäude mit leicht abweichender Hausnummer (z. B. <code>21</code> statt <code>21a</code>) ist das meist korrekt. Bei Neubauten auf bisher unbebautem Grund kann die ACD eines Nachbarn falsch sein.</li>
+<li>Fügt bei nicht gefundenen Zeilen eine zweite DuckDB-Abfrage hinzu — ca. +100 ms bei 2.000 Zeilen mit ~18 % nicht gefundenen Adressen.</li>
+<li><code>house_distance</code> muss manuell geprüft werden, um die Zuverlässigkeit einzuschätzen.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-1-5" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-5-tab">
+<div data-lang="en">
+<ul>
+<li><code>1210, Achengasse, 21</code> — Achengasse 21 not in ADRESSENOGD; nearest is <code>Achengasse 19</code> (distance 2). ACD from <code>070268</code> block returned.</li>
+<li><code>1210, Siemensstraße, 87</code> — if 87 is absent but 85 and 89 are present, distance 2, correct ACD returned.</li>
+<li>Any street where the odd/even side of the street has gaps in registered house numbers.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li><code>1210, Achengasse, 21</code> — Achengasse 21 nicht in ADRESSENOGD; nächstgelegen ist <code>Achengasse 19</code> (Abstand 2). ACD aus dem Block <code>070268</code> wird zurückgegeben.</li>
+<li><code>1210, Siemensstraße, 87</code> — wenn 87 fehlt, aber 85 und 89 vorhanden sind, Abstand 2, korrekte ACD.</li>
+<li>Jede Straße, bei der die gerade oder ungerade Seite Lücken in den registrierten Hausnummern hat.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-1-6" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-6-tab">
+<div data-lang="en">
+<ul>
+<li><strong>Parcel codes</strong> (<code>Parz 38</code>, <code>Parz 12b</code>) — no leading integer, fuzzy pass skipped; remains <code>unmatched</code>.</li>
+<li><strong>New buildings</strong> not yet in ADRESSENOGD at all — the street is present but all house numbers are far from the user’s. If the nearest is &gt; 20 away, remains <code>unmatched</code>.</li>
+<li><strong>Streets genuinely absent</strong> from ADRESSENOGD (35% of the unmatched cohort on the test file) — no candidate rows to compare against.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li><strong>Parzellen-Codes</strong> (<code>Parz 38</code>, <code>Parz 12b</code>) — keine führende Ganzzahl, Fuzzy-Durchlauf übersprungen; bleibt <code>unmatched</code>.</li>
+<li><strong>Neubauten</strong>, die noch nicht in ADRESSENOGD erfasst sind — Straße vorhanden, aber alle Hausnummern sind weit entfernt. Bei Abstand &gt; 20 bleibt der Eintrag <code>unmatched</code>.</li>
+<li><strong>Straßen, die gar nicht in ADRESSENOGD</strong> enthalten sind (35 % der nicht gefundenen Zeilen in der Testdatei) — keine Kandidaten für den Vergleich.</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="tabset-5-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-5-2-tab">
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-2-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-1" role="tab" aria-controls="tabset-2-1" aria-selected="true" href="">Summary / Zusammenfassung</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-2" role="tab" aria-controls="tabset-2-2" aria-selected="false" href="">Assumptions / Annahmen</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-3" role="tab" aria-controls="tabset-2-3" aria-selected="false" href="">Benefits / Vorteile</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-4" role="tab" aria-controls="tabset-2-4" aria-selected="false" href="">Costs / Kosten</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-5-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-5" role="tab" aria-controls="tabset-2-5" aria-selected="false" href="">Works on / Funktioniert bei</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-2-6-tab" data-bs-toggle="tab" data-bs-target="#tabset-2-6" role="tab" aria-controls="tabset-2-6" aria-selected="false" href="">Doesn’t work on / Funktioniert nicht bei</a></li></ul>
+<div class="tab-content">
+<div id="tabset-2-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-2-1-tab">
+<div data-lang="en">
+<p>Some Vienna addresses identify corner parcels with two street names joined by <code>/</code>, e.g.&nbsp;<code>Achengasse 4/Lavantgasse 1a</code>. The previous implementation claimed to handle these but the split was not being applied before the main JOIN, so no recovery occurred. Fix B reimplements the splitter in JavaScript <em>before</em> the JOIN: each <code>A/B</code> street is expanded into two sub-rows, each looked up independently. The results are aggregated as <code>acd_b</code> (second match) and <code>match_quality = "split_both"</code> (both matched) or <code>"split_partial"</code> (one matched).</p>
+</div>
+<div data-lang="de">
+<p>Manche Wiener Adressen bezeichnen Eckgrundstücke mit zwei durch <code>/</code> verbundenen Straßennamen, z. B. <code>Achengasse 4/Lavantgasse 1a</code>. Die frühere Implementierung behauptete, diese zu verarbeiten, aber die Aufteilung fand vor dem JOIN nicht statt. Fix B reimplementiert den Splitter in JavaScript <em>vor</em> dem JOIN: Jede <code>A/B</code>-Adresse wird in zwei Teilzeilen aufgeteilt, die unabhängig voneinander nachgeschlagen werden. Die Ergebnisse werden als <code>acd_b</code> (zweiter Treffer) und <code>match_quality = "split_both"</code> (beide gefunden) oder <code>"split_partial"</code> (einer gefunden) zusammengeführt.</p>
+</div>
+</div>
+<div id="tabset-2-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-2-tab">
+<div data-lang="en">
+<ul>
+<li>A <code>/</code> in the street column indicates a composite address identifying the same physical location from two streets (corner building or shared driveway).</li>
+<li>A trailing number in each half of the split is the house number for that half, e.g.&nbsp;<code>Achengasse 4</code> → street <code>Achengasse</code>, house <code>4</code>.</li>
+<li>Both ACDs are valid for the same physical building; the user can choose either.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Ein <code>/</code> in der Straßenspalte bezeichnet eine zusammengesetzte Adresse, die denselben physischen Standort von zwei Straßen aus beschreibt (Eckgebäude oder gemeinsame Zufahrt).</li>
+<li>Eine abschließende Zahl in jeder Hälfte des Splits ist die Hausnummer für diese Hälfte, z. B. <code>Achengasse 4</code> → Straße <code>Achengasse</code>, Hausnummer <code>4</code>.</li>
+<li>Beide ACDs sind für dasselbe physische Gebäude gültig; der Nutzer kann eine davon wählen.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-2-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-3-tab">
+<div data-lang="en">
+<ul>
+<li>Recovers <strong>14 rows (0.7 pp)</strong> on the 2,039-row test file.</li>
+<li>Returns both ACDs when both halves resolve, giving the user the full picture for corner parcels.</li>
+<li>No distance estimation needed — the result is exact if the street+house exists in ADRESSENOGD.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Erholt <strong>14 Zeilen (0,7 Pp.)</strong> auf der 2.039-zeiligen Testdatei.</li>
+<li>Gibt beide ACDs zurück, wenn beide Hälften aufgelöst werden, und liefert dem Nutzer das vollständige Bild für Eckgrundstücke.</li>
+<li>Keine Abstandsschätzung erforderlich — das Ergebnis ist exakt, wenn Straße + Hausnummer in ADRESSENOGD vorhanden sind.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-2-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-4-tab">
+<div data-lang="en">
+<ul>
+<li>Returning two ACDs (<code>ACD</code> + <code>acd_b</code>) requires the user to inspect both columns for composite matches.</li>
+<li>Pure Schrebergarten parcel addresses like <code>Parz 38</code> remain unmatched even after the split because neither half maps to a registered building address.</li>
+<li>Expands input rows before the JOIN — minor overhead proportional to the number of composite rows in the upload file.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Die Rückgabe zweier ACDs (<code>ACD</code> + <code>acd_b</code>) erfordert, dass der Nutzer beide Spalten bei zusammengesetzten Treffern prüft.</li>
+<li>Reine Schrebergarten-Parzellenadressen wie <code>Parz 38</code> bleiben auch nach dem Split nicht gefunden, da keine Hälfte einer registrierten Gebäudeadresse entspricht.</li>
+<li>Eingabezeilen werden vor dem JOIN erweitert — geringer Mehraufwand proportional zur Anzahl der zusammengesetzten Zeilen.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-2-5" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-5-tab">
+<div data-lang="en">
+<ul>
+<li><code>1210, Achengasse 4/Lavantgasse 1a, —</code> → ACD for <code>Achengasse 4</code> as <code>ACD</code>, ACD for <code>Lavantgasse 1a</code> as <code>acd_b</code>, <code>match_quality = "split_both"</code>.</li>
+<li>Corner buildings where both street addresses are registered in ADRESSENOGD.</li>
+<li>Any composite address where at least one half is a valid street+house combination in the reference data.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li><code>1210, Achengasse 4/Lavantgasse 1a, —</code> → ACD für <code>Achengasse 4</code> als <code>ACD</code>, ACD für <code>Lavantgasse 1a</code> als <code>acd_b</code>, <code>match_quality = "split_both"</code>.</li>
+<li>Eckgebäude, bei denen beide Straßenadressen in ADRESSENOGD registriert sind.</li>
+<li>Jede zusammengesetzte Adresse, bei der mindestens eine Hälfte eine gültige Straße-Hausnummer-Kombination in den Referenzdaten ist.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-2-6" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-6-tab">
+<div data-lang="en">
+<ul>
+<li><strong>Pure Schrebergarten parcels</strong> like <code>Achengasse/Lavantgasse Parz 38</code> — the parcel number does not correspond to a registered building address in ADRESSENOGD; both halves miss.</li>
+<li>Composite strings where the separator has a different meaning (e.g. address range <code>1/3</code> meaning “houses 1 to 3” on a single street — these will be incorrectly split into two sub-lookups).</li>
+<li>Very long composite strings with 3+ parts — only the first two are attempted.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li><strong>Reine Schrebergarten-Parzellen</strong> wie <code>Achengasse/Lavantgasse Parz 38</code> — die Parzellennummer entspricht keiner registrierten Gebäudeadresse in ADRESSENOGD; beide Hälften schlagen fehl.</li>
+<li>Zusammengesetzte Zeichenketten, bei denen das Trennzeichen eine andere Bedeutung hat (z. B. Adressbereich <code>1/3</code> für „Hausnummern 1 bis 3” auf einer einzelnen Straße — diese werden fälschlicherweise in zwei Teilabfragen aufgeteilt).</li>
+<li>Sehr lange zusammengesetzte Zeichenketten mit 3+ Teilen — nur die ersten beiden werden versucht.</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="tabset-5-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-5-3-tab">
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-3-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-1" role="tab" aria-controls="tabset-3-1" aria-selected="true" href="">Summary / Zusammenfassung</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-2" role="tab" aria-controls="tabset-3-2" aria-selected="false" href="">Assumptions / Annahmen</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-3" role="tab" aria-controls="tabset-3-3" aria-selected="false" href="">Benefits / Vorteile</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-4" role="tab" aria-controls="tabset-3-4" aria-selected="false" href="">Costs / Kosten</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-5-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-5" role="tab" aria-controls="tabset-3-5" aria-selected="false" href="">Works on / Funktioniert bei</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-3-6-tab" data-bs-toggle="tab" data-bs-target="#tabset-3-6" role="tab" aria-controls="tabset-3-6" aria-selected="false" href="">Doesn’t work on / Funktioniert nicht bei</a></li></ul>
+<div class="tab-content">
+<div id="tabset-3-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-3-1-tab">
+<div data-lang="en">
+<p><strong>Status: ACTIVE</strong> — implemented in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/48">issue #48</a>. For rows still unmatched after Fix A + Fix B, click the <strong>“🌐 Try REST API for residual unmatched”</strong> button that appears below the results. The page calls the city’s <a href="https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo"><code>OGDAddressService.svc/GetAddressInfo</code></a> REST endpoint once per unmatched row. The API performs server-side fuzzy matching and returns the canonical ACD. Concurrency is capped at 8 parallel requests and a maximum of 250 calls per upload session to stay within polite use of the public OGD service. Matched rows receive <code>match_quality = "rest_api_fallback"</code>.</p>
+<p>Target: ≥ 98% match rate on the 2,039-row test file (up from 94.2% after Fix A + Fix B).</p>
+</div>
+<div data-lang="de">
+<p><strong>Status: AKTIV</strong> — umgesetzt in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/48">Issue #48</a>. Für nach Fix A + B noch nicht gefundene Zeilen erscheint unterhalb der Ergebnisse die Schaltfläche <strong>„🌐 REST API für verbleibende Adressen versuchen”</strong>. Die Seite ruft den städtischen REST-Endpunkt <a href="https://data.wien.gv.at/daten/OGDAddressService.svc/GetAddressInfo"><code>OGDAddressService.svc/GetAddressInfo</code></a> einmal pro nicht gefundener Zeile auf. Die API führt serverseitig eigenes Fuzzy-Matching durch und gibt die kanonische ACD zurück. Die Parallelität ist auf 8 gleichzeitige Anfragen und maximal 250 Aufrufe pro Sitzung begrenzt. Gefundene Zeilen erhalten <code>match_quality = "rest_api_fallback"</code>.</p>
+<p>Ziel: ≥ 98 % Trefferquote auf der 2.039-zeiligen Testdatei (gegenüber 94,2 % nach Fix A + B).</p>
+</div>
+</div>
+<div id="tabset-3-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-2-tab">
+<div data-lang="en">
+<ul>
+<li>The city’s OGDAddressService API is publicly available without authentication and is subject to reasonable use; the 250-call session cap stays well within polite limits.</li>
+<li>Round-trip time is approximately 200–500 ms per request; 8 concurrent requests cap total elapsed time to ≤ 30 s for 118 residual rows.</li>
+<li>The API’s own matching is more permissive than our static Parquet snapshot for Schrebergarten parcel addresses and edge-case spellings.</li>
+<li>The city’s JSON response schema is stable: <code>features[0].properties.ACD</code> and <code>features[0].properties.SCD</code> are present when a match is found. The <code>Ranking</code> property indicates the API’s internal match confidence.</li>
+<li>Users accept that unmatched address fragments (street + house number only, no name or personal data) are sent to the OGD server when they click the button.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Der OGDAddressService-Endpunkt der Stadt Wien ist ohne Authentifizierung öffentlich verfügbar und für vernünftige Nutzung ausgelegt; das Sitzungslimit von 250 Aufrufen liegt weit innerhalb fairer Nutzung.</li>
+<li>Die Roundtrip-Zeit beträgt ca. 200–500 ms pro Anfrage; 8 gleichzeitige Anfragen begrenzen die Gesamtdauer auf ≤ 30 s für 118 verbleibende Zeilen.</li>
+<li>Das eigene Matching der API ist für Schrebergarten-Parzellenadressen und Sonderfälle großzügiger als unser statischer Parquet-Snapshot.</li>
+<li>Das JSON-Antwortschema der Stadt ist stabil: <code>features[0].properties.ACD</code> und <code>features[0].properties.SCD</code> sind vorhanden, wenn ein Treffer gefunden wird. Die Eigenschaft <code>Ranking</code> gibt die interne Match-Konfidenz der API an.</li>
+<li>Nutzer akzeptieren, dass nicht gefundene Adressfragmente (nur Straße und Hausnummer, keine Namen oder personenbezogenen Daten) an den OGD-Server gesendet werden, wenn sie die Schaltfläche drücken.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-3-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-3-tab">
+<div data-lang="en">
+<ul>
+<li>Expected to recover ~2–5 additional percentage points on top of Fix A + B, targeting ≥ 98% match rate on the test file.</li>
+<li>Canonicalises multi-unit deduplication ambiguity for the rows it resolves, since the API returns the registered ACD directly.</li>
+<li>No local data updates needed — the API always reflects the current live Wien address register, including newly built addresses not yet in our Parquet snapshot.</li>
+<li>Completely optional: users who do not need the extra coverage, or who are offline, can skip the button and download the 94.2% result as-is.</li>
+<li><code>rest_ranking</code> column exposes the API’s internal match score so users can filter low-confidence API matches.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Voraussichtlich ~2–5 weitere Prozentpunkte zusätzlich zu Fix A + B, mit dem Ziel einer Trefferquote von ≥ 98 % auf der Testdatei.</li>
+<li>Kanonisiert Mehrdeutigkeiten bei Mehrfamilienhäusern für die gefundenen Zeilen, da die API die registrierte ACD direkt zurückgibt.</li>
+<li>Keine lokalen Datenaktualisierungen erforderlich — die API spiegelt immer den aktuellen Stand des Wiener Adressregisters wider, einschließlich Neubauten, die noch nicht in unserem Parquet-Snapshot enthalten sind.</li>
+<li>Vollständig optional: Nutzer, die keine zusätzliche Abdeckung benötigen oder offline sind, können die Schaltfläche überspringen und das 94,2%-Ergebnis herunterladen.</li>
+<li>Die Spalte <code>rest_ranking</code> gibt den internen Match-Score der API zurück, damit unsichere API-Treffer herausgefiltert werden können.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-3-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-4-tab">
+<div data-lang="en">
+<ul>
+<li>Requires network connectivity for the fallback rows — not offline-capable for this step (Fix A + Fix B still run offline).</li>
+<li>The city API may change its JSON schema or become temporarily unavailable without notice; errors are handled gracefully (<code>match_quality = "unmatched_after_rest"</code> on failure, no exception thrown).</li>
+<li>Users must accept that unmatched address fragments (street + house number, no personal data) are sent to the external OGD server when the button is clicked. This is stated clearly in the UI.</li>
+<li>Session budget is 250 calls; rows beyond the budget receive <code>match_quality = "rest_skipped_over_budget"</code> and are not sent.</li>
+<li>CORS: the API must permit cross-origin requests from the GitHub Pages domain. Tested on the live URL — see the QA report for the result.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Erfordert Netzwerkzugang für die Fallback-Zeilen — dieser Schritt ist nicht offline nutzbar (Fix A + Fix B laufen weiterhin offline).</li>
+<li>Das JSON-Schema der städtischen API kann sich ohne Vorankündigung ändern oder der Dienst kann vorübergehend ausfallen; Fehler werden sauber abgefangen (<code>match_quality = "unmatched_after_rest"</code> bei Fehler, keine Ausnahme).</li>
+<li>Nutzer müssen akzeptieren, dass nicht gefundene Adressfragmente (Straße und Hausnummer, keine personenbezogenen Daten) beim Klick auf die Schaltfläche an den externen OGD-Server übertragen werden. Dies ist in der Benutzeroberfläche klar ersichtlich.</li>
+<li>Das Sitzungsbudget beträgt 250 Aufrufe; Zeilen darüber erhalten <code>match_quality = "rest_skipped_over_budget"</code> und werden nicht übermittelt.</li>
+<li>CORS: Die API muss Cross-Origin-Anfragen von der GitHub-Pages-Domain erlauben. Testergebnis: siehe QA-Bericht.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-3-5" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-5-tab">
+<div data-lang="en">
+<ul>
+<li><strong>Schrebergarten parcel addresses</strong> that the API maps to a registered base building address — e.g.&nbsp;<code>Kleingarten Aspern Parz 38</code> → nearest registered building in the same Kleingarten area.</li>
+<li><strong>New buildings</strong> registered in the live Wien address register but not yet in our Parquet snapshot (snapshot date: 2026-05-02).</li>
+<li><strong>Edge-case spellings</strong> the API normalises on the server side (umlauts, abbreviations, minor typos).</li>
+<li>Any address where the city’s OGD service has a match even if our static join does not.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li><strong>Schrebergarten-Parzellenadressen</strong>, die die API einer registrierten Basisgebäudeadresse zuordnet — z. B. <code>Kleingarten Aspern Parz 38</code> → nächstgelegenes registriertes Gebäude im selben Kleingartenareal.</li>
+<li><strong>Neubauten</strong>, die im Live-Adressregister Wien registriert sind, aber noch nicht in unserem Parquet-Snapshot enthalten sind (Stand: 2026-05-02).</li>
+<li><strong>Sonderfallschreibweisen</strong>, die die API serverseitig normalisiert (Umlaute, Abkürzungen, kleinere Tippfehler).</li>
+<li>Jede Adresse, für die der OGD-Dienst der Stadt einen Treffer hat, auch wenn unser statischer Join keinen findet.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-3-6" class="tab-pane" role="tabpanel" aria-labelledby="tabset-3-6-tab">
+<div data-lang="en">
+<ul>
+<li>Addresses with no match in the live Wien register either — these receive <code>match_quality = "unmatched_after_rest"</code>.</li>
+<li>Offline use cases — the button requires an active internet connection.</li>
+<li>Rows beyond the 250-call session budget — these receive <code>match_quality = "rest_skipped_over_budget"</code>.</li>
+<li>CORS-blocked environments (e.g.&nbsp;certain corporate proxies that block cross-origin API calls to external domains).</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Adressen, die auch im Live-Register Wien keinen Treffer haben — diese erhalten <code>match_quality = "unmatched_after_rest"</code>.</li>
+<li>Offline-Anwendungsfälle — die Schaltfläche erfordert eine aktive Internetverbindung.</li>
+<li>Zeilen, die das Sitzungsbudget von 250 Aufrufen überschreiten — diese erhalten <code>match_quality = "rest_skipped_over_budget"</code>.</li>
+<li>CORS-blockierte Umgebungen (z. B. bestimmte Firmen-Proxys, die Cross-Origin-API-Aufrufe an externe Domains sperren).</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div id="tabset-5-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-5-4-tab">
+<div class="tabset-margin-container"></div><div class="panel-tabset">
+<ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-4-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-1" role="tab" aria-controls="tabset-4-1" aria-selected="true" href="">Summary / Zusammenfassung</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-2" role="tab" aria-controls="tabset-4-2" aria-selected="false" href="">Assumptions / Annahmen</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-3" role="tab" aria-controls="tabset-4-3" aria-selected="false" href="">Benefits / Vorteile</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-4" role="tab" aria-controls="tabset-4-4" aria-selected="false" href="">Costs / Kosten</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-5-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-5" role="tab" aria-controls="tabset-4-5" aria-selected="false" href="">Works on / Funktioniert bei</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-4-6-tab" data-bs-toggle="tab" data-bs-target="#tabset-4-6" role="tab" aria-controls="tabset-4-6" aria-selected="false" href="">Doesn’t work on / Funktioniert nicht bei</a></li></ul>
+<div class="tab-content">
+<div id="tabset-4-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-4-1-tab">
+<div data-lang="en">
+<p><strong>Status: ACTIVE</strong> — implemented in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/49">issue #49</a>.</p>
+<p>ADRESSENOGD contains 291,823 rows but only 148,444 unique <code>(PLZ, street, house)</code> tuples. <strong>19,319 of those tuples (13.0%) have more than one ACD</strong> — multi-unit buildings, separate staircases (<code>Stiegen</code>), or sub-addresses. For example, <code>Achengasse 4, 1210</code> has 82 registered ACDs.</p>
+<p>The previous page deduplicated on <code>(PLZ, street, house)</code> and returned one ACD arbitrarily — whichever sorted first. Fix D replaces that with a <code>GROUP BY + ARRAY_AGG</code> in the DuckDB-WASM <code>addr</code> VIEW. When multiple ACDs match an address:</p>
+<ul>
+<li><code>match_quality = "ambiguous_multi"</code> (shown in purple)</li>
+<li><code>acd_count</code> column shows how many ACDs exist</li>
+<li><code>acd_codes</code> column shows all ACDs comma-joined</li>
+<li>The <strong>⚠ N units</strong> badge next to the ACD cell is clickable to reveal all codes</li>
+<li>The CSV download offers a <strong>“All ACDs (one row per ACD)”</strong> mode that expands ambiguous rows with <code>acd_unit_index = 0..N-1</code> for join-back</li>
+</ul>
+<p>Match rate is unchanged — the 13% ambiguous rows were previously counted as “matched” (just silently wrong). What changes is honesty: the user now sees the ambiguity instead of receiving an arbitrary result.</p>
+</div>
+<div data-lang="de">
+<p><strong>Status: AKTIV</strong> — umgesetzt in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/49">Issue #49</a>.</p>
+<p>ADRESSENOGD enthält 291.823 Zeilen, aber nur 148.444 eindeutige <code>(PLZ, Straße, Haus)</code>-Tupel. <strong>19.319 dieser Tupel (13,0 %) haben mehr als eine ACD</strong> — Mehrfamilienhäuser, separate Stiegen oder Unteradressen. Zum Beispiel hat <code>Achengasse 4, 1210</code> 82 registrierte ACDs.</p>
+<p>Die bisherige Seite deduplizierte auf <code>(PLZ, Straße, Haus)</code> und gab eine ACD willkürlich zurück — jeweils die, die nach Sortierung zuerst kam. Fix D ersetzt das durch ein <code>GROUP BY + ARRAY_AGG</code> in der DuckDB-WASM-View <code>addr</code>. Bei mehreren ACDs für eine Adresse:</p>
+<ul>
+<li><code>match_quality = "ambiguous_multi"</code> (lila hervorgehoben)</li>
+<li>Spalte <code>acd_count</code>: Anzahl der übereinstimmenden ACDs</li>
+<li>Spalte <code>acd_codes</code>: alle ACDs kommagetrennt</li>
+<li>Das <strong>⚠ N units</strong>-Badge neben der ACD-Zelle ist klickbar und zeigt alle Codes</li>
+<li>Der CSV-Download bietet den Modus <strong>„Alle ACDs (eine Zeile je ACD)“</strong>, der mehrdeutige Zeilen mit <code>acd_unit_index = 0..N-1</code> für einen Rück-Join aufklappt</li>
+</ul>
+<p>Die Trefferquote bleibt gleich — die 13 % mehrdeutigen Zeilen wurden bisher als „gefunden” gezählt (aber still falsch). Was sich ändert, ist die Ehrlichkeit: Der Nutzer sieht jetzt die Mehrdeutigkeit statt ein willkürliches Ergebnis.</p>
+</div>
+</div>
+<div id="tabset-4-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-4-2-tab">
+<div data-lang="en">
+<ul>
+<li>The user knows their own unit / <code>Stiege</code> and can use the <code>acd_codes</code> list or the expanded CSV to identify their specific ACD.</li>
+<li>Returning multiple ACDs is strictly preferable to silently picking one at random. There is no failure mode — single-unit addresses are unaffected.</li>
+<li>The 13.0% figure (19,319 / 148,444 unique tuples) is based on the <code>addresses_2026-05-02.parquet</code> snapshot. The fraction is stable over time because it reflects Vienna’s physical building stock.</li>
+<li><code>ARRAY_AGG(ACD ORDER BY ACD)</code> is deterministic: the list is sorted alphabetically, so <code>acd_list[1]</code> (the backward-compatible primary ACD) is always the lexicographically smallest ACD — not random.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Der Nutzer kennt seine eigene Einheit / Stiege und kann die Liste in <code>acd_codes</code> oder das aufgeklappte CSV nutzen, um seine spezifische ACD zu identifizieren.</li>
+<li>Mehrere ACDs zurückzugeben ist einer willkürlichen Einzelauswahl eindeutig vorzuziehen. Es gibt keinen Fehlerfall — Einzeladressen sind unberührt.</li>
+<li>Der Anteil von 13,0 % (19.319 / 148.444 eindeutige Tupel) basiert auf dem Snapshot <code>addresses_2026-05-02.parquet</code>. Er ist über die Zeit stabil, da er den physischen Gebäudebestand Wiens widerspiegelt.</li>
+<li><code>ARRAY_AGG(ACD ORDER BY ACD)</code> ist deterministisch: Die Liste ist alphabetisch sortiert, <code>acd_list[1]</code> (die abwärtskompatible primäre ACD) ist immer die lexikografisch kleinste ACD — nicht zufällig.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-4-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-4-3-tab">
+<div data-lang="en">
+<ul>
+<li>Eliminates a hidden correctness bug affecting ~13% of matched rows.</li>
+<li>No extra queries — the information is already in ADRESSENOGD; <code>GROUP BY</code> replaces <code>DISTINCT</code> at no additional cost.</li>
+<li>Match rate is unchanged (≥ 96.9%); correctness improves for the 13% ambiguous cohort.</li>
+<li><code>acd_codes</code> column gives the user the full picture to look up their unit.</li>
+<li>CSV “All ACDs” mode preserves all valid options for downstream processing.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Beseitigt einen versteckten Korrektheitsfehler, der ~13 % der Treffer betrifft.</li>
+<li>Keine zusätzlichen Abfragen — die Information ist schon in ADRESSENOGD; <code>GROUP BY</code> ersetzt <code>DISTINCT</code> ohne Mehraufwand.</li>
+<li>Trefferquote bleibt unverändert (≥ 96,9 %); Korrektheit verbessert sich für die 13 % mehrdeutigen Adressen.</li>
+<li>Spalte <code>acd_codes</code> gibt dem Nutzer alle Optionen für die Einheitensuche.</li>
+<li>Der CSV-Modus „Alle ACDs” erhält alle gültigen Optionen für die Weiterverarbeitung.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-4-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-4-4-tab">
+<div data-lang="en">
+<ul>
+<li>CSV row-count exceeds input-row-count in “All ACDs” mode for multi-unit rows. Users expecting a strict 1:1 output should use “First ACD only” (default).</li>
+<li>The <code>acd_list</code> object from DuckDB-WASM requires array unpacking in JavaScript; handled transparently, but adds a small deserialization step.</li>
+<li>Column <code>acd_b</code> (Fix B composite-street second ACD) and <code>acd_codes</code> (Fix D all-units list) are conceptually different and both present in the output. Documentation makes the distinction clear.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li>Im Modus „Alle ACDs” überschreitet die CSV-Zeilenanzahl die Eingabezeilenanzahl bei Mehrfamilienhaus-Zeilen. Nutzer, die eine strikte 1:1-Ausgabe erwarten, sollten „Nur erste ACD” (Standard) verwenden.</li>
+<li>Das <code>acd_list</code>-Objekt aus DuckDB-WASM erfordert Array-Entpackung in JavaScript; wird transparent verarbeitet, fügt aber einen kleinen Deserialisierungsschritt hinzu.</li>
+<li>Die Spalten <code>acd_b</code> (Fix B: zweite ACD bei zusammengesetzter Adresse) und <code>acd_codes</code> (Fix D: alle Einheiten-ACDs) sind konzeptuell verschieden, aber beide in der Ausgabe vorhanden. Die Dokumentation macht den Unterschied klar.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-4-5" class="tab-pane" role="tabpanel" aria-labelledby="tabset-4-5-tab">
+<div data-lang="en">
+<ul>
+<li><strong>Any matched address in a multi-unit building.</strong> Example: <code>Achengasse 4, 1210</code> has 82 registered ACDs — all 82 are returned in <code>acd_codes</code>; the badge shows “⚠ 82 units”.</li>
+<li><strong>All match quality levels</strong> that produce a match (<code>exact</code> → upgraded to <code>ambiguous_multi</code> when <code>acd_count &gt; 1</code>; similarly for <code>fuzzy_nearest_house</code>).</li>
+<li><strong>Backward compatibility:</strong> <code>ACD</code> column still contains the first (lowest lexicographic) ACD, so existing downstream code reading only the <code>ACD</code> column continues to work.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li><strong>Jede gefundene Adresse in einem Mehrfamilienhaus.</strong> Beispiel: <code>Achengasse 4, 1210</code> hat 82 registrierte ACDs — alle 82 werden in <code>acd_codes</code> zurückgegeben; das Badge zeigt „⚠ 82 units”.</li>
+<li><strong>Alle Treffer-Qualitätsstufen</strong>, die einen Treffer erzeugen (<code>exact</code> → aufgewertet zu <code>ambiguous_multi</code> bei <code>acd_count &gt; 1</code>; ebenso für <code>fuzzy_nearest_house</code>).</li>
+<li><strong>Abwärtskompatibilität:</strong> Die Spalte <code>ACD</code> enthält weiterhin die erste (lexikografisch kleinste) ACD, sodass bestehender Code, der nur die <code>ACD</code>- Spalte liest, weiterhin funktioniert.</li>
+</ul>
+</div>
+</div>
+<div id="tabset-4-6" class="tab-pane" role="tabpanel" aria-labelledby="tabset-4-6-tab">
+<div data-lang="en">
+<ul>
+<li><strong>Single-unit addresses</strong> — no change in behaviour (<code>acd_count = 1</code>, <code>match_quality = "exact"</code>, no badge shown).</li>
+<li><strong>Unmatched addresses</strong> — Fix D only affects rows that do match; unmatched rows remain <code>match_quality = "unmatched"</code>.</li>
+<li><strong>Unit-level disambiguation</strong> — Fix D tells the user there are N ACDs for their address, but does not know which unit is theirs. The user must look up their <code>Stiege</code> / door number in the <code>acd_codes</code> list or use the city’s <a href="https://www.wien.gv.at/adressensuche/">Adressensuche Wien</a> to confirm.</li>
+</ul>
+</div>
+<div data-lang="de">
+<ul>
+<li><strong>Einzeladressen</strong> — keine Verhaltensänderung (<code>acd_count = 1</code>, <code>match_quality = "exact"</code>, kein Badge).</li>
+<li><strong>Nicht gefundene Adressen</strong> — Fix D betrifft nur Treffer; nicht gefundene Adressen bleiben <code>match_quality = "unmatched"</code>.</li>
+<li><strong>Einheiten-genaue Disambiguierung</strong> — Fix D teilt dem Nutzer mit, dass N ACDs für seine Adresse existieren, weiß aber nicht, welche Einheit gemeint ist. Der Nutzer muss seine Stiege / Türnummer in der Liste <code>acd_codes</code> nachschlagen oder die städtische <a href="https://www.wien.gv.at/adressensuche/">Adressensuche Wien</a> nutzen.</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+
+
+</section>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
