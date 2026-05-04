@@ -697,13 +697,36 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 </section>
 </div>
 <div id="tabset-2-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-2-2-tab">
+<div class="callout callout-style-default callout-warning callout-titled">
+<div class="callout-header d-flex align-content-center" data-bs-toggle="collapse" data-bs-target=".callout-1-contents" aria-controls="callout-1" aria-expanded="true" aria-label="Toggle callout">
+<div class="callout-icon-container">
+<i class="callout-icon"></i>
+</div>
+<div class="callout-title-container flex-fill">
+<span class="screen-reader-only">Warning</span>Machine-translated German / Maschinell übersetzt
+</div>
+<div class="callout-btn-toggle d-inline-block border-0 py-1 ps-1 pe-0 float-end"><i class="callout-toggle"></i></div>
+</div>
+<div id="callout-1" class="callout-1-contents callout-collapse collapse show">
+<div class="callout-body-container callout-body">
+<p>Die deutsche Übersetzung wurde maschinell erstellt und nicht von einem Muttersprachler überprüft. Bitte Ungenauigkeiten unter <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/62">Issue #62</a> melden.</p>
+<p>The German translation is machine-generated and has not been reviewed by a native speaker. Please report inaccuracies on <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/62">issue #62</a>.</p>
+</div>
+</div>
+</div>
+<div data-lang="en">
 <p>The address-to-ACD lookup runs through up to 6 steps. Each tab below explains one step with a real example drawn from <code>tests/qa/ACD_TEST_V3_no_ACD_col.csv</code> and <code>inst/extdata/sample-acd-test.xlsx</code>.</p>
+</div>
+<div data-lang="de">
+<p>Die Adress-zu-ACD-Suche durchläuft bis zu 6 Schritte. Jeder Tab unten erklärt einen Schritt mit einem realen Beispiel aus <code>tests/qa/ACD_TEST_V3_no_ACD_col.csv</code> und <code>inst/extdata/sample-acd-test.xlsx</code>.</p>
+</div>
 <section id="steps" class="level4">
 <h4 class="anchored" data-anchor-id="steps">Steps</h4>
 <div class="tabset-margin-container"></div><div class="panel-tabset">
 <ul class="nav nav-tabs" role="tablist"><li class="nav-item" role="presentation"><a class="nav-link active" id="tabset-1-1-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-1" role="tab" aria-controls="tabset-1-1" aria-selected="true" href="">1. Normalise input</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-2-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-2" role="tab" aria-controls="tabset-1-2" aria-selected="false" href="">2. Exact join</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-3-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-3" role="tab" aria-controls="tabset-1-3" aria-selected="false" href="">3. Fuzzy nearest-house</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-4-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-4" role="tab" aria-controls="tabset-1-4" aria-selected="false" href="">4. Composite-street splitter</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-5-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-5" role="tab" aria-controls="tabset-1-5" aria-selected="false" href="">5. Multi-unit dedup</a></li><li class="nav-item" role="presentation"><a class="nav-link" id="tabset-1-6-tab" data-bs-toggle="tab" data-bs-target="#tabset-1-6" role="tab" aria-controls="tabset-1-6" aria-selected="false" href="">6. REST API fallback</a></li></ul>
 <div class="tab-content">
 <div id="tabset-1-1" class="tab-pane active" role="tabpanel" aria-labelledby="tabset-1-1-tab">
+<div data-lang="en">
 <p>Before any join, both the address table (ADRESSENOGD) and the user’s uploaded data are normalised the same way: whitespace is trimmed, street names are lowercased, and house numbers are lowercased and trimmed.</p>
 <p><strong>Worked example (from the V3 test file):</strong></p>
 <table class="caption-top table">
@@ -733,12 +756,45 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 </tbody>
 </table>
 <p>A row with <code>Stiege/RH</code> value <code>Parz. 35</code> is treated as a garden-plot row: the <code>Parz</code> pattern triggers the composite-street path (Step 4), and the trailing <code>35</code> is extracted as the plot-level house identifier.</p>
+</div>
+<div data-lang="de">
+<p>Vor jeder Verknüpfung werden sowohl die Adresstabelle (ADRESSENOGD) als auch die hochgeladenen Benutzerdaten auf dieselbe Weise normalisiert: Leerzeichen werden entfernt, Straßennamen werden in Kleinbuchstaben umgewandelt und Hausnummern werden ebenfalls kleingeschrieben und bereinigt.</p>
+<p><strong>Arbeitsbeispiel (aus der V3-Testdatei):</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Feld</th>
+<th>Roheingabe</th>
+<th>Nach Normalisierung</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Straße</td>
+<td><code>Achengasse</code></td>
+<td><code>achengasse</code></td>
+</tr>
+<tr class="even">
+<td>Hausnummer</td>
+<td><code>4</code> (Zeile 2, ObjektNr 6)</td>
+<td><code>4</code></td>
+</tr>
+<tr class="odd">
+<td>PLZ</td>
+<td><code>1210</code></td>
+<td><code>1210</code></td>
+</tr>
+</tbody>
+</table>
+<p>Eine Zeile mit dem <code>Stiege/RH</code>-Wert <code>Parz. 35</code> wird als Gartenparzelle behandelt: Das <code>Parz</code>-Muster löst den zusammengesetzte-Straße-Pfad (Schritt 4) aus, und die nachfolgende <code>35</code> wird als Parzellen-Hausidentifikator extrahiert.</p>
+</div>
 <p>The address table normalisation in DuckDB-WASM SQL:</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode sql code-with-copy"><code class="sourceCode sql"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="fu">LOWER</span>(<span class="fu">TRIM</span>(NAME_STR))  <span class="co">-- street_norm</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="fu">LOWER</span>(<span class="fu">TRIM</span>(NAME_ONR))  <span class="co">-- house_norm</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="fu">CAST</span>(PLZ <span class="kw">AS</span> <span class="dt">VARCHAR</span>)   <span class="co">-- plz_norm</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
 </div>
 <div id="tabset-1-2" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-2-tab">
+<div data-lang="en">
 <p>After normalisation, the tool performs a <code>LEFT JOIN</code> on <code>(plz_norm, street_norm, house_norm)</code>. When all three keys match and exactly one ACD exists for that address, <code>match_quality = "exact"</code> is returned.</p>
 <p><strong>Worked example (ObjektNr 3 from the V3 test file):</strong></p>
 <table class="caption-top table">
@@ -777,7 +833,48 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 </table>
 <p>Row ObjektNr 3 (<code>1210, Achengasse 3</code>) resolves to ACD <code>070268</code> via exact join on all three normalised keys. This is confirmed by the Quick guide example values on the Upload page.</p>
 </div>
+<div data-lang="de">
+<p>Nach der Normalisierung führt das Werkzeug einen <code>LEFT JOIN</code> über <code>(plz_norm, street_norm, house_norm)</code> durch. Wenn alle drei Schlüssel übereinstimmen und genau eine ACD für diese Adresse existiert, wird <code>match_quality = "exact"</code> zurückgegeben.</p>
+<p><strong>Arbeitsbeispiel (ObjektNr 3 aus der V3-Testdatei):</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Feld</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Eingabe PLZ</td>
+<td><code>1210</code></td>
+</tr>
+<tr class="even">
+<td>Eingabe Straße</td>
+<td><code>Achengasse</code></td>
+</tr>
+<tr class="odd">
+<td>Eingabe Hausnummer</td>
+<td><code>3</code></td>
+</tr>
+<tr class="even">
+<td>Normalisierte Schlüssel</td>
+<td><code>("1210", "achengasse", "3")</code></td>
+</tr>
+<tr class="odd">
+<td>Ergebnis ACD</td>
+<td><code>070268</code></td>
+</tr>
+<tr class="even">
+<td>match_quality</td>
+<td><code>exact</code></td>
+</tr>
+</tbody>
+</table>
+<p>ObjektNr 3 (<code>1210, Achengasse 3</code>) wird über die exakte Verknüpfung aller drei normalisierten Schlüssel der ACD <code>070268</code> zugeordnet. Dies wird durch die Beispielwerte in der Schnellübersicht auf der Upload-Seite bestätigt.</p>
+</div>
+</div>
 <div id="tabset-1-3" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-3-tab">
+<div data-lang="en">
 <p>When <code>(PLZ, street_norm)</code> matches but the exact house number is absent from ADRESSENOGD, the algorithm finds the registered house on the same street with the smallest numeric distance from the requested number. Distance is capped at 20 — rows further than that remain <code>unmatched</code>.</p>
 <p><strong>Worked example:</strong></p>
 <table class="caption-top table">
@@ -816,7 +913,48 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 </table>
 <p>The <code>house_distance</code> column is included in the download CSV so users can filter low-confidence results. On the 2,039-row test file, this step recovers 246 rows (12.1 percentage points lift).</p>
 </div>
+<div data-lang="de">
+<p>Wenn <code>(PLZ, street_norm)</code> übereinstimmt, die genaue Hausnummer aber nicht in ADRESSENOGD vorhanden ist, sucht der Algorithmus das registrierte Haus auf derselben Straße mit dem kleinsten numerischen Abstand zur gesuchten Nummer. Der Abstand ist auf 20 begrenzt — Zeilen mit größerem Abstand bleiben <code>unmatched</code>.</p>
+<p><strong>Arbeitsbeispiel:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Feld</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Eingabe</td>
+<td>PLZ <code>1210</code>, Straße <code>Achengasse</code>, Haus <code>21</code></td>
+</tr>
+<tr class="even">
+<td>Situation</td>
+<td><code>Achengasse 21</code> ist nicht in ADRESSENOGD</td>
+</tr>
+<tr class="odd">
+<td>Nächstes registriertes Haus</td>
+<td><code>Achengasse 19</code></td>
+</tr>
+<tr class="even">
+<td>Numerischer Abstand</td>
+<td>2</td>
+</tr>
+<tr class="odd">
+<td>match_quality</td>
+<td><code>fuzzy_nearest_house</code></td>
+</tr>
+<tr class="even">
+<td>house_distance Spalte</td>
+<td><code>2</code></td>
+</tr>
+</tbody>
+</table>
+<p>Die Spalte <code>house_distance</code> ist in der Download-CSV enthalten, damit Benutzer Ergebnisse mit geringer Konfidenz herausfiltern können. Bei der 2.039-Zeilen-Testdatei erholt dieser Schritt 246 Zeilen (12,1 Prozentpunkte Verbesserung).</p>
+</div>
+</div>
 <div id="tabset-1-4" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-4-tab">
+<div data-lang="en">
 <p>Some Vienna addresses — mainly Schrebergarten plots — use a <code>/</code> in the street field to encode two streets, e.g.&nbsp;<code>Achengasse 4/Lavantgasse 1a</code>. The splitter divides this into two sub-queries before the join, each queried independently.</p>
 <p><strong>Worked example (ObjektNr 9 from the V3 test file):</strong></p>
 <table class="caption-top table">
@@ -863,7 +1001,56 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 </table>
 <p>The trailing numbers (<code>4</code> and <code>1a</code>) are extracted from each part automatically. Both ACDs are returned: the first in the <code>ACD</code> column, the second in <code>acd_b</code>. The <code>match_quality</code> is <code>split_both</code> when both parts resolve, <code>split_partial</code> when only one does.</p>
 </div>
+<div data-lang="de">
+<p>Einige Wiener Adressen — hauptsächlich Schrebergartenparzellen — verwenden ein <code>/</code> im Straßenfeld, um zwei Straßen zu kodieren, z.B. <code>Achengasse 4/Lavantgasse 1a</code>. Der Splitter teilt dies in zwei Unterabfragen vor der Verknüpfung auf, die jeweils unabhängig abgefragt werden.</p>
+<p><strong>Arbeitsbeispiel (ObjektNr 9 aus der V3-Testdatei):</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Feld</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Eingabe PLZ</td>
+<td><code>1210</code></td>
+</tr>
+<tr class="even">
+<td>Eingabe Straße</td>
+<td><code>Achengasse 4/Lavantgasse 1a</code></td>
+</tr>
+<tr class="odd">
+<td>Eingabe Hausnummer</td>
+<td><code>NA</code> (in der Straße eingebettet)</td>
+</tr>
+<tr class="even">
+<td>Aufgeteilter Teil 1</td>
+<td>Straße <code>Achengasse</code>, Haus <code>4</code></td>
+</tr>
+<tr class="odd">
+<td>Aufgeteilter Teil 2</td>
+<td>Straße <code>Lavantgasse</code>, Haus <code>1a</code></td>
+</tr>
+<tr class="even">
+<td>Ausgabe ACD (Teil 1)</td>
+<td><code>&lt;verify&gt;</code></td>
+</tr>
+<tr class="odd">
+<td>Ausgabe ACD (Teil 2)</td>
+<td><code>&lt;verify&gt;</code></td>
+</tr>
+<tr class="even">
+<td>match_quality</td>
+<td><code>split_both</code> (wenn beide Teile übereinstimmen)</td>
+</tr>
+</tbody>
+</table>
+<p>Die nachfolgenden Nummern (<code>4</code> und <code>1a</code>) werden aus jedem Teil automatisch extrahiert. Beide ACDs werden zurückgegeben: die erste in der Spalte <code>ACD</code>, die zweite in <code>acd_b</code>. Das <code>match_quality</code> ist <code>split_both</code>, wenn beide Teile aufgelöst werden, und <code>split_partial</code>, wenn nur einer aufgelöst wird.</p>
+</div>
+</div>
 <div id="tabset-1-5" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-5-tab">
+<div data-lang="en">
 <p>ADRESSENOGD contains 291,823 address points but only 148,444 unique <code>(PLZ, street, house)</code> tuples. 19,319 of those tuples (13.0%) have more than one ACD — multi-unit buildings with separate staircases or sub-addresses. The lookup uses <code>GROUP BY + ARRAY_AGG(ACD ORDER BY ACD)</code> to return all ACDs for such addresses rather than picking one arbitrarily.</p>
 <p><strong>Worked example:</strong></p>
 <table class="caption-top table">
@@ -898,7 +1085,44 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 </table>
 <p>The results table shows a purple <code>ambiguous_multi</code> badge with “⚠ 82 units”. The primary <code>ACD</code> column contains the lexicographically smallest ACD for backward compatibility. The “All ACDs” CSV download mode expands ambiguous rows to one row per ACD with an <code>acd_unit_index</code> column for join-back.</p>
 </div>
+<div data-lang="de">
+<p>ADRESSENOGD enthält 291.823 Adresspunkte, aber nur 148.444 eindeutige <code>(PLZ, Straße, Haus)</code>-Tupel. 19.319 dieser Tupel (13,0%) haben mehr als eine ACD — Mehrfamilienhäuser mit separaten Stiegenhäusern oder Unteradressen. Die Suche verwendet <code>GROUP BY + ARRAY_AGG(ACD ORDER BY ACD)</code>, um alle ACDs für solche Adressen zurückzugeben, anstatt eine willkürlich auszuwählen.</p>
+<p><strong>Arbeitsbeispiel:</strong></p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Feld</th>
+<th>Wert</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Eingabe</td>
+<td>PLZ <code>1210</code>, Straße <code>Achengasse</code>, Haus <code>4</code></td>
+</tr>
+<tr class="even">
+<td>ARRAY_AGG Ergebnis</td>
+<td>82 verschiedene ACD-Codes in ADRESSENOGD</td>
+</tr>
+<tr class="odd">
+<td>match_quality</td>
+<td><code>ambiguous_multi</code></td>
+</tr>
+<tr class="even">
+<td>acd_count Spalte</td>
+<td><code>82</code></td>
+</tr>
+<tr class="odd">
+<td>acd_codes Spalte</td>
+<td>kommagetrennte Liste aller 82 ACDs</td>
+</tr>
+</tbody>
+</table>
+<p>Die Ergebnistabelle zeigt ein lilafarbenes <code>ambiguous_multi</code>-Abzeichen mit “⚠ 82 units”. Die primäre Spalte <code>ACD</code> enthält die lexikografisch kleinste ACD für Abwärtskompatibilität. Der CSV-Download-Modus “All ACDs” erweitert mehrdeutige Zeilen auf eine Zeile pro ACD mit einer Spalte <code>acd_unit_index</code> für Rück-Joins.</p>
+</div>
+</div>
 <div id="tabset-1-6" class="tab-pane" role="tabpanel" aria-labelledby="tabset-1-6-tab">
+<div data-lang="en">
 <p>The city’s OGDAddressService REST API (<code>GetAddressInfo</code>) can attempt server-side fuzzy matching for rows still unmatched after steps 1–5.</p>
 <p><strong>Status: NOT implemented in the DuckDB-WASM JavaScript path.</strong> The R-side implementation (<code>R/upload_algorithm.R</code>) also documents this as future work (Step 6, not implemented). The UI shows a “Try REST API” button below the results table, but clicking it sends address fragments to <code>data.wien.gv.at</code> and is a separate optional step outside the main algorithm.</p>
 <p>When/if implemented:</p>
@@ -909,6 +1133,19 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 <li>Rows beyond budget receive <code>match_quality = "rest_skipped_over_budget"</code></li>
 </ul>
 <p>This step is not implemented in the current <code>R/upload_algorithm.R</code> (see <a href="https://github.com/JohnGavin/acd_area_climate_design/blob/main/R/upload_algorithm.R#L14"><code>upload_algorithm.R</code> line 14</a>: “Step 6: REST API fallback. NOT IMPLEMENTED”). Future work tracked in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/48">issue #48</a>.</p>
+</div>
+<div data-lang="de">
+<p>Die REST-API des Stadtdienstes OGDAddressService (<code>GetAddressInfo</code>) kann serverseitige unscharfe Übereinstimmungen für Zeilen versuchen, die nach den Schritten 1–5 noch nicht gefunden wurden.</p>
+<p><strong>Status: NICHT implementiert im DuckDB-WASM-JavaScript-Pfad.</strong> Die R-seitige Implementierung (<code>R/upload_algorithm.R</code>) dokumentiert dies ebenfalls als zukünftige Arbeit (Schritt 6, nicht implementiert). Die Benutzeroberfläche zeigt eine Schaltfläche “Try REST API” unterhalb der Ergebnistabelle, aber ein Klick darauf sendet Adressfragmente an <code>data.wien.gv.at</code> und ist ein separater optionaler Schritt außerhalb des Hauptalgorithmus.</p>
+<p>Wenn/falls implementiert:</p>
+<ul>
+<li>Parallelität auf 8 gleichzeitige Anfragen begrenzt</li>
+<li>Sitzungsbudget: maximal 250 Aufrufe</li>
+<li>Übereinstimmende Zeilen erhalten <code>match_quality = "rest_api_fallback"</code></li>
+<li>Zeilen jenseits des Budgets erhalten <code>match_quality = "rest_skipped_over_budget"</code></li>
+</ul>
+<p>Dieser Schritt ist nicht in der aktuellen <code>R/upload_algorithm.R</code> implementiert (siehe <a href="https://github.com/JohnGavin/acd_area_climate_design/blob/main/R/upload_algorithm.R#L14"><code>upload_algorithm.R</code> Zeile 14</a>: “Step 6: REST API fallback. NOT IMPLEMENTED”). Zukünftige Arbeit wird in <a href="https://github.com/JohnGavin/acd_area_climate_design/issues/48">Issue #48</a> verfolgt.</p>
+</div>
 <!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->
 
 <!-- Inline Chart.js for the per-district bar chart (no server needed) -->
@@ -2033,7 +2270,7 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
 </div>
 <hr style="margin-top:30px; border:none; border-top:1px solid #dee2e6;">
 <p style="text-align:left; font-size:0.82em; color:#6c757d; margin-top:8px;">
-<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/6684eb39de61c43d1487c2124984d98de31ea00b"><code>6684eb3</code></a> | built 2026-05-04 14:44 UTC
+<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/bba5642442603b4dd58652fb4c368b50fd422041"><code>bba5642</code></a> | built 2026-05-04 14:54 UTC
 </p>
 
 
