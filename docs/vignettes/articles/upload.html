@@ -419,8 +419,37 @@ body.dark-mode #progress-msg { color: #ccc; }
 body.dark-mode #drop-zone:hover,
 body.dark-mode #drop-zone.drag-over { background: #1e2a3e !important; }
 body.dark-mode p#file-name-display { color: #fff; }
-body.dark-mode #match-summary span[style*="198754"] { color: #69d4a0 !important; }
-body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important; }
+/* ── #match-summary in dark mode (defeats inline style on the div) ──────── */
+/* The div carries inline `style="background:#f8f9fa; ..."` which has higher
+   specificity than class/id selectors. !important is required.            */
+body.dark-mode #match-summary {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #4a4a5a !important;
+}
+body.dark-mode #match-summary strong { color: #ffffff !important; }
+
+/* Tally tokens — every inline-coloured span needs a dark-mode pair that
+   meets 4.5:1 against #000. Originals (light-mode) → dark-mode targets:    */
+body.dark-mode #match-summary span[style*="198754"] { color: #69d4a0 !important; } /* exact (green) */
+body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important; } /* unmatched (red) */
+body.dark-mode #match-summary span[style*="6f42c1"] { color: #c8a8ff !important; } /* ambiguous (purple) */
+body.dark-mode #match-summary span[style*="fd7e14"] { color: #ffb070 !important; } /* fuzzy / REST (orange) */
+body.dark-mode #match-summary span[style*="0dcaf0"] { color: #5edaff !important; } /* split both (cyan) */
+body.dark-mode #match-summary span[style*="6c757d"] { color: #b8c0c8 !important; } /* split partial (gray) */
+
+/* ── Methodology callout — 3 size-steps bigger (toolbar-aware) ──────────── */
+/* Toolbar A+/A− adjusts --upload-font-size in 2px steps. "3 sizes bigger"
+   = +6px. calc() lets the bump scale with user font adjustments.          */
+.callout,
+.callout-warning,
+.callout .callout-title-container,
+.callout .callout-title,
+.callout .callout-body,
+.callout .callout-body p {
+  font-size: calc(var(--upload-font-size, 1.15em) + 6px) !important;
+  line-height: 1.45 !important;
+}
 
 </style>
 
@@ -2254,7 +2283,7 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
 </div>
 <hr style="margin-top:30px; border:none; border-top:1px solid #dee2e6;">
 <p style="text-align:left; font-size:0.82em; color:#6c757d; margin-top:8px;">
-<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/9c22cd6d173122cdf70f7f8726c31cd7f111f641"><code>9c22cd6</code></a> | built 2026-05-04 21:32 UTC
+<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/929ed21fb5ce372796c86b14eb824109d7a6f607"><code>929ed21</code></a> | built 2026-05-04 21:41 UTC
 </p>
 
 
