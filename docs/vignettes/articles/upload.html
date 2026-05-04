@@ -351,6 +351,65 @@ body.dark-mode #results-table td {
   background-color: #000000 !important;
   border-color: #4a4a5a !important;
 }
+
+/* ── Methodology tab: callout banner + pipe-tables in [data-lang] divs ──── */
+/* Both elements live OUTSIDE .upload-page-prose. Pandoc emits bare <table>
+   inside :::: {data-lang="en|de"} ::::; the Machine-translated banner is a
+   Quarto .callout-warning. Default cosmo + auto-dark gives white-on-white
+   in dark mode for both. Pin them explicitly.                             */
+
+/* Methodology pipe-tables — light mode (black on white)                   */
+[data-lang="en"] table,
+[data-lang="en"] table thead,
+[data-lang="en"] table tbody,
+[data-lang="en"] table tr,
+[data-lang="en"] table th,
+[data-lang="en"] table td,
+[data-lang="de"] table,
+[data-lang="de"] table thead,
+[data-lang="de"] table tbody,
+[data-lang="de"] table tr,
+[data-lang="de"] table th,
+[data-lang="de"] table td {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  border-color: #dee2e6 !important;
+}
+
+/* Methodology pipe-tables — dark mode (white on black)                    */
+body.dark-mode [data-lang="en"] table,
+body.dark-mode [data-lang="en"] table thead,
+body.dark-mode [data-lang="en"] table tbody,
+body.dark-mode [data-lang="en"] table tr,
+body.dark-mode [data-lang="en"] table th,
+body.dark-mode [data-lang="en"] table td,
+body.dark-mode [data-lang="de"] table,
+body.dark-mode [data-lang="de"] table thead,
+body.dark-mode [data-lang="de"] table tbody,
+body.dark-mode [data-lang="de"] table tr,
+body.dark-mode [data-lang="de"] table th,
+body.dark-mode [data-lang="de"] table td {
+  color: #ffffff !important;
+  background-color: #000000 !important;
+  border-color: #4a4a5a !important;
+}
+
+/* Machine-translated callout banner — dark mode (white on black)          */
+/* Quarto wraps callouts as div.callout > div.callout-header + div.callout-body.
+   Override both layers so the entire banner is readable.                  */
+body.dark-mode .callout,
+body.dark-mode .callout-warning,
+body.dark-mode .callout .callout-header,
+body.dark-mode .callout .callout-body,
+body.dark-mode .callout .callout-body p,
+body.dark-mode .callout .callout-title-container,
+body.dark-mode .callout .callout-title {
+  color: #ffffff !important;
+  background-color: #000000 !important;
+  border-color: #4a4a5a !important;
+}
+body.dark-mode .callout a,
+body.dark-mode .callout .callout-body a { color: #4ea8de !important; }
 body.dark-mode select {
   background: var(--card-bg); color: var(--text); border-color: var(--border);
 }
@@ -2195,7 +2254,7 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
 </div>
 <hr style="margin-top:30px; border:none; border-top:1px solid #dee2e6;">
 <p style="text-align:left; font-size:0.82em; color:#6c757d; margin-top:8px;">
-<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/30381da8fe35a4761bdda1c51991e97d9c7a46f2"><code>30381da</code></a> | built 2026-05-04 21:27 UTC
+<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/9c22cd6d173122cdf70f7f8726c31cd7f111f641"><code>9c22cd6</code></a> | built 2026-05-04 21:32 UTC
 </p>
 
 
