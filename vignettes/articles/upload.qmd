@@ -616,7 +616,21 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
 
 ### Methodology
 
+::: {.callout-warning collapse="false"}
+## Machine-translated German / Maschinell übersetzt
+
+Die deutsche Übersetzung wurde maschinell erstellt und nicht von einem Muttersprachler überprüft. Bitte Ungenauigkeiten unter [Issue #62](https://github.com/JohnGavin/acd_area_climate_design/issues/62) melden.
+
+The German translation is machine-generated and has not been reviewed by a native speaker. Please report inaccuracies on [issue #62](https://github.com/JohnGavin/acd_area_climate_design/issues/62).
+:::
+
+:::: {data-lang="en"}
 The address-to-ACD lookup runs through up to 6 steps. Each tab below explains one step with a real example drawn from `tests/qa/ACD_TEST_V3_no_ACD_col.csv` and `inst/extdata/sample-acd-test.xlsx`.
+::::
+
+:::: {data-lang="de"}
+Die Adress-zu-ACD-Suche durchläuft bis zu 6 Schritte. Jeder Tab unten erklärt einen Schritt mit einem realen Beispiel aus `tests/qa/ACD_TEST_V3_no_ACD_col.csv` und `inst/extdata/sample-acd-test.xlsx`.
+::::
 
 #### Steps
 
@@ -624,6 +638,7 @@ The address-to-ACD lookup runs through up to 6 steps. Each tab below explains on
 
 ##### 1. Normalise input
 
+:::: {data-lang="en"}
 Before any join, both the address table (ADRESSENOGD) and the user's uploaded data are normalised the same way: whitespace is trimmed, street names are lowercased, and house numbers are lowercased and trimmed.
 
 **Worked example (from the V3 test file):**
@@ -635,6 +650,21 @@ Before any join, both the address table (ADRESSENOGD) and the user's uploaded da
 | PLZ | `1210` | `1210` |
 
 A row with `Stiege/RH` value `Parz. 35` is treated as a garden-plot row: the `Parz` pattern triggers the composite-street path (Step 4), and the trailing `35` is extracted as the plot-level house identifier.
+::::
+
+:::: {data-lang="de"}
+Vor jeder Verknüpfung werden sowohl die Adresstabelle (ADRESSENOGD) als auch die hochgeladenen Benutzerdaten auf dieselbe Weise normalisiert: Leerzeichen werden entfernt, Straßennamen werden in Kleinbuchstaben umgewandelt und Hausnummern werden ebenfalls kleingeschrieben und bereinigt.
+
+**Arbeitsbeispiel (aus der V3-Testdatei):**
+
+| Feld | Roheingabe | Nach Normalisierung |
+|------|------------|---------------------|
+| Straße | `Achengasse` | `achengasse` |
+| Hausnummer | `4` (Zeile 2, ObjektNr 6) | `4` |
+| PLZ | `1210` | `1210` |
+
+Eine Zeile mit dem `Stiege/RH`-Wert `Parz. 35` wird als Gartenparzelle behandelt: Das `Parz`-Muster löst den zusammengesetzte-Straße-Pfad (Schritt 4) aus, und die nachfolgende `35` wird als Parzellen-Hausidentifikator extrahiert.
+::::
 
 The address table normalisation in DuckDB-WASM SQL:
 
@@ -646,6 +676,7 @@ CAST(PLZ AS VARCHAR)   -- plz_norm
 
 ##### 2. Exact join
 
+:::: {data-lang="en"}
 After normalisation, the tool performs a `LEFT JOIN` on `(plz_norm, street_norm, house_norm)`. When all three keys match and exactly one ACD exists for that address, `match_quality = "exact"` is returned.
 
 **Worked example (ObjektNr 3 from the V3 test file):**
@@ -660,9 +691,28 @@ After normalisation, the tool performs a `LEFT JOIN` on `(plz_norm, street_norm,
 | match_quality | `exact` |
 
 Row ObjektNr 3 (`1210, Achengasse 3`) resolves to ACD `070268` via exact join on all three normalised keys. This is confirmed by the Quick guide example values on the Upload page.
+::::
+
+:::: {data-lang="de"}
+Nach der Normalisierung führt das Werkzeug einen `LEFT JOIN` über `(plz_norm, street_norm, house_norm)` durch. Wenn alle drei Schlüssel übereinstimmen und genau eine ACD für diese Adresse existiert, wird `match_quality = "exact"` zurückgegeben.
+
+**Arbeitsbeispiel (ObjektNr 3 aus der V3-Testdatei):**
+
+| Feld | Wert |
+|------|------|
+| Eingabe PLZ | `1210` |
+| Eingabe Straße | `Achengasse` |
+| Eingabe Hausnummer | `3` |
+| Normalisierte Schlüssel | `("1210", "achengasse", "3")` |
+| Ergebnis ACD | `070268` |
+| match_quality | `exact` |
+
+ObjektNr 3 (`1210, Achengasse 3`) wird über die exakte Verknüpfung aller drei normalisierten Schlüssel der ACD `070268` zugeordnet. Dies wird durch die Beispielwerte in der Schnellübersicht auf der Upload-Seite bestätigt.
+::::
 
 ##### 3. Fuzzy nearest-house
 
+:::: {data-lang="en"}
 When `(PLZ, street_norm)` matches but the exact house number is absent from ADRESSENOGD, the algorithm finds the registered house on the same street with the smallest numeric distance from the requested number. Distance is capped at 20 — rows further than that remain `unmatched`.
 
 **Worked example:**
@@ -677,9 +727,28 @@ When `(PLZ, street_norm)` matches but the exact house number is absent from ADRE
 | house_distance column | `2` |
 
 The `house_distance` column is included in the download CSV so users can filter low-confidence results. On the 2,039-row test file, this step recovers 246 rows (12.1 percentage points lift).
+::::
+
+:::: {data-lang="de"}
+Wenn `(PLZ, street_norm)` übereinstimmt, die genaue Hausnummer aber nicht in ADRESSENOGD vorhanden ist, sucht der Algorithmus das registrierte Haus auf derselben Straße mit dem kleinsten numerischen Abstand zur gesuchten Nummer. Der Abstand ist auf 20 begrenzt — Zeilen mit größerem Abstand bleiben `unmatched`.
+
+**Arbeitsbeispiel:**
+
+| Feld | Wert |
+|------|------|
+| Eingabe | PLZ `1210`, Straße `Achengasse`, Haus `21` |
+| Situation | `Achengasse 21` ist nicht in ADRESSENOGD |
+| Nächstes registriertes Haus | `Achengasse 19` |
+| Numerischer Abstand | 2 |
+| match_quality | `fuzzy_nearest_house` |
+| house_distance Spalte | `2` |
+
+Die Spalte `house_distance` ist in der Download-CSV enthalten, damit Benutzer Ergebnisse mit geringer Konfidenz herausfiltern können. Bei der 2.039-Zeilen-Testdatei erholt dieser Schritt 246 Zeilen (12,1 Prozentpunkte Verbesserung).
+::::
 
 ##### 4. Composite-street splitter
 
+:::: {data-lang="en"}
 Some Vienna addresses — mainly Schrebergarten plots — use a `/` in the street field to encode two streets, e.g. `Achengasse 4/Lavantgasse 1a`. The splitter divides this into two sub-queries before the join, each queried independently.
 
 **Worked example (ObjektNr 9 from the V3 test file):**
@@ -696,9 +765,30 @@ Some Vienna addresses — mainly Schrebergarten plots — use a `/` in the stree
 | match_quality | `split_both` (if both parts match) |
 
 The trailing numbers (`4` and `1a`) are extracted from each part automatically. Both ACDs are returned: the first in the `ACD` column, the second in `acd_b`. The `match_quality` is `split_both` when both parts resolve, `split_partial` when only one does.
+::::
+
+:::: {data-lang="de"}
+Einige Wiener Adressen — hauptsächlich Schrebergartenparzellen — verwenden ein `/` im Straßenfeld, um zwei Straßen zu kodieren, z.B. `Achengasse 4/Lavantgasse 1a`. Der Splitter teilt dies in zwei Unterabfragen vor der Verknüpfung auf, die jeweils unabhängig abgefragt werden.
+
+**Arbeitsbeispiel (ObjektNr 9 aus der V3-Testdatei):**
+
+| Feld | Wert |
+|------|------|
+| Eingabe PLZ | `1210` |
+| Eingabe Straße | `Achengasse 4/Lavantgasse 1a` |
+| Eingabe Hausnummer | `NA` (in der Straße eingebettet) |
+| Aufgeteilter Teil 1 | Straße `Achengasse`, Haus `4` |
+| Aufgeteilter Teil 2 | Straße `Lavantgasse`, Haus `1a` |
+| Ausgabe ACD (Teil 1) | `<verify>` |
+| Ausgabe ACD (Teil 2) | `<verify>` |
+| match_quality | `split_both` (wenn beide Teile übereinstimmen) |
+
+Die nachfolgenden Nummern (`4` und `1a`) werden aus jedem Teil automatisch extrahiert. Beide ACDs werden zurückgegeben: die erste in der Spalte `ACD`, die zweite in `acd_b`. Das `match_quality` ist `split_both`, wenn beide Teile aufgelöst werden, und `split_partial`, wenn nur einer aufgelöst wird.
+::::
 
 ##### 5. Multi-unit dedup
 
+:::: {data-lang="en"}
 ADRESSENOGD contains 291,823 address points but only 148,444 unique `(PLZ, street, house)` tuples. 19,319 of those tuples (13.0%) have more than one ACD — multi-unit buildings with separate staircases or sub-addresses. The lookup uses `GROUP BY + ARRAY_AGG(ACD ORDER BY ACD)` to return all ACDs for such addresses rather than picking one arbitrarily.
 
 **Worked example:**
@@ -712,9 +802,27 @@ ADRESSENOGD contains 291,823 address points but only 148,444 unique `(PLZ, stree
 | acd_codes column | comma-separated list of all 82 ACDs |
 
 The results table shows a purple `ambiguous_multi` badge with "⚠ 82 units". The primary `ACD` column contains the lexicographically smallest ACD for backward compatibility. The "All ACDs" CSV download mode expands ambiguous rows to one row per ACD with an `acd_unit_index` column for join-back.
+::::
+
+:::: {data-lang="de"}
+ADRESSENOGD enthält 291.823 Adresspunkte, aber nur 148.444 eindeutige `(PLZ, Straße, Haus)`-Tupel. 19.319 dieser Tupel (13,0%) haben mehr als eine ACD — Mehrfamilienhäuser mit separaten Stiegenhäusern oder Unteradressen. Die Suche verwendet `GROUP BY + ARRAY_AGG(ACD ORDER BY ACD)`, um alle ACDs für solche Adressen zurückzugeben, anstatt eine willkürlich auszuwählen.
+
+**Arbeitsbeispiel:**
+
+| Feld | Wert |
+|------|------|
+| Eingabe | PLZ `1210`, Straße `Achengasse`, Haus `4` |
+| ARRAY_AGG Ergebnis | 82 verschiedene ACD-Codes in ADRESSENOGD |
+| match_quality | `ambiguous_multi` |
+| acd_count Spalte | `82` |
+| acd_codes Spalte | kommagetrennte Liste aller 82 ACDs |
+
+Die Ergebnistabelle zeigt ein lilafarbenes `ambiguous_multi`-Abzeichen mit "⚠ 82 units". Die primäre Spalte `ACD` enthält die lexikografisch kleinste ACD für Abwärtskompatibilität. Der CSV-Download-Modus "All ACDs" erweitert mehrdeutige Zeilen auf eine Zeile pro ACD mit einer Spalte `acd_unit_index` für Rück-Joins.
+::::
 
 ##### 6. REST API fallback
 
+:::: {data-lang="en"}
 The city's OGDAddressService REST API (`GetAddressInfo`) can attempt server-side fuzzy matching for rows still unmatched after steps 1–5.
 
 **Status: NOT implemented in the DuckDB-WASM JavaScript path.** The R-side implementation (`R/upload_algorithm.R`) also documents this as future work (Step 6, not implemented). The UI shows a "Try REST API" button below the results table, but clicking it sends address fragments to `data.wien.gv.at` and is a separate optional step outside the main algorithm.
@@ -727,6 +835,22 @@ When/if implemented:
 - Rows beyond budget receive `match_quality = "rest_skipped_over_budget"`
 
 This step is not implemented in the current `R/upload_algorithm.R` (see [`upload_algorithm.R` line 14](https://github.com/JohnGavin/acd_area_climate_design/blob/main/R/upload_algorithm.R#L14): "Step 6: REST API fallback. NOT IMPLEMENTED"). Future work tracked in [issue #48](https://github.com/JohnGavin/acd_area_climate_design/issues/48).
+::::
+
+:::: {data-lang="de"}
+Die REST-API des Stadtdienstes OGDAddressService (`GetAddressInfo`) kann serverseitige unscharfe Übereinstimmungen für Zeilen versuchen, die nach den Schritten 1–5 noch nicht gefunden wurden.
+
+**Status: NICHT implementiert im DuckDB-WASM-JavaScript-Pfad.** Die R-seitige Implementierung (`R/upload_algorithm.R`) dokumentiert dies ebenfalls als zukünftige Arbeit (Schritt 6, nicht implementiert). Die Benutzeroberfläche zeigt eine Schaltfläche "Try REST API" unterhalb der Ergebnistabelle, aber ein Klick darauf sendet Adressfragmente an `data.wien.gv.at` und ist ein separater optionaler Schritt außerhalb des Hauptalgorithmus.
+
+Wenn/falls implementiert:
+
+- Parallelität auf 8 gleichzeitige Anfragen begrenzt
+- Sitzungsbudget: maximal 250 Aufrufe
+- Übereinstimmende Zeilen erhalten `match_quality = "rest_api_fallback"`
+- Zeilen jenseits des Budgets erhalten `match_quality = "rest_skipped_over_budget"`
+
+Dieser Schritt ist nicht in der aktuellen `R/upload_algorithm.R` implementiert (siehe [`upload_algorithm.R` Zeile 14](https://github.com/JohnGavin/acd_area_climate_design/blob/main/R/upload_algorithm.R#L14): "Step 6: REST API fallback. NOT IMPLEMENTED"). Zukünftige Arbeit wird in [Issue #48](https://github.com/JohnGavin/acd_area_climate_design/issues/48) verfolgt.
+::::
 
 ```{=html}
 <!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->
