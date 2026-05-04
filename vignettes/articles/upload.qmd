@@ -180,6 +180,33 @@ body.dark-mode #match-summary {
 body.dark-mode #results-section h3,
 body.dark-mode #results-section h4 { color: var(--text); }
 body.dark-mode #empty-state-msg { color: #aaa; }
+
+/* ── Results table contrast (#results-table) ────────────────────────────── */
+/* Populated by JS after upload completes; sits OUTSIDE .upload-page-prose,
+   so the prose-scoped table rules above do not reach it. Pin both modes
+   explicitly: black-on-white in light mode, white-on-black in dark mode.  */
+#results-table,
+#results-table thead,
+#results-table tbody,
+#results-table tr,
+#results-table th,
+#results-table td {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  border-color: #dee2e6 !important;
+}
+#results-table th { font-weight: 600; }
+
+body.dark-mode #results-table,
+body.dark-mode #results-table thead,
+body.dark-mode #results-table tbody,
+body.dark-mode #results-table tr,
+body.dark-mode #results-table th,
+body.dark-mode #results-table td {
+  color: #ffffff !important;
+  background-color: #000000 !important;
+  border-color: #4a4a5a !important;
+}
 body.dark-mode select {
   background: var(--card-bg); color: var(--text); border-color: var(--border);
 }

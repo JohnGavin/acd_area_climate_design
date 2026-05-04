@@ -324,6 +324,33 @@ body.dark-mode #match-summary {
 body.dark-mode #results-section h3,
 body.dark-mode #results-section h4 { color: var(--text); }
 body.dark-mode #empty-state-msg { color: #aaa; }
+
+/* ── Results table contrast (#results-table) ────────────────────────────── */
+/* Populated by JS after upload completes; sits OUTSIDE .upload-page-prose,
+   so the prose-scoped table rules above do not reach it. Pin both modes
+   explicitly: black-on-white in light mode, white-on-black in dark mode.  */
+#results-table,
+#results-table thead,
+#results-table tbody,
+#results-table tr,
+#results-table th,
+#results-table td {
+  color: #000000 !important;
+  background-color: #ffffff !important;
+  border-color: #dee2e6 !important;
+}
+#results-table th { font-weight: 600; }
+
+body.dark-mode #results-table,
+body.dark-mode #results-table thead,
+body.dark-mode #results-table tbody,
+body.dark-mode #results-table tr,
+body.dark-mode #results-table th,
+body.dark-mode #results-table td {
+  color: #ffffff !important;
+  background-color: #000000 !important;
+  border-color: #4a4a5a !important;
+}
 body.dark-mode select {
   background: var(--card-bg); color: var(--text); border-color: var(--border);
 }
@@ -2168,7 +2195,7 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
 </div>
 <hr style="margin-top:30px; border:none; border-top:1px solid #dee2e6;">
 <p style="text-align:left; font-size:0.82em; color:#6c757d; margin-top:8px;">
-<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/90a3eb99b426c2fa0e2c78222ef7696bb5881707"><code>90a3eb9</code></a> | built 2026-05-04 21:21 UTC
+<a href="https://github.com/JohnGavin/acd_area_climate_design">acd_area_climate_design</a> | commit <a href="https://github.com/JohnGavin/acd_area_climate_design/commit/30381da8fe35a4761bdda1c51991e97d9c7a46f2"><code>30381da</code></a> | built 2026-05-04 21:27 UTC
 </p>
 
 
