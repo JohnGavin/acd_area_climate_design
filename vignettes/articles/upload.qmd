@@ -517,18 +517,20 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
         <span data-lang="en">Data table (accessibility)</span>
         <span data-lang="de">Datentabelle (Barrierefreiheit)</span>
       </summary>
-      <table id="district-data-table"
-             style="font-size:0.78em; border-collapse:collapse; margin-top:4px; color:#e0e0e0;">
-        <thead>
-          <tr>
-            <th style="border:1px solid #555; padding:3px 8px;">District (PLZ)</th>
-            <th style="border:1px solid #555; padding:3px 8px;">Total</th>
-            <th style="border:1px solid #555; padding:3px 8px;">Matched</th>
-            <th style="border:1px solid #555; padding:3px 8px;">Match rate (%)</th>
-          </tr>
-        </thead>
-        <tbody id="district-data-tbody"></tbody>
-      </table>
+      <div id="district-data-table" role="table" aria-label="Match rate by district"
+           style="display:grid; grid-template-columns: 1fr 80px 80px 100px;
+                  gap: 0; font-size:0.78em; margin-top:4px; color:#e0e0e0;
+                  border:1px solid #555;">
+        <div role="rowgroup" style="display:contents;">
+          <div role="row" style="display:contents; font-weight:bold; background:#222;">
+            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">District (PLZ)</div>
+            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">Total</div>
+            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">Matched</div>
+            <div role="columnheader" style="border:1px solid #555; padding:3px 8px;">Match rate (%)</div>
+          </div>
+        </div>
+        <div role="rowgroup" id="district-data-tbody" style="display:contents;"></div>
+      </div>
     </details>
   </div>
 
@@ -724,7 +726,7 @@ When/if implemented:
 - Matched rows receive `match_quality = "rest_api_fallback"`
 - Rows beyond budget receive `match_quality = "rest_skipped_over_budget"`
 
-This step is not implemented in the current `R/upload_algorithm.R` (see `upload_algorithm.R` line 14: "Step 6: REST API fallback. NOT IMPLEMENTED"). Future work tracked in [issue #48](https://github.com/JohnGavin/acd_area_climate_design/issues/48).
+This step is not implemented in the current `R/upload_algorithm.R` (see [`upload_algorithm.R` line 14](https://github.com/JohnGavin/acd_area_climate_design/blob/main/R/upload_algorithm.R#L14): "Step 6: REST API fallback. NOT IMPLEMENTED"). Future work tracked in [issue #48](https://github.com/JohnGavin/acd_area_climate_design/issues/48).
 
 ```{=html}
 <!-- ── duckdb-wasm + lookup JS ─────────────────────────────────────────────── -->
@@ -1410,12 +1412,12 @@ function renderChart(merged) {
   const tbody = document.getElementById("district-data-tbody");
   if (tbody) {
     tbody.innerHTML = districtData.map(d =>
-      `<tr>
-        <td style="border:1px solid #555; padding:2px 8px;">${d.district}</td>
-        <td style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.total}</td>
-        <td style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.matched}</td>
-        <td style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.rate}</td>
-      </tr>`
+      `<div role="row" style="display:contents;">
+        <div role="cell" style="border:1px solid #555; padding:2px 8px;">${d.district}</div>
+        <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.total}</div>
+        <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.matched}</div>
+        <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.rate}</div>
+      </div>`
     ).join("");
   }
 }
@@ -1847,3 +1849,27 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
 :::
 
 :::
+
+```{r footer-info}
+#| echo: false
+#| results: asis
+
+# Build footer with live SHA + timestamp
+sha_full <- tryCatch(
+  system2("git", c("rev-parse", "HEAD"), stdout = TRUE)[1],
+  error = function(e) "unknown"
+)
+sha_short <- substr(sha_full, 1, 7)
+build_time <- format(Sys.time(), "%Y-%m-%d %H:%M %Z", tz = "UTC")
+repo_url <- "https://github.com/JohnGavin/acd_area_climate_design"
+sha_url <- if (sha_full != "unknown") {
+  paste0(repo_url, "/commit/", sha_full)
+} else {
+  repo_url
+}
+
+cat(sprintf(
+  "\n\n<hr style=\"margin-top:30px; border:none; border-top:1px solid #dee2e6;\">\n<p style=\"text-align:left; font-size:0.82em; color:#6c757d; margin-top:8px;\">[acd_area_climate_design](%s) | commit [`%s`](%s) | built %s</p>\n",
+  repo_url, sha_short, sha_url, build_time
+))
+```
