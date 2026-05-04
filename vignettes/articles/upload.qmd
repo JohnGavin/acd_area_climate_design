@@ -161,6 +161,18 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
   background: #1a1a1a;
   border-radius: 6px;
   padding: 10px 12px;
+  cursor: zoom-in;
+  transition: all 0.2s;
+}
+#chart-section.chart-fullscreen {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  width: 100vw; height: 100vh; z-index: 9999;
+  background: #1a1a1a; padding: 30px;
+  cursor: zoom-out; overflow: auto;
+  border-radius: 0;
+}
+#chart-section.chart-fullscreen #district-chart {
+  max-width: none !important; width: 100% !important; max-height: 90vh;
 }
 #district-chart-caption {
   color: #e0e0e0;   /* white-on-dark: contrast ratio >> 4.5:1 vs #1a1a1a */
@@ -609,6 +621,23 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
       <div style="background:#dee2e6; border-radius:4px; height:6px; width:100%;">
         <div id="rest-progress-bar" style="background:#fd7e14; border-radius:4px; height:6px; width:0%; transition:width 0.2s;"></div>
       </div>
+    </div>
+    <!-- REST download banner (shown after REST completes — #67) -->
+    <div id="rest-download-after" style="display:none; margin-top:14px; padding:12px; background:#e7f3ff; border:1px solid #b8d8ff; border-radius:6px;">
+      <p style="margin:0 0 8px; font-size:0.92em;">
+        <span data-lang="en">Rows matched via the REST API have <code>match_quality = rest_api_fallback</code> in the downloaded CSV.</span>
+        <span data-lang="de">Per REST-API gefundene Zeilen haben <code>match_quality = rest_api_fallback</code> in der heruntergeladenen CSV.</span>
+      </p>
+      <button id="rest-download-btn" style="
+        padding:8px 20px; background:#198754; color:#fff;
+        border:none; border-radius:6px; cursor:pointer; font-size:1em;"
+        data-en="⬇ Download updated CSV" data-de="⬇ Aktualisierte CSV herunterladen">
+        ⬇ Download updated CSV
+      </button>
+      <a href="#download-section" style="margin-left:12px; font-size:0.88em; color:#0d6efd;">
+        <span data-lang="en">…or scroll up to the original Download button</span>
+        <span data-lang="de">…oder zur ursprünglichen Download-Schaltfläche scrollen</span>
+      </a>
     </div>
   </div>
 </div>
@@ -1451,6 +1480,11 @@ function renderChart(merged) {
   const existing = Chart.getChart(canvas);
   if (existing) existing.destroy();
 
+  // Auto-size canvas: 28px per district + 100px header/footer
+  const canvasHeight = Math.max(400, districtData.length * 28 + 100);
+  canvas.height = canvasHeight;
+  canvas.style.height = canvasHeight + "px";
+
   // Cleveland dot plot: type="scatter", x=rate, y=integer index
   const points = districtData.map((d, i) => ({ x: d.rate, y: i }));
 
@@ -1543,6 +1577,25 @@ function renderChart(merged) {
         <div role="cell" style="border:1px solid #555; padding:2px 8px; text-align:right;">${d.rate}</div>
       </div>`
     ).join("");
+  }
+
+  // ── Click-toggle fullscreen (#66) ────────────────────────────────────────
+  const chartSection = document.getElementById("chart-section");
+  // Attach once: guard against re-attaching on re-render
+  if (!chartSection.__fullscreenListenerAttached__) {
+    chartSection.__fullscreenListenerAttached__ = true;
+    chartSection.addEventListener("click", (e) => {
+      // Ignore clicks inside the accessible data-table <details>
+      if (e.target.closest("details")) return;
+      chartSection.classList.toggle("chart-fullscreen");
+      if (window.Chart) {
+        const ch = Chart.getChart(canvas);
+        if (ch) setTimeout(() => ch.resize(), 50);
+      }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") chartSection.classList.remove("chart-fullscreen");
+    });
   }
 }
 
@@ -1961,6 +2014,21 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
     progressWrap.style.display = "block";
     // Disable button to avoid double-calling
     btn.textContent = isDE ? "✓ REST API abgeschlossen" : "✓ REST API done";
+
+    // Show download banner (#67)
+    const restDownloadAfter = document.getElementById("rest-download-after");
+    if (restDownloadAfter) {
+      restDownloadAfter.style.display = "block";
+      const restDownloadBtn = document.getElementById("rest-download-btn");
+      if (restDownloadBtn) {
+        // Replace with fresh clone to avoid duplicate listeners on re-run
+        const freshBtn = restDownloadBtn.cloneNode(true);
+        restDownloadBtn.parentNode.replaceChild(freshBtn, restDownloadBtn);
+        freshBtn.addEventListener("click", () => {
+          if (resultRows.length > 0) downloadCsv(resultRows);
+        });
+      }
+    }
 
   } catch (err) {
     restMsg.textContent = (isDE ? "Fehler: " : "Error: ") + err.message;
