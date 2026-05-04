@@ -103,6 +103,15 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
     "search-label": "Search"
   }
 }</script>
+<style>
+  /* Hide site navbar on this page only — per #57 follow-up */
+  .quarto-title-banner,
+  header#quarto-header,
+  nav.navbar,
+  .navbar { display: none !important; }
+  body.nav-fixed { padding-top: 0 !important; }
+  main.content { padding-top: 1rem !important; }
+</style>
 
 
 <link rel="stylesheet" href="../../styles.css">
