@@ -259,7 +259,9 @@ body.dark-mode #match-summary span[style*="dc3545"] { color: #f08080 !important;
 </script>
 ```
 
-## Pages {.panel-tabset}
+## Pages
+
+::: {.panel-tabset}
 
 ### Upload
 
@@ -589,7 +591,9 @@ via [DuckDB-Wasm](https://duckdb.org/docs/api/wasm/overview.html). Es werden kei
 
 The address-to-ACD lookup runs through up to 6 steps. Each tab below explains one step with a real example drawn from `tests/qa/ACD_TEST_V3_no_ACD_col.csv` and `inst/extdata/sample-acd-test.xlsx`.
 
-#### Steps {.panel-tabset}
+#### Steps
+
+::: {.panel-tabset}
 
 ##### 1. Normalise input
 
@@ -1814,3 +1818,7 @@ document.getElementById("rest-btn").addEventListener("click", async () => {
 });
 </script>
 ```
+
+:::
+
+:::
