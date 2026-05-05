@@ -1,5 +1,51 @@
 # Changelog
 
+## 2026-05-05
+
+### Completed
+
+Six commits on `main` (no PR — direct commits, dark-mode contrast hardening session):
+
+| Commit | Summary |
+|---|---|
+| `30381da` | Black viewport gutters around the central article (`html, body { background:#000 !important; }`) — page-scoped to upload.qmd |
+| `9c22cd6` | `#results-table` forced to black-on-white in light, white-on-black in dark, with `!important` to defeat inline `style=` |
+| `929ed21` | Methodology pipe-tables in `[data-lang="en|de"]` divs + Machine-translated callout banner — both pinned in dark mode |
+| `56905c7` | `#match-summary` dark-mode contrast (white-on-black) + 4 new tally-token colour pairs (purple/orange/cyan/grey); callout font +6 px |
+| `9eb9589` | Comprehensive dark-mode bg sweep — every named container forced black-on-white in dark mode + catch-all `[style*="background:#fff..."]` selector; new `scripts/check_dark_contrast.sh` audit |
+| `ff36dfe` | Migrated audit script to global location (`~/docs_gh/llm/.claude/scripts/`). `_quarto.yml` post-render references the global wrapper. Single source of truth at `JohnGavin/llm`; CI fetches via raw.githubusercontent.com. |
+
+Also in `JohnGavin/llm` repo (commits `0985d2d` → `5b59402`):
+- New rule `dark-mode-completeness.md` (5 mandatory clauses, replacement-palette table)
+- Edited `accessibility-standards.md` (mandatory automated checks + vignette toolbar)
+- Edited `orchestrator-protocol.md` (contrast gate)
+- Edited `quality-gates/SKILL.md` (standalone accessibility deductions)
+- Added `dark-mode-completeness` to AGENTS.md mandatory rules + inline bullet
+- Edited `templates/new-project-claude.md` (post-render wiring section)
+- Added Phase 11b to `session_init.sh` — warns at session start if `_quarto.yml` lacks the wiring
+
+### Failed Approaches
+
+- **Per-element contrast PRs (5× in 2 days).** Each fix scoped to one selector the user pointed at, leaving sibling instances broken. Lesson: when a contrast bug is reported, run audit over the whole page first, fix the WHOLE class in one commit. Encoded as Clause 2 of `dark-mode-completeness`.
+- **Substituting `var(--card-bg)` (= `#16213e`) where the user said "black".** Lesson: when user says "black", use literal `#000000`. Encoded as Clause 1.
+- **Dark-mode rules without `!important` against inline-styled elements.** Inline-style specificity wins. Encoded as Clause 1.
+- **Audit script regex `[fF][a-fA-F0-9]{5}` matched orange `#fd7e14`.** Fix: tighten to `[b-fB-F][0-9a-fA-F]` per channel so all 3 channels ≥ 0xb0.
+- **Grep matched CSS comments and JS template literals as if they were rendered DOM.** Fix: strip `<style>` and `<script>` blocks via Python regex before scanning. False-positive count: 4 → 0.
+- **Per-project copies of the audit script.** User explicitly forbade. Fix: single global location, projects reference by absolute path or fetch from public mirror.
+
+### Accuracy / Metrics
+
+- Live URL passes audit: 3 light-bg elements detected, 3 covered, 0 uncovered → PASS
+- Audit script integrated into Quarto post-render: every render auto-audits and blocks on violation
+- 6 acd commits pushed to main; 4 llm commits pushed to main
+
+### Known Limitations
+
+- **Other vignettes in this project (`dashboard.qmd`, `methodology.qmd`, `lookup.qmd`, `scrollytell_de.qmd`, `index.qmd`)** were NOT audited. Post-render hook now runs against ALL rendered HTML, so a full `quarto render` will catch any latent bugs. Recommend a full render + visual walk in dark mode before next deploy.
+- **No headless-browser visual confirmation.** Static audit catches inline-style coverage but not CSS-rendered colours from cosmo theme defaults. Future: Playwright check.
+- **AGENTS.md stale audit count.** Says "Rules (74)" but actual is now 75. Cosmetic; self-corrects on next regen.
+- **Untracked artifacts carried over from prior session:** modifications to `analysis/qa/deploy_validation_2026-05-02.md`, plus 3 untracked files. Not from this session; left untouched.
+
 ## 2026-05-04
 
 ### Completed
