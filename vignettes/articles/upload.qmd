@@ -307,6 +307,82 @@ body.dark-mode #match-summary span[style*="6c757d"] { color: #b8c0c8 !important;
   line-height: 1.45 !important;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   COMPREHENSIVE DARK-MODE BOX SWEEP
+   Every element on this page that carries an inline `style="background:#…"`
+   with a LIGHT colour (white, light-gray, cream, light-blue, light-yellow)
+   must, in dark mode, be forced to pure black background and white text.
+   The user requirement is unambiguous: dark mode = #000 background + #fff
+   text EVERYWHERE, regardless of inline style.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* (1) Named containers carrying inline backgrounds                        */
+body.dark-mode #sample-strip,
+body.dark-mode #drop-zone,
+body.dark-mode #match-summary,
+body.dark-mode #rest-fallback-section,
+body.dark-mode #rest-download-after,
+body.dark-mode #fuzzy-error-banner,
+body.dark-mode #empty-state-msg,
+body.dark-mode #col-map-section,
+body.dark-mode #results-section {
+  background: #000000 !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+  border-color: #4a4a5a !important;
+}
+
+/* (2) All descendants of those containers — prose, strong, em, code, p   */
+body.dark-mode #sample-strip *,
+body.dark-mode #drop-zone *,
+body.dark-mode #rest-fallback-section *,
+body.dark-mode #rest-download-after *,
+body.dark-mode #fuzzy-error-banner *,
+body.dark-mode #empty-state-msg *,
+body.dark-mode #col-map-section *,
+body.dark-mode #results-section > *:not(#results-table):not(#match-summary) {
+  color: #ffffff !important;
+  background-color: transparent !important;
+  border-color: #4a4a5a !important;
+}
+
+/* (3) Catch-all attribute selector — any element with an inline LIGHT bg
+   not yet covered by the named selectors above. This is the safety net
+   that prevents future regressions when new boxes are added.            */
+body.dark-mode [style*="background:#fff"],
+body.dark-mode [style*="background:#FFF"],
+body.dark-mode [style*="background:#f8"],
+body.dark-mode [style*="background:#F8"],
+body.dark-mode [style*="background:#fef"],
+body.dark-mode [style*="background:#FEF"],
+body.dark-mode [style*="background:#fff8"],
+body.dark-mode [style*="background:#fff3"],
+body.dark-mode [style*="background:#e7f3ff"],
+body.dark-mode [style*="background:#dee"],
+body.dark-mode [style*="background:#cff"],
+body.dark-mode [style*="background:#e9d8fd"],
+body.dark-mode [style*="background:#f8d7da"] {
+  background: #000000 !important;
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+/* (4) Links inside those dark-forced boxes need a readable colour         */
+body.dark-mode #sample-strip a,
+body.dark-mode #drop-zone a,
+body.dark-mode #rest-fallback-section a,
+body.dark-mode #rest-download-after a,
+body.dark-mode #fuzzy-error-banner a,
+body.dark-mode #col-map-section a,
+body.dark-mode #results-section a:not(#results-table a) {
+  color: #4ea8de !important;
+}
+
+/* (5) Form controls inside those boxes (file picker label, selects)       */
+body.dark-mode #upload-section label,
+body.dark-mode #upload-section h3,
+body.dark-mode #upload-section h4 { color: #ffffff !important; }
+
 </style>
 
 <!-- ── Toolbar ─────────────────────────────────────────────────────────────── -->
