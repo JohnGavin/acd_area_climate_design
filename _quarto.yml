@@ -3,6 +3,10 @@ project:
   output-dir: docs
   post-render:
     - scripts/post-render.sh
+    # Global dark-mode contrast audit. Single source of truth in
+    # https://github.com/JohnGavin/llm/.claude/scripts/. NOT copied per
+    # project — referenced by absolute path. See dark-mode-completeness rule.
+    - /Users/johngavin/docs_gh/llm/.claude/scripts/quarto_post_render_contrast.sh
 
 website:
   title: "acd: Vienna ACD"
